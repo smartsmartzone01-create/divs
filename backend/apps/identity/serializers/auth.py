@@ -6,15 +6,24 @@ from apps.identity.models import Account
 
 class AccountRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, trim_whitespace=False)
-    email = serializers.EmailField()
+    email = serializers.EmailField(required=False, allow_null=True, allow_blank=False)
+    phone_number = serializers.CharField(required=False, allow_blank=False)
 
     class Meta:
         model = Account
-        fields = ("id", "email", "username", "password", "phone_number", "country_code")
+        fields = ("id", "email", "phone_number", "password", "country_code")
         read_only_fields = ("id",)
 
     def validate_email(self, value):
-        return value.strip().lower()
+        return value.strip().lower() if value else None
+
+    def validate_phone_number(self, value):
+        return value.strip() if value else None
+
+    def validate(self, attrs):
+        if not attrs.get("email") and not attrs.get("phone_number"):
+            raise serializers.ValidationError("Provide an email address or phone number.")
+        return attrs
 
     def validate_password(self, value):
         validate_password(value)
@@ -31,7 +40,6 @@ class AccountSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "email",
-            "username",
             "phone_number",
             "country_code",
             "email_verified",
