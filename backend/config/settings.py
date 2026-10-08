@@ -62,7 +62,6 @@ if os.environ.get("DIVS_USE_POSTGRESQL", "false").lower() == "true":
         }
     }
 else:
-    # SQLite keeps the first local setup simple; PostgreSQL is the target database.
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -71,6 +70,9 @@ else:
     }
 
 AUTH_USER_MODEL = "identity.Account"
+AUTHENTICATION_BACKENDS = [
+    "apps.identity.backends.EmailOrPhoneBackend",
+]
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -99,6 +101,9 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": "30/minute",
         "user": "120/minute",
+        "verification_request": "6/day",
+        "verification_confirm": "10/hour",
+        "login": "10/minute",
     },
 }
 
@@ -110,9 +115,16 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-# Provider secrets are intentionally optional until integrations are configured.
+SIMPLE_JWT["TOKEN_OBTAIN_SERIALIZER"] = "apps.identity.serializers.SharedTokenObtainPairSerializer"
+
 GOOGLE_OIDC_CLIENT_ID = os.environ.get("GOOGLE_OIDC_CLIENT_ID", "")
 GOOGLE_OIDC_CLIENT_SECRET = os.environ.get("GOOGLE_OIDC_CLIENT_SECRET", "")
 GOOGLE_OIDC_REDIRECT_URI = os.environ.get("GOOGLE_OIDC_REDIRECT_URI", "")
 EMAIL_VERIFICATION_PROVIDER = os.environ.get("EMAIL_VERIFICATION_PROVIDER", "")
 SMS_OTP_PROVIDER = os.environ.get("SMS_OTP_PROVIDER", "")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() == "true"
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "no-reply@divs.local")
