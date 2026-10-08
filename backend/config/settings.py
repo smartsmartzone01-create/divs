@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -49,8 +50,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-if os.environ.get("DATABASE_URL"):
-    # PostgreSQL configuration is supplied through environment variables.
+if os.environ.get("DIVS_USE_POSTGRESQL", "false").lower() == "true":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -62,7 +62,7 @@ if os.environ.get("DATABASE_URL"):
         }
     }
 else:
-    # SQLite keeps the first local setup simple; use PostgreSQL for deployment.
+    # SQLite keeps the first local setup simple; PostgreSQL is the target database.
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -101,8 +101,6 @@ REST_FRAMEWORK = {
         "user": "120/minute",
     },
 }
-
-from datetime import timedelta
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
