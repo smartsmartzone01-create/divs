@@ -3,7 +3,7 @@ from django.contrib.auth.backends import ModelBackend
 
 
 class EmailOrPhoneBackend(ModelBackend):
-    """Authenticate an account through its email address or phone number."""
+    """Authenticate an account using a verified email or verified phone."""
 
     def authenticate(self, request, username=None, password=None, identifier=None, **kwargs):
         login_identifier = identifier or username or kwargs.get("email") or kwargs.get("phone_number")
@@ -15,13 +15,18 @@ class EmailOrPhoneBackend(ModelBackend):
         try:
             if "@" in value:
                 account = Account.objects.get(email__iexact=value)
+                identifier_verified = account.email_verified
             else:
                 account = Account.objects.get(phone_number=value)
+                identifier_verified = account.phone_verified
         except (Account.DoesNotExist, Account.MultipleObjectsReturned):
-            # Run a password hash to reduce timing differences for unknown identifiers.
             Account().set_password(password)
             return None
 
-        if account.check_password(password) and self.user_can_authenticate(account):
+        if (
+            identifier_verified
+            and account.check_password(password)
+            and self.user_can_authenticate(account)
+        ):
             return account
         return None
