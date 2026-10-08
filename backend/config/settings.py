@@ -102,6 +102,7 @@ REST_FRAMEWORK = {
         "anon": "30/minute",
         "user": "120/minute",
         "verification_request": "6/day",
+        "verification_resend": "1/minute",
         "verification_confirm": "10/hour",
         "login": "10/minute",
     },
