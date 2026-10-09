@@ -33,7 +33,7 @@ class GoogleSignInView(APIView):
                 google_requests.Request(),
                 settings.GOOGLE_OIDC_CLIENT_ID,
             )
-        except (ValueError, Exception):
+        except Exception:
             # Never trust claims from a token that failed Google's signature/audience checks.
             return Response(
                 {"detail": "Google sign-in could not be verified."},
