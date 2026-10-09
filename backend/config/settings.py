@@ -126,6 +126,7 @@ REST_FRAMEWORK = {
         "verification_resend": "1/minute",
         "verification_confirm": "10/hour",
         "login": "10/minute",
+        "login_identifier": "10/minute",
     },
 }
 
