@@ -9,6 +9,7 @@ from apps.identity.services.verification import (
     verify_code,
 )
 from common.throttles.authentication import (
+    VerificationConfirmThrottle,
     VerificationRequestThrottle,
     VerificationResendCooldownThrottle,
 )
@@ -45,7 +46,6 @@ class VerificationRequestView(APIView):
         except VerificationDeliveryNotConfigured as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except Exception:
-            # Do not expose mail-provider errors or account existence to callers.
             return Response(
                 {"detail": "Verification delivery is temporarily unavailable."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -72,7 +72,9 @@ class VerificationConfirmSerializer(serializers.Serializer):
 
 
 class VerificationConfirmView(APIView):
+    throttle_scope = "verification_confirm"
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [VerificationConfirmThrottle]
 
     def post(self, request):
         serializer = VerificationConfirmSerializer(data=request.data)
