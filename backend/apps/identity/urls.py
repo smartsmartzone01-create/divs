@@ -2,7 +2,7 @@ from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from apps.identity.serializers.tokens import TrackedTokenRefreshSerializer
-from apps.identity.views.auth import CurrentAccountView, RegistrationView
+from apps.identity.views.auth import CurrentAccountView
 from apps.identity.views.google import GoogleSignInView
 from apps.identity.views.providers import GoogleReadinessView, PhoneReadinessView
 from apps.identity.views.sessions import LogoutView, RevokeSessionView, SessionListView
@@ -12,7 +12,6 @@ from apps.identity.views.verification import VerificationConfirmView, Verificati
 app_name = "identity"
 
 urlpatterns = [
-    path("register/", RegistrationView.as_view(), name="register"),
     path("token/", SharedTokenObtainPairView.as_view(), name="token"),
     path(
         "token/refresh/",
