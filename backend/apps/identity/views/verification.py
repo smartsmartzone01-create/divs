@@ -1,4 +1,4 @@
-from rest_framework import permissions, serializers, status
+from rest_framework import permissions, serializers, status\nfrom rest_framework.throttling import AnonRateThrottle
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -31,7 +31,7 @@ class VerificationRequestSerializer(serializers.Serializer):
 
 class VerificationRequestView(APIView):
     permission_classes = [permissions.AllowAny]
-    throttle_classes = [VerificationRequestThrottle, VerificationResendCooldownThrottle]
+    throttle_classes = [AnonRateThrottle, VerificationRequestThrottle, VerificationResendCooldownThrottle]
 
     def post(self, request):
         serializer = VerificationRequestSerializer(data=request.data)
