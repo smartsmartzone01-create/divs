@@ -23,7 +23,7 @@ class GoogleReadinessView(APIView):
             {
                 "provider": "google",
                 "configured": True,
-                "message": "Configuration exists; the OIDC flow still needs implementation and testing.",
+                "message": "Google ID-token validation is configured; registration and account linking remain separate work.",
             }
         )
 
