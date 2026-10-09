@@ -1,4 +1,7 @@
-from django.utils import timezone\nfrom rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from django.utils import timezone
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.identity.models import AuthSession
 from apps.identity.services.sessions import create_auth_session
@@ -18,9 +21,6 @@ class SharedTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class TrackedTokenRefreshSerializer(TokenRefreshSerializer):
     def validate(self, attrs):
-        from rest_framework_simplejwt.tokens import RefreshToken
-        from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-
         try:
             refresh = RefreshToken(attrs["refresh"])
             session_id = refresh.get("sid")
