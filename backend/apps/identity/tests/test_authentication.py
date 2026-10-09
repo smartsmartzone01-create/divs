@@ -144,7 +144,7 @@ class IdentityFoundationTests(TestCase):
         record = VerificationCode.objects.create(
             channel=VerificationCode.Channel.EMAIL,
             target="attempts@example.com",
-            code_hash="pbkdf2_sha256$600000$not-a-real-salt$not-a-real-hash",
+            code_hash=make_password("654321"),
             expires_at=timezone.now() + timedelta(minutes=10),
         )
         for _ in range(5):
