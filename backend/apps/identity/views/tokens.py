@@ -5,5 +5,6 @@ from common.throttles.authentication import AuthenticationAttemptThrottle
 
 
 class SharedTokenObtainPairView(TokenObtainPairView):
+    throttle_scope = "login"
     serializer_class = SharedTokenObtainPairSerializer
     throttle_classes = [AuthenticationAttemptThrottle]
