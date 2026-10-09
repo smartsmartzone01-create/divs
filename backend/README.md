@@ -1,6 +1,6 @@
 # DIVS Backend
 
-Initial Django backend with the shared identity and authentication foundation. Registration flows for drivers, clients, and administrators remain separate future work.
+Django backend with a shared identity/authentication foundation and a separate role-registration module. Driver registration is implemented; client and operations-admin registrations, profile modules, verification workflows, and workspace access gates remain future steps.
 
 ## Local setup
 
@@ -15,10 +15,10 @@ Initial Django backend with the shared identity and authentication foundation. R
 4. From the `backend/` directory, create and apply initial migrations, then run checks and tests:
 
    ```bash
-   python manage.py makemigrations identity
+   python manage.py makemigrations identity registrations
    python manage.py migrate
    python manage.py check
-   python manage.py test apps.identity
+   python manage.py test apps.identity apps.registrations
    ```
 
 SQLite and local-memory caching are used by default for local development. Configure PostgreSQL and a shared Redis cache for deployment. Rate limiting based on local-memory cache is not shared between multiple application workers.
@@ -26,6 +26,9 @@ SQLite and local-memory caching are used by default for local development. Confi
 ## Shared authentication routes
 
 - `POST /api/v1/auth/token/` — sign in using `identifier` (verified email or verified phone number) and `password`.
+- `POST /api/v1/registrations/driver/` — create the authenticated account's driver registration.
+- `GET /api/v1/registrations/driver/` — retrieve that account's driver registration.
+- `PATCH /api/v1/registrations/driver/` — update that account's driver registration.
 - `POST /api/v1/auth/token/refresh/` — refresh a token while its tracked device session remains active.
 - `GET /api/v1/auth/me/` — retrieve the authenticated account.
 - `POST /api/v1/auth/verification/request/` — request an email or phone verification code.
@@ -46,4 +49,5 @@ SQLite and local-memory caching are used by default for local development. Confi
 - Google ID tokens are verified server-side against the configured client ID. Matching email addresses alone never auto-link a Google identity to an existing account.
 - Email delivery requires valid SMTP settings. SMS/OTP delivery is not operational until an SMS provider is selected and integrated.
 - Google sign-in can authenticate linked identities, but the separate registration and authenticated account-linking flows have not yet been built.
-- Password recovery, role authorization, and the three distinct registration flows are not implemented yet.
+- Driver registration is separate from the future driver profile and verification records. Saving a registration does not verify a driver or grant work eligibility.
+- Client and operations-admin registration, distinct user/driver/client/admin profile models, verification workflows, role authorization, and workspace access gates are not implemented yet.
