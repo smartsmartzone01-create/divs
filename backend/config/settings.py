@@ -70,6 +70,26 @@ else:
     }
 
 AUTH_USER_MODEL = "identity.Account"
+
+REDIS_URL = os.environ.get("REDIS_URL", "")
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+            "KEY_PREFIX": "divs",
+        }
+    }
+else:
+    # Local-only fallback; production should use shared Redis for reliable throttles.
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "divs-local-auth-throttles",
+        }
+    }
+
 AUTHENTICATION_BACKENDS = [
     "apps.identity.backends.EmailOrPhoneBackend",
 ]
