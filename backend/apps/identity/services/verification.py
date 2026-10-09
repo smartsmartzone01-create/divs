@@ -37,13 +37,17 @@ def issue_verification_code(channel, target, account=None):
     )
 
     if channel == VerificationCode.Channel.EMAIL:
-        sent = send_mail(
-            subject="Your DIVS verification code",
-            message=f"Your DIVS verification code is {raw_code}. It expires in {CODE_TTL_MINUTES} minutes.",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[target],
-            fail_silently=False,
-        )
+        try:
+            sent = send_mail(
+                subject="Your DIVS verification code",
+                message=f"Your DIVS verification code is {raw_code}. It expires in {CODE_TTL_MINUTES} minutes.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[target],
+                fail_silently=False,
+            )
+        except Exception:
+            record.delete()
+            raise
         if sent != 1:
             record.delete()
             raise VerificationDeliveryNotConfigured("Email delivery did not accept the message.")
