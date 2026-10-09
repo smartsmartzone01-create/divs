@@ -3,6 +3,18 @@ import hashlib
 from rest_framework.throttling import ScopedRateThrottle, SimpleRateThrottle
 
 
+class LoginIdentifierThrottle(SimpleRateThrottle):
+    """Limit repeated password attempts against one email or phone identifier."""
+
+    scope = "login_identifier"
+
+    def get_cache_key(self, request, view):
+        data = getattr(request, "data", {})
+        target = (data.get("identifier") or "").strip().lower()
+        ident = hashlib.sha256(target.encode("utf-8")).hexdigest() if target else self.get_ident(request)
+        return self.cache_format % {"scope": self.scope, "ident": ident}
+
+
 class VerificationRequestThrottle(SimpleRateThrottle):
     """Limit verification-code sends per normalized destination."""
 
