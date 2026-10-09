@@ -4,11 +4,11 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.db import IntegrityError, transaction
-from django.test import TestCase, override_settings
+from django.test import TestCase, override_settings\nfrom unittest.mock import patch
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from apps.identity.models import ExternalIdentity, VerificationCode
+from apps.identity.models import AuthSession, ExternalIdentity, VerificationCode
 
 Account = get_user_model()
 PASSWORD = "Long-Unique-Password-987!"
@@ -140,7 +140,63 @@ class IdentityFoundationTests(TestCase):
         account.refresh_from_db()
         self.assertTrue(account.email_verified)
 
-    def test_wrong_verification_code_counts_toward_attempt_limit(self):
+
+    def test_authenticated_request_uses_tracked_session(self):
+        account = Account.objects.create_user(
+            email="session@example.com",
+            password=PASSWORD,
+            email_verified=True,
+        )
+        response = self.client.post(
+            "/api/v1/auth/token/",
+            {"identifier": account.email, "password": PASSWORD},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        session = AuthSession.objects.get(id=response.data["session_id"])
+        self.assertEqual(session.account, account)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {response.data['access']}")
+        me_response = self.client.get("/api/v1/auth/me/")
+        self.assertEqual(me_response.status_code, 200)
+
+    def test_revoked_session_cannot_use_access_token(self):
+        account = Account.objects.create_user(
+            email="revoked@example.com",
+            password=PASSWORD,
+            email_verified=True,
+        )
+        response = self.client.post(
+            "/api/v1/auth/token/",
+            {"identifier": account.email, "password": PASSWORD},
+            format="json",
+        )
+        session = AuthSession.objects.get(id=response.data["session_id"])
+        session.revoked_at = timezone.now()
+        session.save(update_fields=["revoked_at"])
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {response.data['access']}")
+        me_response = self.client.get("/api/v1/auth/me/")
+        self.assertEqual(me_response.status_code, 401)
+
+    @override_settings(GOOGLE_OIDC_CLIENT_ID="test-client")
+    @patch("apps.identity.views.google.id_token.verify_oauth2_token")
+    def test_google_sign_in_does_not_auto_link_by_matching_email(self, verify_token):
+        Account.objects.create_user(email="google@example.com", password=PASSWORD)
+        verify_token.return_value = {
+            "sub": "google-subject-new",
+            "email": "google@example.com",
+            "email_verified": True,
+        }
+        response = self.client.post(
+            "/api/v1/auth/providers/google/sign-in/",
+            {"credential": "fake-id-token"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertTrue(response.data["registration_required"])
+        self.assertEqual(ExternalIdentity.objects.count(), 0)
+\n    def test_wrong_verification_code_counts_toward_attempt_limit(self):
         record = VerificationCode.objects.create(
             channel=VerificationCode.Channel.EMAIL,
             target="attempts@example.com",
