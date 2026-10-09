@@ -1,4 +1,4 @@
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from django.utils import timezone\nfrom rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 
 from apps.identity.models import AuthSession
 from apps.identity.services.sessions import create_auth_session
@@ -30,7 +30,7 @@ class TrackedTokenRefreshSerializer(TokenRefreshSerializer):
                 id=session_id,
                 account_id=refresh.get("user_id"),
                 revoked_at__isnull=True,
-                expires_at__gt=__import__("django.utils.timezone", fromlist=["now"]).now(),
+                expires_at__gt=timezone.now(),
             ).first()
             if session is None:
                 raise InvalidToken("This session has expired or been revoked.")
