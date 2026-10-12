@@ -1,8 +1,10 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.notifications.models import Notification
+from apps.notifications.permissions import OperationsNotificationAccess
 from apps.notifications.serializers import NotificationSerializer
 from apps.notifications.services import mark_notification_read
 from common.views import RoleProtectedAPIView
@@ -58,8 +60,16 @@ class ClientNotificationListView(WorkspaceNotificationListView):
 
 
 class OperationsNotificationListView(WorkspaceNotificationListView):
+    permission_classes = [IsAuthenticated, OperationsNotificationAccess]
     required_profile_type = "operations"
     recipient_role = Notification.RecipientRole.OPERATIONS
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        has_active_profile = self.request.user.operations_membership.profile.status == "active" if hasattr(self.request.user, "operations_membership") and hasattr(self.request.user.operations_membership, "profile") else False
+        if not has_active_profile:
+            queryset = queryset.filter(event_type__startswith="operations.application.")
+        return queryset
 
 
 class DriverNotificationReadView(WorkspaceNotificationReadView):
@@ -73,5 +83,18 @@ class ClientNotificationReadView(WorkspaceNotificationReadView):
 
 
 class OperationsNotificationReadView(WorkspaceNotificationReadView):
+    permission_classes = [IsAuthenticated, OperationsNotificationAccess]
     required_profile_type = "operations"
     recipient_role = Notification.RecipientRole.OPERATIONS
+
+    def post(self, request, notification_id):
+        queryset = Notification.objects.filter(
+            recipient=request.user,
+            recipient_role=self.recipient_role,
+        )
+        has_active_profile = self.request.user.operations_membership.profile.status == "active" if hasattr(self.request.user, "operations_membership") and hasattr(self.request.user.operations_membership, "profile") else False
+        if not has_active_profile:
+            queryset = queryset.filter(event_type__startswith="operations.application.")
+        notification = get_object_or_404(queryset, pk=notification_id)
+        mark_notification_read(notification=notification, recipient=request.user)
+        return Response(NotificationSerializer(notification).data, status=status.HTTP_200_OK)
