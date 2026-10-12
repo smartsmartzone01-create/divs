@@ -43,8 +43,9 @@ SQLite and local-memory caching are used by default for local development. Confi
 
 Driver registration is separate from the future driver profile and verification records. Saving a registration does not verify a driver or grant work eligibility.
 
-## Operations invitation and application routes
+## Operations access, invitation and application routes
 
+- `GET /api/v1/operations/me/` — return the signed-in approved operations role and its explicit capability list. This is a policy overview; it does not imply all listed driver workflows have been implemented.
 - `POST /api/v1/operations/invitations/` — system superuser or approved admin sends an invitation to a specific email for the Admin or Operator role.
 - `POST /api/v1/operations/invitations/validate/` — recipient validates the code against the invited email before proceeding.
 - `POST /api/v1/operations/invitations/<invitation_id>/revoke/` — revoke an unused invitation.
@@ -52,7 +53,7 @@ Driver registration is separate from the future driver profile and verification 
 - `GET /api/v1/operations/applications/pending/` — list pending applications for the system superuser.
 - `POST /api/v1/operations/applications/<application_id>/review/` — system superuser approves or rejects an application.
 
-Invitation codes are stored as hashes, expire after 24 hours, are tied to the invited email, and are consumed when the application is submitted. A valid code permits an application only; it does not itself grant a role. Approval is a separate step. An approved Admin is activated as a Django superuser, while an approved Operator receives an operations membership without superuser privileges.
+Invitation codes are stored as hashes, expire after 24 hours, are tied to the invited email, and are consumed when the application is submitted. A valid code permits an application only; it does not itself grant a role. Approval is a separate step. An approved Admin is activated as a Django superuser, while an approved Operator receives an operations membership without superuser privileges. The current capability policy lets Operators access the operations workspace and reserves invitation management and operations-application review for the Admin/system-superuser path. Driver registration, verification review, and performance capabilities are defined for future endpoints but do not become usable until those workflows enforce the policy.
 
 ## Security behavior and current limits
 
