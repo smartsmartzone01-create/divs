@@ -8,6 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.operations.models import OperationsInvitation
+from apps.notifications.services import notify_operations_reviewers
 
 
 INVITATION_TTL_HOURS = 24
@@ -62,4 +63,12 @@ def issue_operations_invitation(*, inviter, email, role):
         expires_at__gt=now,
     ).exclude(pk=invitation.pk).update(revoked_at=now)
 
+    transaction.on_commit(
+        lambda: notify_operations_reviewers(
+            event_type="operations.invitation.created",
+            title="Operations invitation issued",
+            message=f"An operations invitation for the {invitation.get_role_display()} role was issued.",
+        ),
+        robust=True,
+    )
     return invitation
