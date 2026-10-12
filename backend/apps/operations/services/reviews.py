@@ -1,6 +1,8 @@
 from django.db import transaction
 from django.utils import timezone
 
+from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
 from apps.operations.models import OperationsApplication, OperationsMembership
 from apps.profiles.models import OperationsProfile
 
@@ -48,5 +50,26 @@ def review_operations_application(*, application_id, reviewer, decision, review_
             account.is_staff = True
             account.is_superuser = True
             account.save(update_fields=["is_staff", "is_superuser", "updated_at"])
+
+    is_approved = decision == OperationsApplication.Status.APPROVED
+    create_notification(
+        recipient=application.account,
+        recipient_role=Notification.RecipientRole.OPERATIONS,
+        event_type=(
+            "operations.application.approved"
+            if is_approved
+            else "operations.application.rejected"
+        ),
+        title=(
+            "Operations application approved"
+            if is_approved
+            else "Operations application not approved"
+        ),
+        message=(
+            "Your operations application was approved. Your assigned workspace access is active."
+            if is_approved
+            else "Your operations application was rejected. You do not have operations workspace access."
+        ),
+    )
 
     return application
