@@ -93,7 +93,7 @@ class VerificationReviewServiceTests(APITestCase):
         )
         response = self.client.post(
             url,
-            {"status": "passed", "result_code": "match", "review_note": "Reviewed."},
+            {"status": "passed", "result_code": "clear", "review_note": "Reviewed."},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -127,7 +127,7 @@ class VerificationReviewServiceTests(APITestCase):
             check_id=self.checks[0].id,
             reviewer=self.reviewer,
             status=DriverVerificationCheck.Status.FAILED,
-            result_code=DriverVerificationCheck.ResultCode.MISMATCH,
+            result_code=DriverVerificationCheck.ResultCode.RECORD_FOUND,
         )
         self.verification.refresh_from_db()
         self.assertEqual(self.verification.status, DriverVerification.Status.REJECTED)
