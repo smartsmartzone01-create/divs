@@ -1,5 +1,6 @@
 from django.contrib.auth.hashers import check_password
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.notifications.models import Notification
@@ -24,7 +25,7 @@ def submit_operations_application(*, account, invitation_id, code, full_name):
             email=email,
             used_at__isnull=True,
             revoked_at__isnull=True,
-            expires_at__gt=timezone.now(),
+            (Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())),
         )
         .first()
     )
