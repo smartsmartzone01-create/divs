@@ -58,7 +58,7 @@ Client registration records the client type, person/company name, primary contac
 - `apps.profiles.OperationsProfile` links one-to-one to an approved operations membership.
 - Each profile has its own UUID, lifecycle status (`active`, `suspended`, or `closed`), and timestamps. The shared account is resolved through its linked registration or membership, avoiding a second account foreign key that could disagree.
 - Profile status is not verification status or hiring eligibility. Those rules will be handled separately.
-- This is currently the model/schema foundation only: profile creation is not yet automated, and profile API endpoints and role-based access checks will be added in subsequent steps.
+- Profile creation is automated on successful driver/client registration and successful operations approval. Profile API endpoints and role-based access checks will be added in subsequent steps.
 
 ## Operations access, invitation and application routes
 
@@ -82,4 +82,4 @@ Invitation codes are stored as hashes, expire after 24 hours, are tied to the in
 - Google ID tokens are verified server-side against the configured client ID. Matching email addresses alone never auto-link a Google identity to an existing account.
 - Email delivery requires valid SMTP settings. SMS/OTP delivery is not operational until an SMS provider is selected and integrated.
 - Google sign-in can authenticate linked identities, but the separate registration and authenticated account-linking flows have not yet been built.
-- The initial DriverProfile, ClientProfile, and OperationsProfile models now exist in `apps.profiles`. They have separate UUIDs and lifecycle status fields, and each links to its role registration or approved operations membership rather than duplicating account identity or registration details. Automatic profile creation during registration/approval, profile APIs, and access gates are still future work.
+- The initial DriverProfile, ClientProfile, and OperationsProfile models now exist in `apps.profiles`. They have separate UUIDs and lifecycle status fields, and each links to its role registration or approved operations membership rather than duplicating account identity or registration details. Driver and client profiles are created in the same transaction as their registration; an operations profile is created in the same transaction as membership approval. Profile APIs and role-based access gates are still future work.
