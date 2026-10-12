@@ -32,4 +32,4 @@ class DriverProfile(models.Model):
         return self.registration.account
 
     def __str__(self):
-        return f"Driver profile for {self.account_id}"
+        return f"Driver profile for {self.account.pk}"
