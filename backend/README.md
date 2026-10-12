@@ -44,6 +44,15 @@ SQLite and local-memory caching are used by default for local development. Confi
 
 Registration and profile existence do not verify a driver or grant work eligibility. The profile endpoint is read-only and uses the shared role-protected API base.
 
+## Client registration and profile
+
+- `POST /api/v1/registrations/client/` — create the authenticated account's client registration as an individual or company.
+- `GET /api/v1/registrations/client/` — retrieve that account's client registration.
+- `PATCH /api/v1/registrations/client/` — update that account's client registration.
+- `GET /api/v1/profiles/client/` — retrieve the signed-in client's own profile metadata and nested registration details.
+
+Client registration records client type, name, primary contact, email, country, region, and optional alternative contacts. The profile endpoint is read-only and returns only the authenticated client's own data. Client verification is not part of this flow. The same account can have driver and client profiles.
+
 ## Driver verification
 
 - `GET /api/v1/verification/driver/me/` — return the signed-in driver's own overall verification state, four check states, and current discoverability gate.
@@ -52,14 +61,6 @@ Registration and profile existence do not verify a driver or grant work eligibil
 The initial check types are national identity, driving licence, traffic/police records, and accident records. A new driver profile automatically receives a verification record and one pending row for each check. Overall verification becomes approved only when all four checks pass; a failed check rejects it. This is a verification gate, not the full discovery implementation.
 
 **Data minimization rule:** verification stores only check type, status, a limited result code, method, timestamps, and reviewer. It has no fields for national ID numbers, licence numbers, dates of birth, free-text notes, government response payloads, police narratives, or accident details. Government API adapters are not connected yet; manual review is the current workflow, and a future adapter must translate the source response into an allowed result code and discard the raw response.
-
-## Client registration and profile foundation
-
-- `POST /api/v1/registrations/client/` — create the authenticated account's client registration as an individual or company.
-- `GET /api/v1/registrations/client/` — retrieve that account's client registration.
-- `PATCH /api/v1/registrations/client/` — update that account's client registration.
-
-Client registration records client type, name, primary contact, email, country, region, and optional alternative contacts. Client verification is not part of this flow. The same account can have driver and client profiles.
 
 ## Shared profile access
 
