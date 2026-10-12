@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.operations.models import OperationsApplication, OperationsMembership
+from apps.operations.models import OperationsApplication
 from apps.profiles.models import OperationsProfile
 
 
