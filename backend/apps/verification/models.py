@@ -28,7 +28,6 @@ class DriverVerification(models.Model):
         related_name="driver_verification_decisions",
     )
     decided_at = models.DateTimeField(null=True, blank=True)
-    decision_note = models.CharField(max_length=500, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -97,7 +96,6 @@ class DriverVerificationCheck(models.Model):
         blank=True,
         related_name="reviewed_driver_verification_checks",
     )
-    review_note = models.CharField(max_length=500, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
