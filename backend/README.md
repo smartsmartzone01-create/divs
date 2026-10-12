@@ -67,16 +67,17 @@ Client registration records client type, name, primary contact, email, country, 
 - Shared authorization lives in `common/permissions.py` and `common/views.py`. Protected endpoints declare a required profile type; registration endpoints remain accessible before role profiles exist.
 - Profile lifecycle status is separate from driver verification and future work eligibility. The driver discovery endpoint will later enforce verification and other visibility rules.
 
-## Operations access, invitation and application routes
+## Operations access, profile, invitation and application routes
 
 - `GET /api/v1/operations/me/` — return the signed-in approved operations role and its explicit capability list.
+- `GET /api/v1/profiles/operations/` — retrieve the signed-in operations member's own profile, approved name, role, contact details, and approval timestamp. This endpoint is read-only and requires an active operations profile.
 - `POST /api/v1/operations/invitations/` — system superuser or approved admin sends an invitation to a specific email for the Admin or Operator role.
 - `POST /api/v1/operations/invitations/validate/` — recipient validates the code against the invited email.
 - `POST /api/v1/operations/invitations/<invitation_id>/revoke/` — revoke an unused invitation.
 - `POST /api/v1/operations/applications/` — submit an application using an invitation code.
 - `GET /api/v1/operations/applications/pending/` and `POST /api/v1/operations/applications/<application_id>/review/` — superuser reviews pending applications.
 
-Invitation codes are hashed, tied to the invited email, and consumed when an application is submitted. The current implementation expires invitations after 24 hours. Approval is a separate step; approved Admins are activated as Django superusers, while Operators receive operations membership without superuser privileges.
+Invitation codes are hashed, tied to the invited email, and consumed when an application is submitted. The current implementation expires invitations after 24 hours. Approval is a separate step; approved Admins are activated as Django superusers, while Operators receive operations membership without superuser privileges. The profile API exposes the approved role but does not itself grant capabilities; the operations permission policy remains the authority for actions.
 
 ## Security behavior and current limits
 
