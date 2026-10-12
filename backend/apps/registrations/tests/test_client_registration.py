@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.identity.models import Account
+from apps.notifications.models import Notification
 from apps.profiles.models import ClientProfile
 from apps.registrations.models import ClientRegistration, DriverRegistration
 
@@ -29,6 +30,13 @@ class ClientRegistrationAPITests(APITestCase):
     def test_authenticated_account_can_register_as_individual_client(self):
         response = self.client.post(self.url, self.valid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.account,
+                recipient_role=Notification.RecipientRole.CLIENT,
+                event_type="client.registration.completed",
+            ).exists()
+        )
         self.assertEqual(ClientRegistration.objects.count(), 1)
         profile = ClientProfile.objects.get(registration__account=self.account)
         self.assertEqual(profile.account, self.account)
