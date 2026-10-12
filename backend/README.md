@@ -18,7 +18,7 @@ Django backend with shared identity/authentication and separate domain modules. 
    python manage.py makemigrations --check --dry-run
    python manage.py migrate
    python manage.py check
-   python manage.py test apps.identity apps.registrations apps.operations apps.profiles
+   python manage.py test apps.identity apps.registrations apps.operations apps.profiles common.tests
    ```
 
 These commands have not been run against the current online changes yet.
@@ -58,7 +58,9 @@ Client registration records the client type, person/company name, primary contac
 - `apps.profiles.OperationsProfile` links one-to-one to an approved operations membership.
 - Each profile has its own UUID, lifecycle status (`active`, `suspended`, or `closed`), and timestamps. The shared account is resolved through its linked registration or membership, avoiding a second account foreign key that could disagree.
 - Profile status is not verification status or hiring eligibility. Those rules will be handled separately.
-- Profile creation is automated on successful driver/client registration and successful operations approval. Profile API endpoints and role-based access checks will be added in subsequent steps.
+- Profile creation is automated on successful driver/client registration and successful operations approval.
+- Shared authorization lives in `common/permissions.py` (`HasRequiredProfile`) and `common/views.py` (`RoleProtectedAPIView`). A protected view declares `required_profile_type` as `driver`, `client`, or `operations`; access is granted only when the authenticated account has an active matching profile. The system superuser can access the operations area but does not automatically gain driver or client profile access.
+- Registration endpoints remain outside this protected base so a person can register before they have a profile. The policy foundation is implemented and has tests; the driver profile retrieval endpoint is the next step.
 
 ## Operations access, invitation and application routes
 
@@ -82,4 +84,4 @@ Invitation codes are stored as hashes, expire after 24 hours, are tied to the in
 - Google ID tokens are verified server-side against the configured client ID. Matching email addresses alone never auto-link a Google identity to an existing account.
 - Email delivery requires valid SMTP settings. SMS/OTP delivery is not operational until an SMS provider is selected and integrated.
 - Google sign-in can authenticate linked identities, but the separate registration and authenticated account-linking flows have not yet been built.
-- The initial DriverProfile, ClientProfile, and OperationsProfile models now exist in `apps.profiles`. They have separate UUIDs and lifecycle status fields, and each links to its role registration or approved operations membership rather than duplicating account identity or registration details. Driver and client profiles are created in the same transaction as their registration; an operations profile is created in the same transaction as membership approval. Profile APIs and role-based access gates are still future work.
+- The initial DriverProfile, ClientProfile, and OperationsProfile models now exist in `apps.profiles`. They have separate UUIDs and lifecycle status fields, and each links to its role registration or approved operations membership rather than duplicating account identity or registration details. Driver and client profiles are created in the same transaction as their registration; an operations profile is created in the same transaction as membership approval. The shared role-access policy and protected-view base are implemented; profile retrieval APIs are still future work.
