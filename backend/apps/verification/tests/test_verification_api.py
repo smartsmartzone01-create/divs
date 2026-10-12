@@ -93,7 +93,7 @@ class VerificationReviewServiceTests(APITestCase):
         )
         response = self.client.post(
             url,
-            {"status": "passed", "result_code": "clear", "review_note": "Reviewed."},
+            {"status": "passed", "result_code": "clear"},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
