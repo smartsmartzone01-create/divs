@@ -9,6 +9,8 @@ from apps.verification.serializers import (
     ManualCheckReviewSerializer,
 )
 from apps.verification.services import VerificationReviewError, review_driver_check
+from apps.operations.permissions import HasOperationsCapability
+from common.permissions import HasRequiredProfile
 from common.views import RoleProtectedAPIView
 
 
