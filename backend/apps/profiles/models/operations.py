@@ -32,4 +32,4 @@ class OperationsProfile(models.Model):
         return self.membership.account
 
     def __str__(self):
-        return f"Operations profile for {self.account_id}"
+        return f"Operations profile for {self.account.pk}"
