@@ -27,6 +27,7 @@ SQLite and local-memory caching are used by default for local development. Confi
 
 ## Shared authentication routes
 
+- `POST /api/v1/auth/register/` — create a shared identity account without choosing a role; role-specific registration remains separate.
 - `POST /api/v1/auth/token/` — sign in using `identifier` (verified email or verified phone number) and `password`.
 - `GET /api/v1/auth/me/` — retrieve the authenticated account.
 - `POST /api/v1/auth/verification/request/` and `POST /api/v1/auth/verification/confirm/` — request and confirm an email or phone verification code.
