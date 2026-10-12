@@ -40,4 +40,3 @@ class ManualCheckReviewSerializer(serializers.Serializer):
         required=False,
         allow_blank=True,
     )
-    review_note = serializers.CharField(required=False, allow_blank=True, max_length=500)
