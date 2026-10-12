@@ -75,10 +75,10 @@ The initial check types are national identity, driving licence, traffic/police r
 - `POST /api/v1/operations/invitations/` — system superuser or approved admin sends an invitation to a specific email for the Admin or Operator role.
 - `POST /api/v1/operations/invitations/validate/` — recipient validates the code against the invited email.
 - `POST /api/v1/operations/invitations/<invitation_id>/revoke/` — revoke an unused invitation.
-- `POST /api/v1/operations/applications/` — submit an application using an invitation code.
+- `POST /api/v1/operations/applications/` — submit an application using an invitation code.\n- `GET /api/v1/operations/applications/me/` — retrieve the authenticated account’s latest application status; it never exposes another applicant’s record.
 - `GET /api/v1/operations/applications/pending/` and `POST /api/v1/operations/applications/<application_id>/review/` — superuser reviews pending applications.
 
-Invitation codes are hashed, tied to the invited email, and consumed when an application is submitted. The current implementation expires invitations after 24 hours. Approval is a separate step; approved Admins are activated as Django superusers, while Operators receive operations membership without superuser privileges. The profile API exposes the approved role but does not itself grant capabilities; the operations permission policy remains the authority for actions.
+Invitation codes are hashed, tied to the invited email, and consumed when an application is submitted. Applicants can check their latest application status without receiving operations permissions. Driver verification review requires the explicit `review_driver_verification` capability and an active operations profile. The current implementation expires invitations after 24 hours. Approval is a separate step; approved Admins are activated as Django superusers, while Operators receive operations membership without superuser privileges. The profile API exposes the approved role but does not itself grant capabilities; the operations permission policy remains the authority for actions.
 
 ## Security behavior and current limits
 
