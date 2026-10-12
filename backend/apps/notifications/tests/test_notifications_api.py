@@ -5,7 +5,7 @@ from rest_framework.test import APITestCase
 
 from apps.identity.models import Account
 from apps.notifications.models import Notification
-from apps.notifications.services import create_notification
+from apps.notifications.services import create_notification, notify_operations_reviewers
 from apps.operations.models import OperationsApplication, OperationsInvitation, OperationsMembership
 from apps.operations.services.reviews import review_operations_application
 from apps.profiles.models import ClientProfile, DriverProfile, OperationsProfile
@@ -194,6 +194,31 @@ class NotificationAPITests(APITestCase):
                 title="New driver request",
                 message="A client has sent you a driver request.",
             )
+
+    def test_driver_registration_event_notifies_operations_accounts_individually(self):
+        notify_operations_reviewers(
+            event_type="driver.registration.submitted",
+            title="New driver registration",
+            message="A driver has registered and their verification checks are awaiting review.",
+        )
+
+        self.client.force_authenticate(user=self.operator)
+        operator_response = self.client.get(reverse("notifications:operations-list"))
+        self.client.force_authenticate(user=Account.objects.get(email="system-admin@example.com"))
+        root_response = self.client.get(reverse("notifications:operations-list"))
+
+        self.assertEqual(operator_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(root_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            operator_response.data["results"][0]["event_type"],
+            "driver.registration.submitted",
+        )
+        self.assertEqual(
+            root_response.data["results"][0]["event_type"],
+            "driver.registration.submitted",
+        )
+        self.assertEqual(len(operator_response.data["results"]), 1)
+        self.assertEqual(len(root_response.data["results"]), 1)
 
     def test_rejected_operations_applicant_receives_only_application_notification(self):
         system_root = Account.objects.create_superuser(
