@@ -8,7 +8,8 @@ from rest_framework.views import APIView
 from apps.registrations.models import DriverRegistration
 from apps.registrations.serializers import DriverRegistrationSerializer
 from apps.profiles.models import DriverProfile
-from apps.notifications.services import notify_operations_reviewers
+from apps.notifications.models import Notification
+from apps.notifications.services import create_notification, notify_operations_reviewers
 
 
 class DriverRegistrationView(APIView):
@@ -36,6 +37,13 @@ class DriverRegistrationView(APIView):
                 {"detail": "A driver registration already exists for this account."},
                 status=status.HTTP_409_CONFLICT,
             )
+        create_notification(
+            recipient=request.user,
+            recipient_role=Notification.RecipientRole.DRIVER,
+            event_type="driver.registration.received",
+            title="Driver registration received",
+            message="Your driver profile has been created. Verification is required before you can be listed as available.",
+        )
         notify_operations_reviewers(
             event_type="driver.registration.submitted",
             title="New driver registration",
