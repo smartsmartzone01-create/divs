@@ -43,6 +43,14 @@ SQLite and local-memory caching are used by default for local development. Confi
 
 Driver registration is separate from the future driver profile and verification records. Saving a registration does not verify a driver or grant work eligibility.
 
+## Client registration routes
+
+- `POST /api/v1/registrations/client/` — create the authenticated account's client registration as an individual or company.
+- `GET /api/v1/registrations/client/` — retrieve that account's client registration.
+- `PATCH /api/v1/registrations/client/` — update that account's client registration.
+
+Client registration records the client type, person/company name, primary contact, email, country, region, and optional alternative contacts. Client verification is not part of this registration flow. The same shared account can register as both a driver and a client; each role has its own registration record.
+
 ## Operations access, invitation and application routes
 
 - `GET /api/v1/operations/me/` — return the signed-in approved operations role and its explicit capability list. This is a policy overview; it does not imply all listed driver workflows have been implemented.
@@ -65,4 +73,4 @@ Invitation codes are stored as hashes, expire after 24 hours, are tied to the in
 - Google ID tokens are verified server-side against the configured client ID. Matching email addresses alone never auto-link a Google identity to an existing account.
 - Email delivery requires valid SMTP settings. SMS/OTP delivery is not operational until an SMS provider is selected and integrated.
 - Google sign-in can authenticate linked identities, but the separate registration and authenticated account-linking flows have not yet been built.
-- Client registration, distinct driver/client/admin profile models, verification workflows, and workspace access gates remain future work.
+- Distinct driver/client/admin profile models, driver verification workflows, and integrated workspace access gates remain future work.
