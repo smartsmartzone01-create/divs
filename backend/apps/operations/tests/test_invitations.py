@@ -11,6 +11,7 @@ from rest_framework.test import APITestCase
 
 from apps.identity.models import Account
 from apps.operations.models import OperationsInvitation
+from apps.operations.services.invitations import issue_operations_invitation
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
@@ -21,6 +22,7 @@ class OperationsInvitationAPITests(APITestCase):
             password="StrongPassword123!",
         )
         self.url = reverse("operations:invitation-create")
+        self.validate_url = reverse("operations:invitation-validate")
         self.payload = {
             "email": "new.operator@example.com",
             "role": OperationsInvitation.Role.OPERATOR,
@@ -38,10 +40,8 @@ class OperationsInvitationAPITests(APITestCase):
         self.assertEqual(invitation.invited_by, self.superuser)
         expected_expiry = timezone.now() + timedelta(hours=24)
         self.assertLess(abs(invitation.expires_at - expected_expiry), timedelta(seconds=10))
-        self.assertTrue(check_password(
-            mail.outbox[0].body.split("Invitation code: ", 1)[1].splitlines()[0],
-            invitation.code_hash,
-        ))
+        raw_code = mail.outbox[0].body.split("Invitation code: ", 1)[1].splitlines()[0]
+        self.assertTrue(check_password(raw_code, invitation.code_hash))
         self.assertNotIn("code", response.data)
 
     def test_regular_account_cannot_issue_invitation(self):
@@ -83,3 +83,56 @@ class OperationsInvitationAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(OperationsInvitation.objects.count(), 0)
+
+    def test_invitation_code_can_be_validated_without_consuming_it(self):
+        invitation = issue_operations_invitation(
+            inviter=self.superuser,
+            email="new.operator@example.com",
+            role=OperationsInvitation.Role.OPERATOR,
+        )
+        raw_code = mail.outbox[-1].body.split("Invitation code: ", 1)[1].splitlines()[0]
+
+        response = self.client.post(
+            self.validate_url,
+            {"email": "NEW.OPERATOR@example.com", "code": raw_code},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["valid"])
+        self.assertEqual(response.data["invitation_id"], str(invitation.id))
+        invitation.refresh_from_db()
+        self.assertIsNone(invitation.used_at)
+
+    def test_wrong_code_is_rejected(self):
+        issue_operations_invitation(
+            inviter=self.superuser,
+            email="new.operator@example.com",
+            role=OperationsInvitation.Role.OPERATOR,
+        )
+
+        response = self.client.post(
+            self.validate_url,
+            {"email": "new.operator@example.com", "code": "wrong-code"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_expired_invitation_code_is_rejected(self):
+        invitation = issue_operations_invitation(
+            inviter=self.superuser,
+            email="new.operator@example.com",
+            role=OperationsInvitation.Role.OPERATOR,
+        )
+        raw_code = mail.outbox[-1].body.split("Invitation code: ", 1)[1].splitlines()[0]
+        invitation.expires_at = timezone.now() - timedelta(seconds=1)
+        invitation.save(update_fields=["expires_at"])
+
+        response = self.client.post(
+            self.validate_url,
+            {"email": "new.operator@example.com", "code": raw_code},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
