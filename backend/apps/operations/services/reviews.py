@@ -2,6 +2,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.operations.models import OperationsApplication, OperationsMembership
+from apps.profiles.models import OperationsProfile
 
 
 class ApplicationReviewError(Exception):
@@ -41,6 +42,7 @@ def review_operations_application(*, application_id, reviewer, decision, review_
             role=application.invitation.role,
             approved_by=reviewer,
         )
+        OperationsProfile.objects.create(membership=membership)
         if membership.role == OperationsMembership.Role.ADMIN:
             account = application.account
             account.is_staff = True
