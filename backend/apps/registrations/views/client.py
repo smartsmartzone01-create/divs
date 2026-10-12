@@ -8,6 +8,8 @@ from rest_framework.views import APIView
 from apps.registrations.models import ClientRegistration
 from apps.registrations.serializers import ClientRegistrationSerializer
 from apps.profiles.models import ClientProfile
+from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
 
 
 class ClientRegistrationView(APIView):
@@ -39,6 +41,13 @@ class ClientRegistrationView(APIView):
                 {"detail": "A client registration already exists for this account."},
                 status=status.HTTP_409_CONFLICT,
             )
+        create_notification(
+            recipient=request.user,
+            recipient_role=Notification.RecipientRole.CLIENT,
+            event_type="client.registration.completed",
+            title="Client registration complete",
+            message="Your client profile is ready to use.",
+        )
         return Response(
             ClientRegistrationSerializer(registration).data,
             status=status.HTTP_201_CREATED,
