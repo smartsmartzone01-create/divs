@@ -79,3 +79,14 @@ class OperationsPermissionPolicyTests(TestCase):
         request = self.factory.post("/api/v1/operations/applications/example/review/")
         request.user = self.system_root
         self.assertTrue(SystemSuperuserOnly().has_permission(request, object()))
+
+    def test_unapproved_extra_superuser_is_not_the_system_root(self):
+        extra_superuser = Account.objects.create_superuser(
+            email="extra-root@example.com",
+            password="StrongPassword123!",
+        )
+
+        self.assertEqual(capabilities_for(extra_superuser), frozenset())
+        request = self.factory.post("/api/v1/operations/applications/example/review/")
+        request.user = extra_superuser
+        self.assertFalse(SystemSuperuserOnly().has_permission(request, object()))
