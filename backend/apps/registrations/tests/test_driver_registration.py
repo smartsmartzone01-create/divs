@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.identity.models import Account
+from apps.notifications.models import Notification
 from apps.profiles.models import DriverProfile
 from apps.registrations.models import DriverRegistration
 
@@ -30,6 +31,13 @@ class DriverRegistrationAPITests(APITestCase):
     def test_authenticated_driver_can_create_registration(self):
         response = self.client.post(self.url, self.valid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.account,
+                recipient_role=Notification.RecipientRole.DRIVER,
+                event_type="driver.registration.received",
+            ).exists()
+        )
         self.assertEqual(DriverRegistration.objects.count(), 1)
         profile = DriverProfile.objects.get(registration__account=self.account)
         self.assertEqual(profile.account, self.account)
