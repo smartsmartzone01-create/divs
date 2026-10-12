@@ -12,6 +12,7 @@ from rest_framework.test import APITestCase
 from apps.identity.models import Account
 from apps.operations.models import OperationsApplication, OperationsInvitation, OperationsMembership
 from apps.operations.services.invitations import issue_operations_invitation
+from apps.profiles.models import OperationsProfile
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
@@ -238,6 +239,7 @@ class OperationsInvitationAPITests(APITestCase):
         self.assertTrue(account.is_staff)
         self.assertTrue(account.is_superuser)
         self.assertEqual(account.operations_membership.role, OperationsMembership.Role.ADMIN)
+        self.assertTrue(OperationsProfile.objects.filter(membership=account.operations_membership).exists())
 
     def test_superuser_approval_activates_limited_operator_membership(self):
         account, application = self._submit_application(OperationsInvitation.Role.OPERATOR, "new.operator2@example.com")
@@ -254,6 +256,7 @@ class OperationsInvitationAPITests(APITestCase):
         self.assertFalse(account.is_staff)
         self.assertFalse(account.is_superuser)
         self.assertEqual(account.operations_membership.role, OperationsMembership.Role.OPERATOR)
+        self.assertTrue(OperationsProfile.objects.filter(membership=account.operations_membership).exists())
 
     def test_applicant_cannot_review_own_application(self):
         account, application = self._submit_application(OperationsInvitation.Role.OPERATOR, "self-review@example.com")
@@ -281,6 +284,7 @@ class OperationsInvitationAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(OperationsMembership.objects.filter(account=account).exists())
+        self.assertFalse(OperationsProfile.objects.filter(membership__account=account).exists())
         application.refresh_from_db()
         self.assertEqual(application.status, OperationsApplication.Status.REJECTED)
 
