@@ -1,14 +1,21 @@
+from django.contrib.auth.hashers import check_password
+from django.utils import timezone
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.operations.models import OperationsInvitation
 from apps.operations.permissions import CanIssueOperationsInvitations
-from apps.operations.serializers.invitations import OperationsInvitationCreateSerializer
+from apps.operations.serializers.invitations import (
+    OperationsInvitationCreateSerializer,
+    OperationsInvitationValidateSerializer,
+)
 from apps.operations.services.invitations import (
     InvitationDeliveryError,
     issue_operations_invitation,
 )
+from apps.operations.throttles import InvitationCodeThrottle
 
 
 class OperationsInvitationCreateView(APIView):
@@ -39,4 +46,40 @@ class OperationsInvitationCreateView(APIView):
                 "detail": "Invitation email sent. The recipient must apply and be approved separately.",
             },
             status=status.HTTP_201_CREATED,
+        )
+
+
+class OperationsInvitationValidateView(APIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [InvitationCodeThrottle]
+
+    def post(self, request):
+        serializer = OperationsInvitationValidateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+        code = serializer.validated_data["code"]
+
+        invitation = OperationsInvitation.objects.filter(
+            email=email,
+            used_at__isnull=True,
+            revoked_at__isnull=True,
+            expires_at__gt=timezone.now(),
+        ).order_by("-created_at").first()
+
+        if invitation is None or not check_password(code, invitation.code_hash):
+            return Response(
+                {"detail": "The invitation code is invalid, expired, revoked, or already used."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            {
+                "valid": True,
+                "invitation_id": str(invitation.id),
+                "email": invitation.email,
+                "role": invitation.role,
+                "expires_at": invitation.expires_at,
+                "detail": "Code accepted. This only allows you to continue an application; it does not grant permissions.",
+            },
+            status=status.HTTP_200_OK,
         )
