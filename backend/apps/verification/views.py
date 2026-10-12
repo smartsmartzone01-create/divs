@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import status as http_status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.profiles.models import DriverProfile
@@ -33,7 +34,7 @@ class MyDriverVerificationView(RoleProtectedAPIView):
 
 
 class OperationsDriverCheckReviewView(RoleProtectedAPIView):
-    """Allow approved operations users to record a minimal manual check outcome."""
+    """Allow authorized operations members to record a minimal manual check outcome."""
 
     required_profile_type = "operations"
 
