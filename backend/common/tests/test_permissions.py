@@ -99,7 +99,7 @@ class SharedRolePermissionTests(TestCase):
         OperationsProfile.objects.create(membership=membership)
         self.assertTrue(self.allowed(self.account, "operations"))
 
-    def test_system_superuser_can_access_operations_area(self):
+    def test_system_superuser_without_membership_can_access_operations_area(self):
         root = Account.objects.create_superuser(
             email="root-access@example.com",
             password="StrongPassword123!",
@@ -108,6 +108,27 @@ class SharedRolePermissionTests(TestCase):
         self.assertTrue(self.allowed(root, "operations"))
         self.assertFalse(self.allowed(root, "driver"))
         self.assertFalse(self.allowed(root, "client"))
+
+    def test_admin_superuser_with_suspended_profile_is_denied_operations_area(self):
+        approver = Account.objects.create_superuser(
+            email="root-admin-profile@example.com",
+            password="StrongPassword123!",
+        )
+        admin = Account.objects.create_superuser(
+            email="approved-admin@example.com",
+            password="StrongPassword123!",
+        )
+        membership = OperationsMembership.objects.create(
+            account=admin,
+            role=OperationsMembership.Role.ADMIN,
+            approved_by=approver,
+        )
+        OperationsProfile.objects.create(
+            membership=membership,
+            status=OperationsProfile.Status.SUSPENDED,
+        )
+
+        self.assertFalse(self.allowed(admin, "operations"))
 
     def test_missing_or_unknown_profile_requirement_fails_closed(self):
         request = self.factory.get("/protected/")
