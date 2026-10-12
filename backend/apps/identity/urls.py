@@ -5,6 +5,7 @@ from apps.identity.serializers.tokens import TrackedTokenRefreshSerializer
 from apps.identity.views.auth import CurrentAccountView
 from apps.identity.views.google import GoogleSignInView
 from apps.identity.views.providers import GoogleReadinessView, PhoneReadinessView
+from apps.identity.views.registration import AccountRegistrationView
 from apps.identity.views.sessions import LogoutView, RevokeSessionView, SessionListView
 from apps.identity.views.tokens import SharedTokenObtainPairView
 from apps.identity.views.verification import VerificationConfirmView, VerificationRequestView
@@ -12,6 +13,7 @@ from apps.identity.views.verification import VerificationConfirmView, Verificati
 app_name = "identity"
 
 urlpatterns = [
+    path("register/", AccountRegistrationView.as_view(), name="register"),
     path("token/", SharedTokenObtainPairView.as_view(), name="token"),
     path(
         "token/refresh/",
