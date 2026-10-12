@@ -18,4 +18,6 @@ class OperationsNotificationAccess(BasePermission):
             status="active",
         ).exists():
             return True
+        if user.is_superuser and not OperationsMembership.objects.filter(account=user).exists():
+            return True
         return OperationsApplication.objects.filter(account=user).exists()
