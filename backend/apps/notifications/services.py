@@ -73,6 +73,33 @@ def notify_active_operations(*, event_type, title, message):
     ]
 
 
+def notify_operations_reviewers(*, event_type, title, message):
+    """Notify active operations members and the initial system superuser."""
+    notifications = notify_active_operations(
+        event_type=event_type,
+        title=title,
+        message=message,
+    )
+    from apps.identity.models import Account
+
+    system_root = (
+        Account.objects.filter(is_superuser=True, operations_membership__isnull=True)
+        .order_by("date_joined")
+        .first()
+    )
+    if system_root:
+        notifications.append(
+            create_notification(
+                recipient=system_root,
+                recipient_role=Notification.RecipientRole.OPERATIONS,
+                event_type=event_type,
+                title=title,
+                message=message,
+            )
+        )
+    return notifications
+
+
 def mark_notification_read(*, notification, recipient):
     """Mark a notification read only when it belongs to the supplied account."""
     if notification.recipient_id != recipient.pk:
