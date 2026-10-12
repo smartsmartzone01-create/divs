@@ -18,7 +18,7 @@ Django backend with shared identity/authentication and separate domain modules. 
    python manage.py makemigrations --check --dry-run
    python manage.py migrate
    python manage.py check
-   python manage.py test apps.identity apps.registrations apps.operations apps.profiles apps.verification common.tests
+   python manage.py test apps.identity apps.registrations apps.operations apps.profiles apps.verification apps.notifications common.tests
    ```
 
 These commands have not been run against the current online changes yet.
@@ -89,3 +89,12 @@ Invitation codes are hashed, tied to the invited email, and consumed when an app
 - Tracked sessions last as long as the refresh-token lifetime (currently seven days), and revoking a session invalidates its access and refresh use.
 - Google ID tokens are verified server-side against the configured client ID. Matching email addresses alone never auto-link a Google identity to an existing account.
 - Email/SMS delivery and government API integration require provider configuration and are not claimed to be operational until integrated and tested.
+
+## In-app notifications
+
+- `GET /api/v1/notifications/driver/` — list the signed-in account's driver-workspace notifications and unread count.
+- `POST /api/v1/notifications/driver/<notification_id>/read/` — mark one of that account's driver notifications as read.
+- `GET /api/v1/notifications/client/` and `POST /api/v1/notifications/client/<notification_id>/read/` — client-workspace notification list and read action.
+- `GET /api/v1/notifications/operations/` and `POST /api/v1/notifications/operations/<notification_id>/read/` — operations-workspace notification list and read action.
+
+Notifications are stored against the shared account UUID and a required recipient role. List and read endpoints filter by both the authenticated account and the workspace role, and require an active matching profile. An account with multiple roles therefore has separate notification streams. Create notifications through `apps.notifications.services.create_notification(...)`, which rejects recipients without an active profile for the target workspace. This initial implementation supports in-app notifications only; SMS, email, and push delivery are not included. Notification text must not contain government-source records, identity numbers, credentials, or other sensitive payloads.
