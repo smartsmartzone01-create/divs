@@ -83,3 +83,28 @@ class OperationsInvitationValidateView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class OperationsInvitationRevokeView(APIView):
+    permission_classes = [IsAuthenticated, CanIssueOperationsInvitations]
+
+    def post(self, request, invitation_id):
+        invitation = OperationsInvitation.objects.filter(pk=invitation_id).first()
+        if invitation is None:
+            return Response(
+                {"detail": "Invitation not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        if invitation.used_at is not None:
+            return Response(
+                {"detail": "A used invitation cannot be revoked."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        if invitation.revoked_at is None:
+            invitation.revoked_at = timezone.now()
+            invitation.save(update_fields=["revoked_at"])
+
+        return Response(
+            {"id": str(invitation.id), "revoked": True},
+            status=status.HTTP_200_OK,
+        )
