@@ -1,5 +1,4 @@
 import secrets
-from datetime import timedelta
 
 from django.contrib.auth.hashers import make_password
 from django.core.mail import send_mail
@@ -10,8 +9,6 @@ from django.utils import timezone
 from apps.operations.models import OperationsInvitation
 from apps.notifications.services import notify_operations_reviewers
 
-
-INVITATION_TTL_HOURS = 24
 
 
 class InvitationDeliveryError(Exception):
@@ -29,7 +26,7 @@ def issue_operations_invitation(*, inviter, email, role):
         role=role,
         code_hash=make_password(raw_code),
         invited_by=inviter,
-        expires_at=now + timedelta(hours=INVITATION_TTL_HOURS),
+        expires_at=None,
     )
 
     try:
@@ -38,8 +35,7 @@ def issue_operations_invitation(*, inviter, email, role):
             message=(
                 f"You have been invited to apply for the DIVS {invitation.get_role_display()} role.\n\n"
                 f"Invitation code: {raw_code}\n\n"
-                f"This code is tied to {normalized_email}, can be used once, and expires in "
-                f"{INVITATION_TTL_HOURS} hours. Enter it on the DIVS operations invitation page. "
+                f"This code is tied to {normalized_email} and can be used once. It does not expire, but DIVS operations can revoke it. Enter it on the DIVS operations invitation page. "
                 "The invitation allows you to apply; it does not grant operations permissions. "
                 "If you were not expecting this invitation, you can ignore this email."
             ),
@@ -60,7 +56,6 @@ def issue_operations_invitation(*, inviter, email, role):
         email=normalized_email,
         used_at__isnull=True,
         revoked_at__isnull=True,
-        expires_at__gt=now,
     ).exclude(pk=invitation.pk).update(revoked_at=now)
 
     transaction.on_commit(
