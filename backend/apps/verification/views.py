@@ -44,7 +44,6 @@ class OperationsDriverCheckReviewView(RoleProtectedAPIView):
                 reviewer=request.user,
                 status=serializer.validated_data["status"],
                 result_code=serializer.validated_data.get("result_code", ""),
-                review_note=serializer.validated_data.get("review_note", ""),
             )
         except VerificationReviewError as exc:
             return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
