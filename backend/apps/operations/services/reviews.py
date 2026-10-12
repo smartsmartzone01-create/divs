@@ -22,6 +22,12 @@ def review_operations_application(*, application_id, reviewer, decision, review_
     if application.account_id == reviewer.pk:
         raise ApplicationReviewError
 
+    if (
+        decision == OperationsApplication.Status.APPROVED
+        and OperationsMembership.objects.filter(account=application.account).exists()
+    ):
+        raise ApplicationReviewError
+
     now = timezone.now()
     application.status = decision
     application.reviewed_by = reviewer
