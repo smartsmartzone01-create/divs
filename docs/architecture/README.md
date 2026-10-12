@@ -16,6 +16,7 @@ DIVS (Driver Identification and Verification System) is a modular application fo
 The following are initial domain boundaries. They can become individual apps under `backend/apps/` as implementation proceeds.
 
 - **Identity and accounts:** registration, authentication, account recovery, and account identity.
+- **Profiles:** separate DriverProfile, ClientProfile, and OperationsProfile records linked to their registration or approved membership. Profile lifecycle status is separate from verification and work eligibility.
 - **Driver profiles and employment:** driver information, driving credentials as profile references, and employment history.
 - **Verification:** identity, driving licence, and relevant record checks; evidence; review workflows; and verification decisions.
 - **Performance and scoring:** evidence-backed performance events and score calculations.
@@ -23,7 +24,7 @@ The following are initial domain boundaries. They can become individual apps und
 - **Client requests:** requests to contact or hire drivers and their status.
 - **Administration and operations:** operational oversight, user and module administration, verification queues, reporting, and audit review.
 
-These are logical boundaries, not a requirement to create every module before implementation begins.
+These are logical boundaries, not a requirement to create every module before implementation begins. The initial role profile models now live in `backend/apps/profiles/`; automatic profile creation, profile APIs, and access enforcement are still pending.
 
 The backend keeps driver registration in `backend/apps/registrations/` and administration/operations in `backend/apps/operations/`. Driver registration must not own admin invitations, operations applications, approval decisions, or operations permissions. The operations module must not implement driver-registration business rules. Both use the shared identity account model.
 
