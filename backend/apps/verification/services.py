@@ -32,6 +32,29 @@ def review_driver_check(
     if result_code and result_code not in DriverVerificationCheck.ResultCode.values:
         raise VerificationReviewError("Unsupported result code.")
 
+    compatible_results = {
+        DriverVerificationCheck.CheckType.NATIONAL_IDENTITY: {
+            DriverVerificationCheck.ResultCode.MATCH,
+            DriverVerificationCheck.ResultCode.MISMATCH,
+            DriverVerificationCheck.ResultCode.INCONCLUSIVE,
+        },
+        DriverVerificationCheck.CheckType.DRIVING_LICENCE: {
+            DriverVerificationCheck.ResultCode.VALID,
+            DriverVerificationCheck.ResultCode.INVALID,
+            DriverVerificationCheck.ResultCode.INCONCLUSIVE,
+        },
+        DriverVerificationCheck.CheckType.TRAFFIC_RECORDS: {
+            DriverVerificationCheck.ResultCode.CLEAR,
+            DriverVerificationCheck.ResultCode.RECORD_FOUND,
+            DriverVerificationCheck.ResultCode.INCONCLUSIVE,
+        },
+        DriverVerificationCheck.CheckType.ACCIDENT_RECORDS: {
+            DriverVerificationCheck.ResultCode.CLEAR,
+            DriverVerificationCheck.ResultCode.RECORD_FOUND,
+            DriverVerificationCheck.ResultCode.INCONCLUSIVE,
+        },
+    }
+
     check = (
         DriverVerificationCheck.objects.select_for_update()
         .select_related("verification")
@@ -40,6 +63,8 @@ def review_driver_check(
     )
     if check is None:
         raise VerificationReviewError("Verification check not found.")
+    if result_code and result_code not in compatible_results[check.check_type]:
+        raise VerificationReviewError("Result code does not match this check type.")
 
     now = timezone.now()
     check.status = status
