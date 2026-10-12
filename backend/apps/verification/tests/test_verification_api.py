@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.identity.models import Account
+from apps.notifications.models import Notification
 from apps.operations.models import OperationsMembership
 from apps.profiles.models import DriverProfile, OperationsProfile
 from apps.registrations.models import DriverRegistration
@@ -132,3 +133,10 @@ class VerificationReviewServiceTests(APITestCase):
         self.verification.refresh_from_db()
         self.assertEqual(self.verification.status, DriverVerification.Status.REJECTED)
         self.assertFalse(self.verification.is_discoverable)
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.verification.profile.registration.account,
+                recipient_role=Notification.RecipientRole.DRIVER,
+                event_type="driver.verification.rejected",
+            ).exists()
+        )
