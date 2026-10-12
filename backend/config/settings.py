@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "apps.operations",
     "apps.profiles",
     "apps.verification.apps.VerificationConfig",
+    "apps.notifications.apps.NotificationsConfig",
 ]
 
 MIDDLEWARE = [
