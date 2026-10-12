@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from apps.registrations.models import DriverRegistration
 from apps.registrations.serializers import DriverRegistrationSerializer
 from apps.profiles.models import DriverProfile
+from apps.notifications.services import notify_operations_reviewers
 
 
 class DriverRegistrationView(APIView):
@@ -35,6 +36,11 @@ class DriverRegistrationView(APIView):
                 {"detail": "A driver registration already exists for this account."},
                 status=status.HTTP_409_CONFLICT,
             )
+        notify_operations_reviewers(
+            event_type="driver.registration.submitted",
+            title="New driver registration",
+            message="A driver has registered and their verification checks are awaiting review.",
+        )
         return Response(DriverRegistrationSerializer(registration).data, status=status.HTTP_201_CREATED)
 
     def patch(self, request):
