@@ -319,3 +319,68 @@ class OperationsInvitationAPITests(APITestCase):
             format="json",
         )
         self.assertEqual(validation.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_operator_access_response_lists_limited_capabilities(self):
+        operator = Account.objects.create_user(
+            email="operator-access@example.com",
+            password="StrongPassword123!",
+        )
+        OperationsMembership.objects.create(
+            account=operator,
+            role=OperationsMembership.Role.OPERATOR,
+            approved_by=self.superuser,
+        )
+        self.client.force_authenticate(user=operator)
+
+        response = self.client.get(reverse("operations:my-access"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["role"], OperationsMembership.Role.OPERATOR)
+        self.assertIn("view_operations_workspace", response.data["capabilities"])
+        self.assertIn("review_driver_verification", response.data["capabilities"])
+        self.assertNotIn("manage_invitations", response.data["capabilities"])
+        self.assertNotIn("review_operations_applications", response.data["capabilities"])
+
+    def test_account_without_operations_membership_cannot_open_operations_workspace(self):
+        account = Account.objects.create_user(
+            email="regular-access@example.com",
+            password="StrongPassword123!",
+        )
+        self.client.force_authenticate(user=account)
+
+        response = self.client.get(reverse("operations:my-access"))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_operator_cannot_issue_operations_invitations(self):
+        operator = Account.objects.create_user(
+            email="operator-invite@example.com",
+            password="StrongPassword123!",
+        )
+        OperationsMembership.objects.create(
+            account=operator,
+            role=OperationsMembership.Role.OPERATOR,
+            approved_by=self.superuser,
+        )
+        self.client.force_authenticate(user=operator)
+
+        response = self.client.post(self.url, self.payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(OperationsInvitation.objects.count(), 0)
+
+    def test_operator_cannot_approve_operations_applications(self):
+        operator = Account.objects.create_user(
+            email="operator-review@example.com",
+            password="StrongPassword123!",
+        )
+        OperationsMembership.objects.create(
+            account=operator,
+            role=OperationsMembership.Role.OPERATOR,
+            approved_by=self.superuser,
+        )
+        self.client.force_authenticate(user=operator)
+
+        response = self.client.get(reverse("operations:application-pending"))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
