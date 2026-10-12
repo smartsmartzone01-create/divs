@@ -16,7 +16,6 @@ def review_driver_check(
     status,
     method=DriverVerificationCheck.Method.MANUAL,
     result_code="",
-    review_note="",
 ):
     """Record a minimal outcome only; never pass through or persist source payloads."""
     allowed_statuses = {
@@ -72,11 +71,10 @@ def review_driver_check(
     check.result_code = result_code
     check.checked_at = now
     check.reviewed_by = reviewer
-    check.review_note = review_note.strip()[:500]
     check.save(
         update_fields=[
             "status", "method", "result_code", "checked_at", "reviewed_by",
-            "review_note", "updated_at",
+            "updated_at",
         ]
     )
 
