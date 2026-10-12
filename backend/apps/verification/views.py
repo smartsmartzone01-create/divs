@@ -1,10 +1,9 @@
 from django.shortcuts import get_object_or_404
-from rest_framework.response import Response
 from rest_framework import status as http_status
-from rest_framework.views import APIView
+from rest_framework.response import Response
 
 from apps.profiles.models import DriverProfile
-from apps.verification.models import DriverVerificationCheck
+from apps.verification.models import DriverVerification, DriverVerificationCheck
 from apps.verification.serializers import (
     DriverVerificationSerializer,
     ManualCheckReviewSerializer,
@@ -25,7 +24,7 @@ class MyDriverVerificationView(RoleProtectedAPIView):
             registration__account=request.user,
         )
         verification = get_object_or_404(
-            profile.verification.__class__.objects.prefetch_related("checks"),
+            DriverVerification.objects.prefetch_related("checks"),
             profile=profile,
         )
         return Response(DriverVerificationSerializer(verification).data)
