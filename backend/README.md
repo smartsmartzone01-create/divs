@@ -43,6 +43,12 @@ SQLite and local-memory caching are used by default for local development. Confi
 
 Driver registration is separate from the future driver profile and verification records. Saving a registration does not verify a driver or grant work eligibility.
 
+## Driver profile route
+
+- `GET /api/v1/profiles/driver/` — return the signed-in driver's own profile ID, lifecycle status, timestamps, and nested registration details, including account-linked contact information.
+
+The endpoint is read-only and uses the shared role-protected API base. Accounts without an active driver profile, including suspended profiles, are denied. The response does not claim that a driver is verified or eligible for work.
+
 ## Client registration routes
 
 - `POST /api/v1/registrations/client/` — create the authenticated account's client registration as an individual or company.
@@ -60,7 +66,7 @@ Client registration records the client type, person/company name, primary contac
 - Profile status is not verification status or hiring eligibility. Those rules will be handled separately.
 - Profile creation is automated on successful driver/client registration and successful operations approval.
 - Shared authorization lives in `common/permissions.py` (`HasRequiredProfile`) and `common/views.py` (`RoleProtectedAPIView`). A protected view declares `required_profile_type` as `driver`, `client`, or `operations`; access is granted only when the authenticated account has an active matching profile. The system superuser can access the operations area but does not automatically gain driver or client profile access.
-- Registration endpoints remain outside this protected base so a person can register before they have a profile. The policy foundation is implemented and has tests; the driver profile retrieval endpoint is the next step.
+- Registration endpoints remain outside this protected base so a person can register before they have a profile. The policy foundation is implemented and has tests. `GET /api/v1/profiles/driver/` returns the authenticated driver's profile metadata and nested registration information. The endpoint uses the shared active-driver-profile permission and returns no verification or work-eligibility claims yet.
 
 ## Operations access, invitation and application routes
 
@@ -84,4 +90,4 @@ Invitation codes are stored as hashes, expire after 24 hours, are tied to the in
 - Google ID tokens are verified server-side against the configured client ID. Matching email addresses alone never auto-link a Google identity to an existing account.
 - Email delivery requires valid SMTP settings. SMS/OTP delivery is not operational until an SMS provider is selected and integrated.
 - Google sign-in can authenticate linked identities, but the separate registration and authenticated account-linking flows have not yet been built.
-- The initial DriverProfile, ClientProfile, and OperationsProfile models now exist in `apps.profiles`. They have separate UUIDs and lifecycle status fields, and each links to its role registration or approved operations membership rather than duplicating account identity or registration details. Driver and client profiles are created in the same transaction as their registration; an operations profile is created in the same transaction as membership approval. The shared role-access policy and protected-view base are implemented; profile retrieval APIs are still future work.
+- The initial DriverProfile, ClientProfile, and OperationsProfile models now exist in `apps.profiles`. They have separate UUIDs and lifecycle status fields, and each links to its role registration or approved operations membership rather than duplicating account identity or registration details. Driver and client profiles are created in the same transaction as their registration; an operations profile is created in the same transaction as membership approval. The shared role-access policy and protected-view base are implemented. Driver profile retrieval is now available; client and operations profile APIs remain future work.
