@@ -7,6 +7,7 @@ from apps.notifications.models import Notification
 from apps.notifications.permissions import OperationsNotificationAccess
 from apps.notifications.serializers import NotificationSerializer
 from apps.notifications.services import mark_notification_read
+from apps.operations.models import OperationsMembership
 from common.views import RoleProtectedAPIView
 
 
@@ -67,7 +68,11 @@ class OperationsNotificationListView(WorkspaceNotificationListView):
     def get_queryset(self):
         queryset = super().get_queryset()
         has_active_profile = self.request.user.operations_membership.profile.status == "active" if hasattr(self.request.user, "operations_membership") and hasattr(self.request.user.operations_membership, "profile") else False
-        if not has_active_profile:
+        is_initial_system_superuser = (
+            self.request.user.is_superuser
+            and not OperationsMembership.objects.filter(account=self.request.user).exists()
+        )
+        if not has_active_profile and not is_initial_system_superuser:
             queryset = queryset.filter(event_type__startswith="operations.application.")
         return queryset
 
@@ -93,7 +98,11 @@ class OperationsNotificationReadView(WorkspaceNotificationReadView):
             recipient_role=self.recipient_role,
         )
         has_active_profile = self.request.user.operations_membership.profile.status == "active" if hasattr(self.request.user, "operations_membership") and hasattr(self.request.user.operations_membership, "profile") else False
-        if not has_active_profile:
+        is_initial_system_superuser = (
+            self.request.user.is_superuser
+            and not OperationsMembership.objects.filter(account=self.request.user).exists()
+        )
+        if not has_active_profile and not is_initial_system_superuser:
             queryset = queryset.filter(event_type__startswith="operations.application.")
         notification = get_object_or_404(queryset, pk=notification_id)
         mark_notification_read(notification=notification, recipient=request.user)
