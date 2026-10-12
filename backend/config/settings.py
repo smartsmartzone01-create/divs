@@ -130,6 +130,7 @@ REST_FRAMEWORK = {
         "login": "10/minute",
         "login_identifier": "10/minute",
         "invitation_code": "5/hour",
+        "account_registration": "5/hour",
     },
 }
 
