@@ -1,19 +1,15 @@
 from rest_framework import status
-from rest_framework.permissions import BasePermission, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.operations.models import OperationsApplication
+from apps.operations.permissions import SystemSuperuserOnly
 from apps.operations.serializers.reviews import OperationsApplicationReviewSerializer
 from apps.operations.services.reviews import (
     ApplicationReviewError,
     review_operations_application,
 )
-
-
-class SystemSuperuserOnly(BasePermission):
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.is_superuser)
 
 
 class OperationsApplicationPendingListView(APIView):
