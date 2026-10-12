@@ -62,10 +62,10 @@ class OperationsInvitationValidateView(APIView):
         code = serializer.validated_data["code"]
 
         invitation = OperationsInvitation.objects.filter(
+            Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()),
             email=email,
             used_at__isnull=True,
             revoked_at__isnull=True,
-            (Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())),
         ).order_by("-created_at").first()
 
         if invitation is None or not check_password(code, invitation.code_hash):
