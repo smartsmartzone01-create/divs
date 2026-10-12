@@ -1,6 +1,7 @@
 from rest_framework.permissions import BasePermission
 
 from apps.operations.models import OperationsMembership
+from apps.profiles.models import OperationsProfile
 
 
 # This is the authorization policy for operations actions. Do not grant a
@@ -27,23 +28,25 @@ ROLE_CAPABILITIES = {
 
 
 def capabilities_for(user):
-    """Return the explicit operations capabilities for an account."""
+    """Return capabilities only for the initial superuser or an active member."""
     if not user or not user.is_authenticated:
         return frozenset()
 
-    # The system superuser is the initial authority and has the Admin policy.
+    membership = OperationsMembership.objects.filter(account=user).only("role").first()
+    if membership is not None:
+        if not OperationsProfile.objects.filter(
+            membership=membership,
+            status=OperationsProfile.Status.ACTIVE,
+        ).exists():
+            return frozenset()
+        return ROLE_CAPABILITIES.get(membership.role, frozenset())
+
+    # The initial system superuser is the only privileged account without a
+    # membership. Approved Admins have memberships and follow profile lifecycle.
     if user.is_superuser:
         return ROLE_CAPABILITIES[OperationsMembership.Role.ADMIN]
 
-    membership = (
-        OperationsMembership.objects.filter(account=user)
-        .only("role")
-        .first()
-    )
-    if membership is None:
-        return frozenset()
-
-    return ROLE_CAPABILITIES.get(membership.role, frozenset())
+    return frozenset()
 
 
 class HasOperationsCapability(BasePermission):
@@ -64,7 +67,7 @@ class IsOperationsWorkspaceMember(BasePermission):
 
 
 class CanIssueOperationsInvitations(BasePermission):
-    """Only Admins and the initial system superuser can invite operations staff."""
+    """Only active Admins and the initial system superuser can manage invitations."""
 
     message = "Only an operations Admin can issue or revoke invitations."
 
@@ -79,4 +82,8 @@ class SystemSuperuserOnly(BasePermission):
 
     def has_permission(self, request, view):
         user = request.user
-        return bool(user and user.is_authenticated and user.is_superuser)
+        if not user or not user.is_authenticated or not user.is_superuser:
+            return False
+        # Approved Admins are marked is_superuser for broad privileges, but
+        # must not approve further operations applications themselves.
+        return not OperationsMembership.objects.filter(account=user).exists()
