@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "apps.registrations",
     "apps.operations",
     "apps.profiles",
+    "apps.verification.apps.VerificationConfig",
 ]
 
 MIDDLEWARE = [
