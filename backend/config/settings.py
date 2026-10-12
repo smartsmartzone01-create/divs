@@ -129,6 +129,7 @@ REST_FRAMEWORK = {
         "verification_confirm": "10/hour",
         "login": "10/minute",
         "login_identifier": "10/minute",
+        "invitation_code": "5/hour",
     },
 }
 
