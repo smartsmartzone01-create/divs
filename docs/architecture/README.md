@@ -65,13 +65,14 @@ Follow the phases in order and finish the registration foundation before buildin
 2. Driver registration.
 3. Client registration.
 4. Invitation-based operations registration and application acceptance.
-5. Integrated system foundations: driver profile, client profile, and operations/admin profile.
-6. Operations roles and permissions, implemented alongside the admin profile and protected capabilities.
-7. Driver verification and evidence handling, including future government API integrations.
-8. Public driver discovery, filtering, and search.
-9. Performance events and scoring.
-10. Client-driver engagement records, contact protection, payment references, and audit history.
-11. Frontend integration as one simple, coherent experience rather than requiring users to think in terms of separate internal modules.
+5. Shared role-access foundation and driver profile API.
+6. Client profile API, reusing the shared access policy.
+7. Operations profile API, reusing the shared access policy.
+8. Driver verification and evidence handling, including future government API integrations.
+9. Public driver discovery, filtering, and search.
+10. Performance events and scoring.
+11. Client-driver engagement records, contact protection, payment references, and audit history.
+12. Frontend integration as one simple, coherent experience rather than requiring users to think in terms of separate internal modules.
 
 Client registration does not require client verification. Driver identity and credential verification applies to drivers. Invitations and application acceptance are part of operations registration; the broader role-and-permission system is built later with the integrated operational capabilities.
 
