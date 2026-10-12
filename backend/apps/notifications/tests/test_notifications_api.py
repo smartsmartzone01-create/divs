@@ -6,9 +6,12 @@ from rest_framework.test import APITestCase
 from apps.identity.models import Account
 from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
-from apps.operations.models import OperationsMembership
+from apps.operations.models import OperationsApplication, OperationsInvitation, OperationsMembership
+from apps.operations.services.reviews import review_operations_application
 from apps.profiles.models import ClientProfile, DriverProfile, OperationsProfile
 from apps.registrations.models import ClientRegistration, DriverRegistration
+from django.utils import timezone
+from datetime import timedelta
 
 
 class NotificationAPITests(APITestCase):
@@ -191,6 +194,44 @@ class NotificationAPITests(APITestCase):
                 title="New driver request",
                 message="A client has sent you a driver request.",
             )
+
+    def test_rejected_operations_applicant_receives_only_application_notification(self):
+        system_root = Account.objects.create_superuser(
+            email="root-for-review@example.com",
+            password="StrongPassword123!",
+        )
+        applicant = Account.objects.create_user(
+            email="applicant@example.com",
+            password="StrongPassword123!",
+        )
+        invitation = OperationsInvitation.objects.create(
+            email=applicant.email,
+            role=OperationsInvitation.Role.OPERATOR,
+            code_hash="already-hashed",
+            invited_by=system_root,
+            expires_at=timezone.now() + timedelta(days=1),
+        )
+        application = OperationsApplication.objects.create(
+            invitation=invitation,
+            account=applicant,
+            full_name="Applicant Person",
+        )
+
+        review_operations_application(
+            application_id=application.id,
+            reviewer=system_root,
+            decision=OperationsApplication.Status.REJECTED,
+        )
+        self.client.force_authenticate(user=applicant)
+        response = self.client.get(reverse("notifications:operations-list"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(
+            response.data["results"][0]["event_type"],
+            "operations.application.rejected",
+        )
+        self.assertEqual(response.data["results"][0]["recipient_role"], "operations")
 
     def test_endpoint_requires_authentication(self):
         response = self.client.get(reverse("notifications:driver-list"))
