@@ -79,3 +79,15 @@ Admin permissions, audit requirements, and privacy boundaries should be consider
 ## Deliberate non-goals for this initial architecture
 
 This document does not yet define database models, migrations, detailed API contracts, final authentication integrations, the scoring formula, government API integrations, or every operational workflow. Decide these incrementally before implementing the relevant feature.
+
+## Operations authorization policy
+
+Operations permissions are defined centrally in `backend/apps/operations/permissions.py`. An account does not become an Operator or Admin simply by registering or by validating an invitation.
+
+- **System superuser:** can review pending operations applications and has the Admin capability set.
+- **Admin:** activated only after approval; receives the elevated Admin capability set.
+- **Operator:** activated only after approval; can access the operations workspace and is not permitted to issue/revoke invitations or approve/reject operations applications.
+- **Ordinary account / pending applicant:** has no operations workspace access.
+
+The capability names for driver registration, driver verification review, and performance management are prepared in the policy for later workflow endpoints. They must be enforced by each relevant endpoint when those workflows are implemented; listing a capability is not a substitute for implementing the workflow or its checks.
+
