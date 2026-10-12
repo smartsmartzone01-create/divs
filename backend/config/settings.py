@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     "apps.identity",
     "apps.registrations",
     "apps.operations",
+    "apps.profiles",
 ]
 
 MIDDLEWARE = [
