@@ -10,7 +10,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.identity.models import Account
-from apps.operations.models import OperationsApplication, OperationsInvitation
+from apps.operations.models import OperationsApplication, OperationsInvitation, OperationsMembership
 from apps.operations.services.invitations import issue_operations_invitation
 
 
@@ -200,3 +200,96 @@ class OperationsInvitationAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(OperationsApplication.objects.count(), 0)
+
+    def _submit_application(self, role, email):
+        invitation = issue_operations_invitation(
+            inviter=self.superuser,
+            email=email,
+            role=role,
+        )
+        raw_code = mail.outbox[-1].body.split("Invitation code: ", 1)[1].splitlines()[0]
+        account = Account.objects.create_user(
+            email=email,
+            password="StrongPassword123!",
+        )
+        self.client.force_authenticate(user=account)
+        response = self.client.post(
+            reverse("operations:application-create"),
+            {"invitation_id": str(invitation.id), "code": raw_code, "full_name": "Test Applicant"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        return account, OperationsApplication.objects.get(invitation=invitation)
+
+    def test_superuser_approval_activates_admin_membership(self):
+        account, application = self._submit_application(OperationsInvitation.Role.ADMIN, "new.admin@example.com")
+        self.client.force_authenticate(user=self.superuser)
+
+        response = self.client.post(
+            reverse("operations:application-review", kwargs={"application_id": application.id}),
+            {"decision": "approved", "review_note": "Identity checked"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        application.refresh_from_db()
+        account.refresh_from_db()
+        self.assertEqual(application.status, OperationsApplication.Status.APPROVED)
+        self.assertTrue(account.is_staff)
+        self.assertTrue(account.is_superuser)
+        self.assertEqual(account.operations_membership.role, OperationsMembership.Role.ADMIN)
+
+    def test_superuser_approval_activates_limited_operator_membership(self):
+        account, application = self._submit_application(OperationsInvitation.Role.OPERATOR, "new.operator2@example.com")
+        self.client.force_authenticate(user=self.superuser)
+
+        response = self.client.post(
+            reverse("operations:application-review", kwargs={"application_id": application.id}),
+            {"decision": "approved"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        account.refresh_from_db()
+        self.assertFalse(account.is_staff)
+        self.assertFalse(account.is_superuser)
+        self.assertEqual(account.operations_membership.role, OperationsMembership.Role.OPERATOR)
+
+    def test_applicant_cannot_review_own_application(self):
+        account, application = self._submit_application(OperationsInvitation.Role.OPERATOR, "self-review@example.com")
+        self.client.force_authenticate(user=account)
+
+        response = self.client.post(
+            reverse("operations:application-review", kwargs={"application_id": application.id}),
+            {"decision": "approved"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        application.refresh_from_db()
+        self.assertEqual(application.status, OperationsApplication.Status.PENDING)
+
+    def test_rejected_application_does_not_grant_membership(self):
+        account, application = self._submit_application(OperationsInvitation.Role.OPERATOR, "rejected@example.com")
+        self.client.force_authenticate(user=self.superuser)
+
+        response = self.client.post(
+            reverse("operations:application-review", kwargs={"application_id": application.id}),
+            {"decision": "rejected", "review_note": "Please reapply after review"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(OperationsMembership.objects.filter(account=account).exists())
+        application.refresh_from_db()
+        self.assertEqual(application.status, OperationsApplication.Status.REJECTED)
+
+    def test_decided_application_cannot_be_reviewed_twice(self):
+        account, application = self._submit_application(OperationsInvitation.Role.OPERATOR, "twice@example.com")
+        self.client.force_authenticate(user=self.superuser)
+        review_url = reverse("operations:application-review", kwargs={"application_id": application.id})
+        first = self.client.post(review_url, {"decision": "rejected"}, format="json")
+        second = self.client.post(review_url, {"decision": "approved"}, format="json")
+
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.assertEqual(second.status_code, status.HTTP_409_CONFLICT)
