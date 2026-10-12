@@ -2,7 +2,7 @@ from django.contrib.auth.hashers import check_password
 from django.db import transaction
 from django.utils import timezone
 
-from apps.operations.models import OperationsApplication, OperationsInvitation
+from apps.operations.models import OperationsApplication, OperationsInvitation, OperationsMembership
 
 
 class InvalidOperationsInvitation(Exception):
@@ -12,7 +12,7 @@ class InvalidOperationsInvitation(Exception):
 @transaction.atomic
 def submit_operations_application(*, account, invitation_id, code, full_name):
     email = (account.email or "").strip().lower()
-    if not email:
+    if not email or OperationsMembership.objects.filter(account=account).exists():
         raise InvalidOperationsInvitation
 
     invitation = (
