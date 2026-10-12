@@ -24,7 +24,7 @@ The following are initial domain boundaries. They can become individual apps und
 - **Client requests:** requests to contact or hire drivers and their status.
 - **Administration and operations:** operational oversight, user and module administration, verification queues, reporting, and audit review.
 
-These are logical boundaries, not a requirement to create every module before implementation begins. The initial role profile models now live in `backend/apps/profiles/`. Driver/client profiles are created with successful registration, and operations profiles are created only after approval grants an operations membership. Profile APIs and access enforcement are still pending.
+These are logical boundaries, not a requirement to create every module before implementation begins. The initial role profile models now live in `backend/apps/profiles/`. Driver/client profiles are created with successful registration, and operations profiles are created only after approval grants an operations membership. The shared profile-access foundation is implemented and tested in code; role-specific profile retrieval APIs are still pending.
 
 The backend keeps driver registration in `backend/apps/registrations/` and administration/operations in `backend/apps/operations/`. Driver registration must not own admin invitations, operations applications, approval decisions, or operations permissions. The operations module must not implement driver-registration business rules. Both use the shared identity account model.
 
@@ -33,12 +33,12 @@ The backend keeps driver registration in `backend/apps/registrations/` and admin
 Authentication establishes **who the actor is**. Authorization determines **what that actor may do**.
 
 - Authentication and account identity must support drivers, clients, Admins, and Operators.
-- Roles and permissions are cross-cutting concerns. Shared permission primitives may live in `backend/common/permissions/`.
+- Roles and permissions are cross-cutting concerns. The shared policy currently lives in `backend/common/permissions.py`, with `RoleProtectedAPIView` in `backend/common/views.py` for endpoints requiring an active driver, client, or operations profile.
 - Admin and operations functionality coordinates authorized oversight across modules, but does not replace module-owned business rules.
 - Each module must enforce authorization for its own operations and sensitive data, using shared permission rules where appropriate.
 - Operational access is granted only after an invitation-based application is reviewed and approved. A valid invitation code permits an application; it does not grant permissions.
 - The system superuser is the initial authority for approving operations applications. Admin and Operator are distinct roles; Operators do not receive superuser privileges.
-- Driver and client access rules must also be defined before their features are implemented.
+- The shared profile access policy is implemented: each protected view declares its required profile type and the common permission checks for an active matching profile. Driver-specific protected endpoints will use this foundation before client and operations profile APIs are added.
 - Sensitive identity, licence, accident, and verification evidence must have explicit access rules and appropriate retention safeguards.
 
 ## Verification and evidence rules
