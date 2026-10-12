@@ -25,6 +25,8 @@ The following are initial domain boundaries. They can become individual apps und
 
 These are logical boundaries, not a requirement to create every module before implementation begins.
 
+The backend keeps driver registration in `backend/apps/registrations/` and administration/operations in `backend/apps/operations/`. Driver registration must not own admin invitations, operations applications, approval decisions, or operations permissions. The operations module must not implement driver-registration business rules. Both use the shared identity account model.
+
 ## Identity, roles, and permissions
 
 Authentication establishes **who the actor is**. Authorization determines **what that actor may do**.
@@ -33,7 +35,9 @@ Authentication establishes **who the actor is**. Authorization determines **what
 - Roles and permissions are cross-cutting concerns. Shared permission primitives may live in `backend/common/permissions/`.
 - Admin and operations functionality coordinates authorized oversight across modules, but does not replace module-owned business rules.
 - Each module must enforce authorization for its own operations and sensitive data, using shared permission rules where appropriate.
-- Initial operational roles include Operations Admin and Verification Officer. Driver and client access rules must also be defined before their features are implemented.
+- Operational access is granted only after an invitation-based application is reviewed and approved. A valid invitation code permits an application; it does not grant permissions.
+- The system superuser is the initial authority for approving operations applications. Admin and Operator are distinct roles; Operators do not receive superuser privileges.
+- Driver and client access rules must also be defined before their features are implemented.
 - Sensitive identity, licence, accident, and verification evidence must have explicit access rules and appropriate retention safeguards.
 
 ## Verification and evidence rules
