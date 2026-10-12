@@ -1,6 +1,8 @@
 from django.db import transaction
 from django.utils import timezone
 
+from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
 from apps.verification.models import DriverVerification, DriverVerificationCheck
 
 
@@ -17,7 +19,7 @@ def review_driver_check(
     method=DriverVerificationCheck.Method.MANUAL,
     result_code="",
 ):
-    """Record a minimal outcome only; never pass through or persist source payloads."""
+    """Record a minimal outcome and notify the driver if their overall status changes."""
     allowed_statuses = {
         DriverVerificationCheck.Status.PASSED,
         DriverVerificationCheck.Status.FAILED,
@@ -56,7 +58,7 @@ def review_driver_check(
 
     check = (
         DriverVerificationCheck.objects.select_for_update()
-        .select_related("verification")
+        .select_related("verification", "verification__profile", "verification__profile__registration")
         .filter(pk=check_id)
         .first()
     )
@@ -65,6 +67,8 @@ def review_driver_check(
     if result_code and result_code not in compatible_results[check.check_type]:
         raise VerificationReviewError("Result code does not match this check type.")
 
+    verification = DriverVerification.objects.select_for_update().get(pk=check.verification_id)
+    previous_overall_status = verification.status
     now = timezone.now()
     check.status = status
     check.method = method
@@ -78,7 +82,6 @@ def review_driver_check(
         ]
     )
 
-    verification = DriverVerification.objects.select_for_update().get(pk=check.verification_id)
     check_statuses = list(verification.checks.values_list("status", flat=True))
     required_count = len(DriverVerificationCheck.CheckType.choices)
     if any(value == DriverVerificationCheck.Status.FAILED for value in check_statuses):
@@ -98,4 +101,24 @@ def review_driver_check(
     verification.save(
         update_fields=["status", "decided_by", "decided_at", "updated_at"]
     )
+
+    if verification.status != previous_overall_status:
+        driver_account = verification.profile.registration.account
+        status_titles = {
+            DriverVerification.Status.IN_REVIEW: ("Verification in review", "Your driver verification is being reviewed."),
+            DriverVerification.Status.APPROVED: ("Driver verification approved", "Your driver verification is approved."),
+            DriverVerification.Status.REJECTED: ("Driver verification not approved", "Your driver verification was not approved. Please review your verification workspace for the current status."),
+        }
+        title, message = status_titles.get(
+            verification.status,
+            ("Verification status updated", "Your driver verification status has changed."),
+        )
+        create_notification(
+            recipient=driver_account,
+            recipient_role=Notification.RecipientRole.DRIVER,
+            event_type=f"driver.verification.{verification.status}",
+            title=title,
+            message=message,
+        )
+
     return check
