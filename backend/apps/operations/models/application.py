@@ -1,4 +1,6 @@
-import uuid\n\nfrom django.conf import settings
+import uuid
+
+from django.conf import settings
 from django.db import models
 
 
