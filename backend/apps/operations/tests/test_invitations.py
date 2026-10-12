@@ -10,7 +10,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.identity.models import Account
-from apps.operations.models import OperationsInvitation
+from apps.operations.models import OperationsApplication, OperationsInvitation
 from apps.operations.services.invitations import issue_operations_invitation
 
 
@@ -136,3 +136,67 @@ class OperationsInvitationAPITests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+    def test_valid_invitation_can_be_used_once_to_submit_pending_application(self):
+        invitation = issue_operations_invitation(
+            inviter=self.superuser,
+            email="applicant@example.com",
+            role=OperationsInvitation.Role.ADMIN,
+        )
+        raw_code = mail.outbox[-1].body.split("Invitation code: ", 1)[1].splitlines()[0]
+        account = Account.objects.create_user(
+            email="applicant@example.com",
+            password="StrongPassword123!",
+        )
+        self.client.force_authenticate(user=account)
+        url = reverse("operations:application-create")
+        payload = {
+            "invitation_id": str(invitation.id),
+            "code": raw_code,
+            "full_name": "Asha Mushi",
+        }
+
+        response = self.client.post(url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        application = OperationsApplication.objects.get()
+        self.assertEqual(application.account, account)
+        self.assertEqual(application.invitation, invitation)
+        self.assertEqual(application.status, OperationsApplication.Status.PENDING)
+        self.assertEqual(response.data["role_applied_for"], OperationsInvitation.Role.ADMIN)
+        self.assertFalse(account.is_superuser)
+        account.refresh_from_db()
+        self.assertTrue(account.email_verified)
+        invitation.refresh_from_db()
+        self.assertIsNotNone(invitation.used_at)
+
+        reuse_response = self.client.post(url, payload, format="json")
+        self.assertEqual(reuse_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(OperationsApplication.objects.count(), 1)
+
+    def test_invitation_cannot_be_used_by_an_account_with_a_different_email(self):
+        invitation = issue_operations_invitation(
+            inviter=self.superuser,
+            email="invited@example.com",
+            role=OperationsInvitation.Role.OPERATOR,
+        )
+        raw_code = mail.outbox[-1].body.split("Invitation code: ", 1)[1].splitlines()[0]
+        other_account = Account.objects.create_user(
+            email="other@example.com",
+            password="StrongPassword123!",
+        )
+        self.client.force_authenticate(user=other_account)
+
+        response = self.client.post(
+            reverse("operations:application-create"),
+            {
+                "invitation_id": str(invitation.id),
+                "code": raw_code,
+                "full_name": "Other Person",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(OperationsApplication.objects.count(), 0)
