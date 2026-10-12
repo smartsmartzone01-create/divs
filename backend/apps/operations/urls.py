@@ -1,5 +1,6 @@
 from django.urls import path
 
+from apps.operations.views.access import OperationsMyAccessView
 from apps.operations.views.applications import OperationsApplicationCreateView
 from apps.operations.views.invitations import (
     OperationsInvitationCreateView,
@@ -14,6 +15,7 @@ from apps.operations.views.reviews import (
 app_name = "operations"
 
 urlpatterns = [
+    path("me/", OperationsMyAccessView.as_view(), name="my-access"),
     path("invitations/", OperationsInvitationCreateView.as_view(), name="invitation-create"),
     path("invitations/validate/", OperationsInvitationValidateView.as_view(), name="invitation-validate"),
     path("invitations/<uuid:invitation_id>/revoke/", OperationsInvitationRevokeView.as_view(), name="invitation-revoke"),
