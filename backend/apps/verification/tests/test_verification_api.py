@@ -26,11 +26,7 @@ class DriverVerificationAPITests(APITestCase):
             driving_experience="1_to_3_years",
         )
         self.profile = DriverProfile.objects.create(registration=registration)
-        self.verification = DriverVerification.objects.create(profile=self.profile)
-        for check_type, _label in DriverVerificationCheck.CheckType.choices:
-            DriverVerificationCheck.objects.create(
-                verification=self.verification, check_type=check_type
-            )
+        self.verification = self.profile.verification
         self.url = reverse("verification:driver-me")
 
     def test_driver_can_read_only_their_check_progress(self):
@@ -86,13 +82,8 @@ class VerificationReviewServiceTests(APITestCase):
             driving_experience="4_to_7_years",
         )
         profile = DriverProfile.objects.create(registration=registration)
-        self.verification = DriverVerification.objects.create(profile=profile)
-        self.checks = [
-            DriverVerificationCheck.objects.create(
-                verification=self.verification, check_type=check_type
-            )
-            for check_type, _label in DriverVerificationCheck.CheckType.choices
-        ]
+        self.verification = profile.verification
+        self.checks = list(self.verification.checks.all())
 
     def test_operations_user_can_record_minimal_manual_check_outcome(self):
         self.client.force_authenticate(user=self.reviewer)
@@ -112,12 +103,18 @@ class VerificationReviewServiceTests(APITestCase):
     def test_all_four_passed_checks_approve_verification(self):
         from apps.verification.services import review_driver_check
 
+        result_codes = {
+            DriverVerificationCheck.CheckType.NATIONAL_IDENTITY: DriverVerificationCheck.ResultCode.MATCH,
+            DriverVerificationCheck.CheckType.DRIVING_LICENCE: DriverVerificationCheck.ResultCode.VALID,
+            DriverVerificationCheck.CheckType.TRAFFIC_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
+            DriverVerificationCheck.CheckType.ACCIDENT_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
+        }
         for check in self.checks:
             review_driver_check(
                 check_id=check.id,
                 reviewer=self.reviewer,
                 status=DriverVerificationCheck.Status.PASSED,
-                result_code=DriverVerificationCheck.ResultCode.CLEAR,
+                result_code=result_codes[check.check_type],
             )
         self.verification.refresh_from_db()
         self.assertEqual(self.verification.status, DriverVerification.Status.APPROVED)
