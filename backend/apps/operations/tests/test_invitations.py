@@ -36,11 +36,8 @@ class OperationsInvitationAPITests(APITestCase):
         self.assertEqual(invitation.email, "new.operator@example.com")
         self.assertEqual(invitation.role, OperationsInvitation.Role.OPERATOR)
         self.assertEqual(invitation.invited_by, self.superuser)
-        self.assertAlmostEqual(
-            invitation.expires_at,
-            timezone.now() + timedelta(hours=24),
-            delta=timedelta(seconds=10),
-        )
+        expected_expiry = timezone.now() + timedelta(hours=24)
+        self.assertLess(abs(invitation.expires_at - expected_expiry), timedelta(seconds=10))
         self.assertTrue(check_password(
             mail.outbox[0].body.split("Invitation code: ", 1)[1].splitlines()[0],
             invitation.code_hash,
