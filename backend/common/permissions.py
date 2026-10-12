@@ -8,6 +8,8 @@ policy instead of creating separate access rules for each profile.
 
 from rest_framework.permissions import BasePermission
 
+from apps.operations.models import OperationsMembership
+
 
 PROFILE_MODELS = {
     "driver": ("apps.profiles.models", "DriverProfile"),
@@ -19,10 +21,9 @@ PROFILE_MODELS = {
 class HasRequiredProfile(BasePermission):
     """Allow access only when the account has the required active role profile.
 
-    Set ``required_profile_type`` on a view to ``driver``, ``client``, or
-    ``operations``. A missing or unsupported declaration fails closed.
-    System superusers may enter operations-only views, but this does not grant
-    driver or client access automatically.
+    The initial system superuser may enter operations-only views without an
+    operations profile. Approved Admins are also Django superusers, but their
+    operations profile must remain active like any other member's profile.
     """
 
     message = "Your account does not have an active profile for this area."
@@ -37,7 +38,11 @@ class HasRequiredProfile(BasePermission):
             return False
 
         if profile_type == "operations" and user.is_superuser:
-            return True
+            # Only the initial system superuser has no approved membership.
+            # An approved Admin has a membership and must pass the normal
+            # active-profile check so suspension can revoke access.
+            if not OperationsMembership.objects.filter(account=user).exists():
+                return True
 
         module_path, model_name = PROFILE_MODELS[profile_type]
         module = __import__(module_path, fromlist=[model_name])
