@@ -5,6 +5,29 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 
+def create_initial_driver_verifications(apps, schema_editor):
+    DriverProfile = apps.get_model("profiles", "DriverProfile")
+    DriverVerification = apps.get_model("verification", "DriverVerification")
+    DriverVerificationCheck = apps.get_model("verification", "DriverVerificationCheck")
+    check_types = [
+        "national_identity",
+        "driving_licence",
+        "traffic_records",
+        "accident_records",
+    ]
+    for profile in DriverProfile.objects.all().iterator():
+        verification, _ = DriverVerification.objects.get_or_create(
+            profile_id=profile.pk,
+            defaults={"status": "pending"},
+        )
+        for check_type in check_types:
+            DriverVerificationCheck.objects.get_or_create(
+                verification_id=verification.pk,
+                check_type=check_type,
+                defaults={"status": "pending"},
+            )
+
+
 class Migration(migrations.Migration):
     initial = True
 
@@ -53,4 +76,5 @@ class Migration(migrations.Migration):
             model_name="driververificationcheck",
             index=models.Index(fields=["status", "check_type"], name="drv_vcheck_status_type_idx"),
         ),
+        migrations.RunPython(create_initial_driver_verifications, migrations.RunPython.noop),
     ]
