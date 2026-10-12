@@ -1,1 +1,0 @@
-Client registration is planned for the development branch.
