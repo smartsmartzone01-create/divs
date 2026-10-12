@@ -31,7 +31,7 @@ The backend keeps driver registration in `backend/apps/registrations/` and admin
 
 Authentication establishes **who the actor is**. Authorization determines **what that actor may do**.
 
-- Authentication and account identity must support drivers, clients, administrators, and verification officers.
+- Authentication and account identity must support drivers, clients, Admins, and Operators.
 - Roles and permissions are cross-cutting concerns. Shared permission primitives may live in `backend/common/permissions/`.
 - Admin and operations functionality coordinates authorized oversight across modules, but does not replace module-owned business rules.
 - Each module must enforce authorization for its own operations and sensitive data, using shared permission rules where appropriate.
