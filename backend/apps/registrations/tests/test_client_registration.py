@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.identity.models import Account
+from apps.profiles.models import ClientProfile
 from apps.registrations.models import ClientRegistration, DriverRegistration
 
 
@@ -29,6 +30,8 @@ class ClientRegistrationAPITests(APITestCase):
         response = self.client.post(self.url, self.valid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(ClientRegistration.objects.count(), 1)
+        profile = ClientProfile.objects.get(registration__account=self.account)
+        self.assertEqual(profile.account, self.account)
         self.assertEqual(response.data["client_type"], "individual")
         self.assertEqual(response.data["name"], "Neema Mushi")
         self.assertEqual(response.data["alternative_contacts"], self.valid_payload["alternative_contacts"])
@@ -51,6 +54,7 @@ class ClientRegistrationAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("region", response.data)
         self.assertEqual(ClientRegistration.objects.count(), 0)
+        self.assertEqual(ClientProfile.objects.count(), 0)
 
     def test_invalid_client_type_is_rejected(self):
         payload = {**self.valid_payload, "client_type": "government"}
