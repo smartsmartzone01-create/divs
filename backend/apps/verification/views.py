@@ -37,6 +37,8 @@ class OperationsDriverCheckReviewView(RoleProtectedAPIView):
     """Allow authorized operations members to record a minimal manual check outcome."""
 
     required_profile_type = "operations"
+    required_operations_capability = "review_driver_verification"
+    permission_classes = [IsAuthenticated, HasRequiredProfile, HasOperationsCapability]
 
     def post(self, request, check_id):
         serializer = ManualCheckReviewSerializer(data=request.data)
