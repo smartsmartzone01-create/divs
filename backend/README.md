@@ -51,7 +51,7 @@ Registration and profile existence do not verify a driver or grant work eligibil
 
 The initial check types are national identity, driving licence, traffic/police records, and accident records. A new driver profile automatically receives a verification record and one pending row for each check. Overall verification becomes approved only when all four checks pass; a failed check rejects it. This is a verification gate, not the full discovery implementation.
 
-**Data minimization rule:** verification stores only check type, status, a limited result code, method, timestamps, reviewer, and a short operational note. It has no fields for national ID numbers, licence numbers, dates of birth, government response payloads, police narratives, or accident details. Do not put retrieved government data into review notes. Government API adapters are not connected yet; manual review is the current workflow, and a future adapter must translate the source response into an allowed result code and discard the raw response.
+**Data minimization rule:** verification stores only check type, status, a limited result code, method, timestamps, and reviewer. It has no fields for national ID numbers, licence numbers, dates of birth, free-text notes, government response payloads, police narratives, or accident details. Government API adapters are not connected yet; manual review is the current workflow, and a future adapter must translate the source response into an allowed result code and discard the raw response.
 
 ## Client registration and profile foundation
 
