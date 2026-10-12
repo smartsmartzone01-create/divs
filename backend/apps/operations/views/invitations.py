@@ -1,4 +1,5 @@
 from django.contrib.auth.hashers import check_password
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -64,12 +65,12 @@ class OperationsInvitationValidateView(APIView):
             email=email,
             used_at__isnull=True,
             revoked_at__isnull=True,
-            expires_at__gt=timezone.now(),
+            (Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())),
         ).order_by("-created_at").first()
 
         if invitation is None or not check_password(code, invitation.code_hash):
             return Response(
-                {"detail": "The invitation code is invalid, expired, revoked, or already used."},
+                {"detail": "The invitation code is invalid, revoked, or already used."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
