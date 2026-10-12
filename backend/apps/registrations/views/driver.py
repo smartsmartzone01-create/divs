@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from apps.registrations.models import DriverRegistration
 from apps.registrations.serializers import DriverRegistrationSerializer
+from apps.profiles.models import DriverProfile
 
 
 class DriverRegistrationView(APIView):
@@ -28,6 +29,7 @@ class DriverRegistrationView(APIView):
         try:
             with transaction.atomic():
                 registration = serializer.save(account=request.user)
+                DriverProfile.objects.create(registration=registration)
         except IntegrityError:
             return Response(
                 {"detail": "A driver registration already exists for this account."},
