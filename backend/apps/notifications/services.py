@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from apps.notifications.models import Notification
+from apps.operations.models import OperationsApplication, OperationsMembership
 from apps.profiles.models import ClientProfile, DriverProfile, OperationsProfile
 
 
@@ -13,22 +14,39 @@ ROLE_PROFILE_MODELS = {
 
 
 def create_notification(*, recipient, recipient_role, event_type, title, message):
-    """Create an in-app notification only for an account with that active role.
+    """Create a notification for one account and one workspace.
 
-    Notifications are targeted to an account UUID and a single workspace role.
-    Do not put government-source records, identity numbers, credentials, or other
-    sensitive payloads into notification titles/messages.
+    Operations applicants may receive only their own application outcome before
+    they have an active operations profile. The initial system superuser may
+    receive operations alerts without an OperationsMembership.
+    Never include government-source records or other sensitive payloads.
     """
     if recipient_role not in ROLE_PROFILE_MODELS:
         raise ValidationError({"recipient_role": "Unsupported notification workspace."})
 
     profile_model, account_lookup = ROLE_PROFILE_MODELS[recipient_role]
-    if not profile_model.objects.filter(
+    has_active_profile = profile_model.objects.filter(
         **{account_lookup: recipient},
         status="active",
-    ).exists():
+    ).exists()
+
+    is_initial_system_superuser = (
+        recipient_role == Notification.RecipientRole.OPERATIONS
+        and recipient.is_superuser
+        and not OperationsMembership.objects.filter(account=recipient).exists()
+    )
+    is_application_outcome = (
+        recipient_role == Notification.RecipientRole.OPERATIONS
+        and event_type in {
+            "operations.application.submitted",
+            "operations.application.approved",
+            "operations.application.rejected",
+        }
+        and OperationsApplication.objects.filter(account=recipient).exists()
+    )
+    if not (has_active_profile or is_initial_system_superuser or is_application_outcome):
         raise ValidationError(
-            {"recipient_role": "The recipient does not have an active profile for this workspace."}
+            {"recipient_role": "The recipient does not have access to this notification workspace."}
         )
 
     return Notification.objects.create(
@@ -38,6 +56,21 @@ def create_notification(*, recipient, recipient_role, event_type, title, message
         title=title,
         message=message,
     )
+
+
+def notify_active_operations(*, event_type, title, message):
+    """Notify each active operations account individually."""
+    profiles = OperationsProfile.objects.filter(status="active").select_related("membership__account")
+    return [
+        create_notification(
+            recipient=profile.membership.account,
+            recipient_role=Notification.RecipientRole.OPERATIONS,
+            event_type=event_type,
+            title=title,
+            message=message,
+        )
+        for profile in profiles
+    ]
 
 
 def mark_notification_read(*, notification, recipient):
