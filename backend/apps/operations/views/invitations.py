@@ -104,6 +104,17 @@ class OperationsInvitationRevokeView(APIView):
         if invitation.revoked_at is None:
             invitation.revoked_at = timezone.now()
             invitation.save(update_fields=["revoked_at"])
+            from django.db import transaction
+            from apps.notifications.services import notify_operations_reviewers
+
+            transaction.on_commit(
+                lambda: notify_operations_reviewers(
+                    event_type="operations.invitation.revoked",
+                    title="Operations invitation revoked",
+                    message=f"An unused invitation for the {invitation.get_role_display()} role was revoked.",
+                ),
+                robust=True,
+            )
 
         return Response(
             {"id": str(invitation.id), "revoked": True},
