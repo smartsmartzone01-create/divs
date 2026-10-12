@@ -27,6 +27,21 @@ ROLE_CAPABILITIES = {
 }
 
 
+def is_initial_system_superuser(user):
+    """Only the earliest superuser without an operations membership is system root."""
+    if not user or not user.is_authenticated or not user.is_superuser:
+        return False
+    first_root = (
+        user.__class__.objects.filter(
+            is_superuser=True,
+            operations_membership__isnull=True,
+        )
+        .order_by("date_joined")
+        .first()
+    )
+    return first_root is not None and first_root.pk == user.pk
+
+
 def capabilities_for(user):
     """Return capabilities only for the initial superuser or an active member."""
     if not user or not user.is_authenticated:
@@ -41,9 +56,7 @@ def capabilities_for(user):
             return frozenset()
         return ROLE_CAPABILITIES.get(membership.role, frozenset())
 
-    # The initial system superuser is the only privileged account without a
-    # membership. Approved Admins have memberships and follow profile lifecycle.
-    if user.is_superuser:
+    if is_initial_system_superuser(user):
         return ROLE_CAPABILITIES[OperationsMembership.Role.ADMIN]
 
     return frozenset()
@@ -86,4 +99,4 @@ class SystemSuperuserOnly(BasePermission):
             return False
         # Approved Admins are marked is_superuser for broad privileges, but
         # must not approve further operations applications themselves.
-        return not OperationsMembership.objects.filter(account=user).exists()
+        return is_initial_system_superuser(user)
