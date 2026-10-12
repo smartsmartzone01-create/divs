@@ -21,11 +21,11 @@ def submit_operations_application(*, account, invitation_id, code, full_name):
     invitation = (
         OperationsInvitation.objects.select_for_update()
         .filter(
+            Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()),
             pk=invitation_id,
             email=email,
             used_at__isnull=True,
             revoked_at__isnull=True,
-            (Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())),
         )
         .first()
     )
