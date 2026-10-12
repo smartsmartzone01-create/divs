@@ -96,7 +96,7 @@ class DriverProfileAPITests(APITestCase):
             region="Arusha",
             district="Arusha City",
             current_residential_address="Sakina",
-            driving_experience="four_to_seven_years",
+            driving_experience="4_to_7_years",
         )
         DriverProfile.objects.create(registration=other_registration)
 
