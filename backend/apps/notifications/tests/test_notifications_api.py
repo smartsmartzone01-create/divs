@@ -99,6 +99,25 @@ class NotificationAPITests(APITestCase):
         note.refresh_from_db()
         self.assertIsNone(note.read_at)
 
+    def test_recipient_can_mark_their_own_workspace_notification_read(self):
+        note = create_notification(
+            recipient=self.driver,
+            recipient_role=Notification.RecipientRole.DRIVER,
+            event_type="driver.requested",
+            title="New driver request",
+            message="A client has sent you a driver request.",
+        )
+        self.client.force_authenticate(user=self.driver)
+
+        response = self.client.post(
+            reverse("notifications:driver-read", kwargs={"notification_id": note.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["is_read"])
+        note.refresh_from_db()
+        self.assertIsNotNone(note.read_at)
+
     def test_workspace_endpoint_requires_matching_active_profile(self):
         account = Account.objects.create_user(
             email="no-profile@example.com", password="StrongPassword123!"
