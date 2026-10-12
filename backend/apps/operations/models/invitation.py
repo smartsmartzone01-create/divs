@@ -20,7 +20,7 @@ class OperationsInvitation(models.Model):
         related_name="sent_operations_invitations",
     )
     created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField()
+    expires_at = models.DateTimeField(null=True, blank=True)
     revoked_at = models.DateTimeField(null=True, blank=True)
     used_at = models.DateTimeField(null=True, blank=True)
 
@@ -40,7 +40,7 @@ class OperationsInvitation(models.Model):
         return (
             self.revoked_at is None
             and self.used_at is None
-            and now < self.expires_at
+            and (self.expires_at is None or now < self.expires_at)
         )
 
     def __str__(self):
