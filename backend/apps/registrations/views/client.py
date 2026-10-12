@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from apps.registrations.models import ClientRegistration
 from apps.registrations.serializers import ClientRegistrationSerializer
+from apps.profiles.models import ClientProfile
 
 
 class ClientRegistrationView(APIView):
@@ -32,6 +33,7 @@ class ClientRegistrationView(APIView):
         try:
             with transaction.atomic():
                 registration = serializer.save(account=request.user)
+                ClientProfile.objects.create(registration=registration)
         except IntegrityError:
             return Response(
                 {"detail": "A client registration already exists for this account."},
