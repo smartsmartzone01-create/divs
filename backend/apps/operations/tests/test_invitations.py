@@ -293,3 +293,29 @@ class OperationsInvitationAPITests(APITestCase):
 
         self.assertEqual(first.status_code, status.HTTP_200_OK)
         self.assertEqual(second.status_code, status.HTTP_409_CONFLICT)
+
+    def test_superuser_can_revoke_an_unused_invitation(self):
+        invitation = issue_operations_invitation(
+            inviter=self.superuser,
+            email="revoke@example.com",
+            role=OperationsInvitation.Role.OPERATOR,
+        )
+        self.client.force_authenticate(user=self.superuser)
+
+        response = self.client.post(
+            reverse("operations:invitation-revoke", kwargs={"invitation_id": invitation.id}),
+            {},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        invitation.refresh_from_db()
+        self.assertIsNotNone(invitation.revoked_at)
+
+        code = mail.outbox[-1].body.split("Invitation code: ", 1)[1].splitlines()[0]
+        validation = self.client.post(
+            self.validate_url,
+            {"email": invitation.email, "code": code},
+            format="json",
+        )
+        self.assertEqual(validation.status_code, status.HTTP_400_BAD_REQUEST)
