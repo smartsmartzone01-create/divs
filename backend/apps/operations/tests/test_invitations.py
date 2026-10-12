@@ -39,8 +39,7 @@ class OperationsInvitationAPITests(APITestCase):
         self.assertEqual(invitation.email, "new.operator@example.com")
         self.assertEqual(invitation.role, OperationsInvitation.Role.OPERATOR)
         self.assertEqual(invitation.invited_by, self.superuser)
-        expected_expiry = timezone.now() + timedelta(hours=24)
-        self.assertLess(abs(invitation.expires_at - expected_expiry), timedelta(seconds=10))
+        self.assertIsNone(invitation.expires_at)
         raw_code = mail.outbox[0].body.split("Invitation code: ", 1)[1].splitlines()[0]
         self.assertTrue(check_password(raw_code, invitation.code_hash))
         self.assertNotIn("code", response.data)
@@ -120,7 +119,7 @@ class OperationsInvitationAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_expired_invitation_code_is_rejected(self):
+    def test_explicitly_expired_legacy_invitation_code_is_rejected(self):
         invitation = issue_operations_invitation(
             inviter=self.superuser,
             email="new.operator@example.com",
