@@ -32,4 +32,4 @@ class ClientProfile(models.Model):
         return self.registration.account
 
     def __str__(self):
-        return f"Client profile for {self.account_id}"
+        return f"Client profile for {self.account.pk}"
