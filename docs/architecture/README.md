@@ -58,16 +58,21 @@ Authentication establishes **who the actor is**. Authorization determines **what
 
 ## Suggested implementation order
 
-1. Identity and authentication.
-2. Shared authorization foundations and role definitions.
-3. Driver profiles and employment history.
-4. Verification workflows and evidence handling.
-5. Performance events and scoring.
-6. Driver discovery and matching.
-7. Client hire/contact requests.
-8. Expanded admin operations, reporting, and audit tools.
+Follow the phases in order and finish the registration foundation before building the integrated system:
 
-Admin permissions, audit requirements, and privacy boundaries should be considered from the start, even though the complete admin dashboard is implemented later.
+1. Shared identity and authentication.
+2. Driver registration.
+3. Client registration.
+4. Invitation-based operations registration and application acceptance.
+5. Integrated system foundations: driver profile, client profile, and operations/admin profile.
+6. Operations roles and permissions, implemented alongside the admin profile and protected capabilities.
+7. Driver verification and evidence handling, including future government API integrations.
+8. Public driver discovery, filtering, and search.
+9. Performance events and scoring.
+10. Client-driver engagement records, contact protection, payment references, and audit history.
+11. Frontend integration as one simple, coherent experience rather than requiring users to think in terms of separate internal modules.
+
+Client registration does not require client verification. Driver identity and credential verification applies to drivers. Invitations and application acceptance are part of operations registration; the broader role-and-permission system is built later with the integrated operational capabilities.
 
 ## Development rules
 
