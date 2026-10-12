@@ -24,7 +24,7 @@ The following are initial domain boundaries. They can become individual apps und
 - **Client requests:** requests to contact or hire drivers and their status.
 - **Administration and operations:** operational oversight, user and module administration, verification queues, reporting, and audit review.
 
-These are logical boundaries, not a requirement to create every module before implementation begins. The initial role profile models now live in `backend/apps/profiles/`; automatic profile creation, profile APIs, and access enforcement are still pending.
+These are logical boundaries, not a requirement to create every module before implementation begins. The initial role profile models now live in `backend/apps/profiles/`. Driver/client profiles are created with successful registration, and operations profiles are created only after approval grants an operations membership. Profile APIs and access enforcement are still pending.
 
 The backend keeps driver registration in `backend/apps/registrations/` and administration/operations in `backend/apps/operations/`. Driver registration must not own admin invitations, operations applications, approval decisions, or operations permissions. The operations module must not implement driver-registration business rules. Both use the shared identity account model.
 
