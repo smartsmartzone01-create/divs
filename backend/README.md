@@ -18,7 +18,7 @@ Django backend with shared identity/authentication and separate domain modules. 
    python manage.py makemigrations --check --dry-run
    python manage.py migrate
    python manage.py check
-   python manage.py test apps.identity apps.registrations apps.operations apps.profiles common.tests
+   python manage.py test apps.identity apps.registrations apps.operations apps.profiles apps.verification common.tests
    ```
 
 These commands have not been run against the current online changes yet.
@@ -35,50 +35,48 @@ SQLite and local-memory caching are used by default for local development. Confi
 - `GET /api/v1/auth/sessions/`, `DELETE /api/v1/auth/sessions/<session_id>/`, and `POST /api/v1/auth/logout/` — manage tracked sessions.
 - `POST /api/v1/auth/providers/google/sign-in/` — validate a Google ID token and sign in only when that Google subject is already linked to a DIVS account.
 
-## Driver registration routes
+## Driver registration and profile
 
 - `POST /api/v1/registrations/driver/` — create the authenticated account's driver registration.
 - `GET /api/v1/registrations/driver/` — retrieve that account's driver registration.
 - `PATCH /api/v1/registrations/driver/` — update that account's driver registration.
+- `GET /api/v1/profiles/driver/` — retrieve the driver's own profile metadata and nested registration details.
 
-Driver registration is separate from the future driver profile and verification records. Saving a registration does not verify a driver or grant work eligibility.
+Registration and profile existence do not verify a driver or grant work eligibility. The profile endpoint is read-only and uses the shared role-protected API base.
 
-## Driver profile route
+## Driver verification
 
-- `GET /api/v1/profiles/driver/` — return the signed-in driver's own profile ID, lifecycle status, timestamps, and nested registration details, including account-linked contact information.
+- `GET /api/v1/verification/driver/me/` — return the signed-in driver's own overall verification state, four check states, and current discoverability gate.
+- `POST /api/v1/verification/operations/checks/<check_id>/review/` — allow an active operations profile to record a manual outcome for one check.
 
-The endpoint is read-only and uses the shared role-protected API base. Accounts without an active driver profile, including suspended profiles, are denied. The response does not claim that a driver is verified or eligible for work.
+The initial check types are national identity, driving licence, traffic/police records, and accident records. A new driver profile automatically receives a verification record and one pending row for each check. Overall verification becomes approved only when all four checks pass; a failed check rejects it. This is a verification gate, not the full discovery implementation.
 
-## Client registration routes
+**Data minimization rule:** verification stores only check type, status, a limited result code, method, timestamps, reviewer, and a short operational note. It has no fields for national ID numbers, licence numbers, dates of birth, government response payloads, police narratives, or accident details. Do not put retrieved government data into review notes. Government API adapters are not connected yet; manual review is the current workflow, and a future adapter must translate the source response into an allowed result code and discard the raw response.
+
+## Client registration and profile foundation
 
 - `POST /api/v1/registrations/client/` — create the authenticated account's client registration as an individual or company.
 - `GET /api/v1/registrations/client/` — retrieve that account's client registration.
 - `PATCH /api/v1/registrations/client/` — update that account's client registration.
 
-Client registration records the client type, person/company name, primary contact, email, country, region, and optional alternative contacts. Client verification is not part of this registration flow. The same shared account can register as both a driver and a client; each role has its own registration record.
+Client registration records client type, name, primary contact, email, country, region, and optional alternative contacts. Client verification is not part of this flow. The same account can have driver and client profiles.
 
-## Role profile foundation
+## Shared profile access
 
-- `apps.profiles.DriverProfile` links one-to-one to a driver registration.
-- `apps.profiles.ClientProfile` links one-to-one to a client registration.
-- `apps.profiles.OperationsProfile` links one-to-one to an approved operations membership.
-- Each profile has its own UUID, lifecycle status (`active`, `suspended`, or `closed`), and timestamps. The shared account is resolved through its linked registration or membership, avoiding a second account foreign key that could disagree.
-- Profile status is not verification status or hiring eligibility. Those rules will be handled separately.
-- Profile creation is automated on successful driver/client registration and successful operations approval.
-- Shared authorization lives in `common/permissions.py` (`HasRequiredProfile`) and `common/views.py` (`RoleProtectedAPIView`). A protected view declares `required_profile_type` as `driver`, `client`, or `operations`; access is granted only when the authenticated account has an active matching profile. The system superuser can access the operations area but does not automatically gain driver or client profile access.
-- Registration endpoints remain outside this protected base so a person can register before they have a profile. The policy foundation is implemented and has tests. `GET /api/v1/profiles/driver/` returns the authenticated driver's profile metadata and nested registration information. The endpoint uses the shared active-driver-profile permission and returns no verification or work-eligibility claims yet.
+- `apps.profiles.DriverProfile`, `ClientProfile`, and `OperationsProfile` each have a UUID, lifecycle status (`active`, `suspended`, or `closed`), and timestamps.
+- Shared authorization lives in `common/permissions.py` and `common/views.py`. Protected endpoints declare a required profile type; registration endpoints remain accessible before role profiles exist.
+- Profile lifecycle status is separate from driver verification and future work eligibility. The driver discovery endpoint will later enforce verification and other visibility rules.
 
 ## Operations access, invitation and application routes
 
-- `GET /api/v1/operations/me/` — return the signed-in approved operations role and its explicit capability list. This is a policy overview; it does not imply all listed driver workflows have been implemented.
+- `GET /api/v1/operations/me/` — return the signed-in approved operations role and its explicit capability list.
 - `POST /api/v1/operations/invitations/` — system superuser or approved admin sends an invitation to a specific email for the Admin or Operator role.
-- `POST /api/v1/operations/invitations/validate/` — recipient validates the code against the invited email before proceeding.
+- `POST /api/v1/operations/invitations/validate/` — recipient validates the code against the invited email.
 - `POST /api/v1/operations/invitations/<invitation_id>/revoke/` — revoke an unused invitation.
-- `POST /api/v1/operations/applications/` — authenticated account submits a pending application using the invitation code. The account email must match the invited email.
-- `GET /api/v1/operations/applications/pending/` — list pending applications for the system superuser.
-- `POST /api/v1/operations/applications/<application_id>/review/` — system superuser approves or rejects an application.
+- `POST /api/v1/operations/applications/` — submit an application using an invitation code.
+- `GET /api/v1/operations/applications/pending/` and `POST /api/v1/operations/applications/<application_id>/review/` — superuser reviews pending applications.
 
-Invitation codes are stored as hashes, expire after 24 hours, are tied to the invited email, and are consumed when the application is submitted. A valid code permits an application only; it does not itself grant a role. Approval is a separate step. An approved Admin is activated as a Django superuser, while an approved Operator receives an operations membership without superuser privileges. The current capability policy lets Operators access the operations workspace and reserves invitation management and operations-application review for the Admin/system-superuser path. Driver registration, verification review, and performance capabilities are defined for future endpoints but do not become usable until those workflows enforce the policy.
+Invitation codes are hashed, tied to the invited email, and consumed when an application is submitted. The current implementation expires invitations after 24 hours. Approval is a separate step; approved Admins are activated as Django superusers, while Operators receive operations membership without superuser privileges.
 
 ## Security behavior and current limits
 
@@ -88,6 +86,4 @@ Invitation codes are stored as hashes, expire after 24 hours, are tied to the in
 - Verification sends are limited per destination and have a resend cooldown. Invitation-code validation is also rate-limited.
 - Tracked sessions last as long as the refresh-token lifetime (currently seven days), and revoking a session invalidates its access and refresh use.
 - Google ID tokens are verified server-side against the configured client ID. Matching email addresses alone never auto-link a Google identity to an existing account.
-- Email delivery requires valid SMTP settings. SMS/OTP delivery is not operational until an SMS provider is selected and integrated.
-- Google sign-in can authenticate linked identities, but the separate registration and authenticated account-linking flows have not yet been built.
-- The initial DriverProfile, ClientProfile, and OperationsProfile models now exist in `apps.profiles`. They have separate UUIDs and lifecycle status fields, and each links to its role registration or approved operations membership rather than duplicating account identity or registration details. Driver and client profiles are created in the same transaction as their registration; an operations profile is created in the same transaction as membership approval. The shared role-access policy and protected-view base are implemented. Driver profile retrieval is now available; client and operations profile APIs remain future work.
+- Email/SMS delivery and government API integration require provider configuration and are not claimed to be operational until integrated and tested.
