@@ -172,3 +172,46 @@ class ScoreCorrectionTests(TestCase):
         restriction.refresh_from_db()
         self.assertEqual(restriction.status, AvailabilityRestriction.Status.ACTIVE)
         self.assertEqual(self.score.manual_override_score, 38)
+
+    def test_correction_replays_later_event_applications(self):
+        later_event = PerformanceEvent.objects.create(
+            driver=self.driver,
+            category=PerformanceEvent.Category.NEGATIVE,
+            event_code="late_delivery",
+            severity=PerformanceEvent.Severity.MINOR,
+            status=PerformanceEvent.Status.APPROVED,
+            title="Later event remains valid",
+        )
+        later_rule = PerformanceScoringRule.objects.create(
+            name="Late delivery",
+            category=PerformanceScoringRule.Category.NEGATIVE,
+            event_code="late_delivery",
+            severity=PerformanceEvent.Severity.MINOR,
+            points_delta=-3,
+            status=PerformanceScoringRule.Status.APPROVED,
+            reason="Test fixture rule.",
+            created_by=self.admin,
+            approved_by=self.admin,
+        )
+        PerformanceEventScoreApplication.objects.create(
+            event=later_event,
+            score=self.score,
+            rule=later_rule,
+            rule_name_snapshot=later_rule.name,
+            points_delta=-3,
+            previous_score=72,
+            new_score=72,
+            reason="Later event application fixture.",
+        )
+        self.score.calculated_score = 72
+        self.score.save(update_fields=["calculated_score", "updated_at"])
+        appeal = self.make_upheld_appeal()
+
+        correct_score_after_upheld_appeal(
+            appeal_id=appeal.pk,
+            actor=self.admin,
+            reason="Remove overturned first event and replay the remaining event.",
+        )
+        self.score.refresh_from_db()
+        # Starting from 80, retain the later -3 event but exclude the overturned -5 event.
+        self.assertEqual(self.score.calculated_score, 77)
