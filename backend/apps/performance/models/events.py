@@ -37,6 +37,8 @@ class PerformanceEvent(models.Model):
         related_name="performance_events",
     )
     category = models.CharField(max_length=16, choices=Category.choices)
+    # Stable event type used to select a specific approved scoring rule.
+    event_code = models.CharField(max_length=64, blank=True, default="")
     severity = models.CharField(max_length=16, choices=Severity.choices, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.SUBMITTED)
     title = models.CharField(max_length=160)
