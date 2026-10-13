@@ -25,15 +25,21 @@ This document describes implemented behavior only. Product requirements and prop
 - History rows are intended to be append-only through normal application workflows. Service-layer protections and permissions are not implemented yet.
 - `DriverScore.calculated_score` remains the automatic calculation field.
 - `DriverScore.manual_override_score` is a separate optional display override. `effective_score` returns the override when present, otherwise the calculated score. The override does not update the automatic calculation.
-- The override state includes a reason, Admin account, and timestamp fields. Override authorization, required-reason validation, and automatic history-row creation are not implemented yet.
+- The override state includes a reason, Admin account, and timestamp fields. The `override_driver_score` service checks for an approved Operations Admin membership, validates the score and required reason, locks the score row in a transaction, updates only the override fields, and creates a `ScoreHistory` entry in the same transaction. It deliberately does not change availability restrictions. An API endpoint is not implemented yet.
 - Both calculated and override scores are constrained to 0–100 when non-null; score-history previous/new values are likewise constrained to 0–100.
+
+### Prepared tests
+
+- Model-definition tests cover the score range intent, event categories, effective-score selection, and signed history delta.
+- Service tests cover Admin override history creation, preservation of the calculated score, Operator denial, and score/reason validation.
+- These tests have been committed but have **not** been executed in a local Django environment.
 
 ## Not implemented yet
 
-- Migrations and verification of model loading. The Performance app is now listed in Django settings.
+- Runtime validation of the hand-prepared initial migration, verification of model loading, and local test execution. The Performance app is now listed in Django settings.
 - Event submission/review APIs, service-layer workflow, and role/capability enforcement.
 - Active scoring rules, event point values, score calculation, or baseline assignment.
-- Service-enforced append-only score history, manual Admin override workflows, and override audit/history creation.
+- API endpoint and request/response validation for Admin score overrides; enforcement of append-only history at the database/service boundary beyond the current write-only workflow.
 - Appeals, correction processing, critical-incident restrictions, low-score restrictions, and restoration approvals.
 - Notifications and integration with Operations, Verification, and driver availability.
 - Automatic trusted-source checks or government API adapters.
