@@ -11,7 +11,7 @@ This document describes implemented behavior only. Product requirements and prop
 ### Core records
 
 - `PerformanceEvent` records a reported event against the existing `profiles.DriverProfile`. It does not create a second driver identity.
-- Events have a category (`positive`, `negative`, `correction`), optional severity (`minor`, `serious`, `critical`), a lifecycle status, title, description, occurrence time, source type/reference, evidence references, submitter, reviewer, decision timestamp, and decision reason.
+- Events have a category (`positive`, `negative`, `correction`), a stable `event_code` used for rule matching, optional severity (`minor`, `serious`, `critical`), a lifecycle status, title, description, occurrence time, source type/reference, evidence references, submitter, reviewer, decision timestamp, and decision reason.
 - Event statuses currently defined in the model are `submitted`, `under_review`, `more_evidence`, `approved`, and `rejected`. Service-level review transitions and role checks are implemented; API endpoints are not.
 - `idempotency_key` can hold a source-provided unique key to support future duplicate protection. Full incident deduplication logic is not implemented yet.
 - `evidence_references` stores references/metadata only. Do not put raw government records, identity numbers, or sensitive source payloads in it.
@@ -58,10 +58,10 @@ This document describes implemented behavior only. Product requirements and prop
 
 ### Scoring rules and calculation
 
-- `PerformanceScoringRule` stores a named rule, event category, severity, signed point change, proposal reason, proposer, approval actor/time, and lifecycle status (`proposed`, `approved`, `retired`).
+- `PerformanceScoringRule` stores a named rule, event category, stable event code, severity, signed point change, proposal reason, proposer, approval actor/time, and lifecycle status (`proposed`, `approved`, `retired`).
 - Only an Operations Admin may propose, approve, or retire rules. A proposed rule is inactive and has no scoring effect. Point values are not pre-seeded; no point values have been approved by default.
-- Positive rules must add points; negative rules must subtract points. A rule must use a whole-number delta from -100 to +100. Only one approved rule may match a given category/severity pair at a time. Retire the existing rule before approving its replacement.
-- The calculation service matches an approved event to an approved rule by exact category and severity. Correction events are deliberately excluded from automatic scoring; they require a traceable correction workflow.
+- Positive rules must add points; negative rules must subtract points. A rule must use a whole-number delta from -100 to +100. Only one approved rule may match a given category/event-code/severity combination at a time. Retire the existing rule before approving its replacement.
+- The calculation service matches an approved event to an approved rule by exact category, event code, and severity. This allows different event types of the same severity to use different point values. Correction events are deliberately excluded from automatic scoring; they require a traceable correction workflow.
 - The driver must already have a non-null `calculated_score`. The service does not invent the 80-point baseline from missing history. Baseline assignment still depends on the agreed verification/history eligibility policy.
 - Applied changes are clamped to 0–100. The calculated score changes; a manual override remains separate and continues to determine the effective/display score when present.
 - `PerformanceEventScoreApplication` records the rule, rule-name snapshot, points, previous/new calculated score, reason, and application time. Its one-to-one event relation prevents the same event from being scored twice through this service. A corresponding `ScoreHistory` row records the transition and actor.
@@ -72,7 +72,7 @@ This document describes implemented behavior only. Product requirements and prop
 ### Prepared tests
 
 - Model-definition tests cover the score range intent, event categories, effective-score selection, and signed history delta.
-- Service tests cover Admin override history creation, preservation of the calculated score, Operator denial, and score/reason validation. Event-review tests cover Operator review, evidence requests, and prevention of silent final-decision replacement. Appeal/availability tests cover driver-only appeal submission, pending-appeal invariants, successful appeal audit, duplicate appeals, the strict below-40 threshold, Admin-only low-score restoration, critical-incident review restrictions, and release history.
+- Service tests cover Admin override history creation, preservation of the calculated score, Operator denial, and score/reason validation. Scoring-engine tests cover inactive proposals, Admin-only rule management, sign validation, one-time event application, score clamping, and withholding score changes when the calculated score is unset. Event-review tests cover Operator review, evidence requests, and prevention of silent final-decision replacement. Appeal/availability tests cover driver-only appeal submission, pending-appeal invariants, successful appeal audit, duplicate appeals, the strict below-40 threshold, Admin-only low-score restoration, critical-incident review restrictions, and release history.
 - These tests have been committed but have **not** been executed in a local Django environment.
 
 ## Not implemented yet
@@ -81,7 +81,7 @@ This document describes implemented behavior only. Product requirements and prop
 - Event submission/review APIs, event-submission validation, and endpoint-level permissions. Service-level review decisions are implemented.
 - Baseline assignment and its eligibility checks; exact point values remain unapproved and no rules are active by default.
 - API endpoint and request/response validation for Admin score overrides; enforcement of append-only history at the database/service boundary beyond the current write-only workflow.
-- Runtime validation of migrations 0001–0003 and local execution of all tests. Score correction/recalculation after a successful appeal remains unimplemented.
+- Runtime validation of migrations 0001–0004 and local execution of all tests. Score correction/recalculation after a successful appeal remains unimplemented.
 - Notifications and integration with Operations, Verification, and driver availability.
 - Automatic trusted-source checks or government API adapters.
 
