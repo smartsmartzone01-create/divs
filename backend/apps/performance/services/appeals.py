@@ -46,6 +46,12 @@ def submit_performance_appeal(*, event_id, appellant, reason, evidence_reference
     ):
         raise ValidationError({"event": "Only an event with a final decision can be appealed."})
 
+    if PerformanceAppeal.objects.filter(
+        event=event,
+        status=PerformanceAppeal.Status.PENDING,
+    ).exists():
+        raise ValidationError({"event": "This event already has a pending appeal."})
+
     appeal = PerformanceAppeal.objects.create(
         event=event,
         appellant=appellant,
