@@ -13,11 +13,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name="performanceappeal",
-            name="correction_required",
-            field=models.BooleanField(default=False),
-        ) if False else migrations.CreateModel(
+        migrations.CreateModel(
             name="PerformanceAppeal",
             fields=[
                 ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
