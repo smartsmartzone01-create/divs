@@ -34,6 +34,7 @@ def apply_approved_event_score(*, event_id, actor=None):
 
     rule = PerformanceScoringRule.objects.filter(
         category=event.category,
+        event_code=event.event_code,
         severity=event.severity,
         status=PerformanceScoringRule.Status.APPROVED,
     ).first()
