@@ -22,7 +22,7 @@ def _require_admin(actor):
         raise PermissionDenied("Only an Operations Admin may apply appeal corrections.")
 
 
-def _recalculate_without_corrected_events(score):
+def _recalculate_without_corrected_events(score, *, exclude_event_id):
     """Replay immutable event applications from their earliest recorded starting score."""
     applications = list(
         PerformanceEventScoreApplication.objects.filter(score=score).order_by("applied_at", "pk")
@@ -34,6 +34,7 @@ def _recalculate_without_corrected_events(score):
         score=score
     ).values_list("event_id", flat=True)
     corrected_event_ids = set(corrected_event_ids)
+    corrected_event_ids.add(exclude_event_id)
 
     # The earliest application preserves the calculated score immediately before
     # any scored event. Replay the immutable point deltas, excluding appealed events
@@ -96,7 +97,10 @@ def correct_score_after_upheld_appeal(*, appeal_id, actor, reason):
             # without manufacturing a score change.
             recalculated = previous
         else:
-            recalculated = _recalculate_without_corrected_events(score)
+            recalculated = _recalculate_without_corrected_events(
+                score,
+                exclude_event_id=appeal.event_id,
+            )
 
         correction = PerformanceScoreCorrection.objects.create(
             appeal=appeal,
