@@ -188,3 +188,16 @@ class AppealAndAvailabilityWorkflowTests(TestCase):
         self.assertEqual(released.status, AvailabilityRestriction.Status.RELEASED)
         self.assertEqual(AvailabilityRestrictionDecision.objects.count(), 2)
         self.assertFalse(has_active_performance_restriction(driver_id=self.driver.pk))
+
+    def test_second_pending_appeal_for_same_event_is_rejected(self):
+        submit_performance_appeal(
+            event_id=self.event.pk,
+            appellant=self.driver_account,
+            reason="First appeal.",
+        )
+        with self.assertRaises(ValidationError):
+            submit_performance_appeal(
+                event_id=self.event.pk,
+                appellant=self.driver_account,
+                reason="Duplicate pending appeal.",
+            )
