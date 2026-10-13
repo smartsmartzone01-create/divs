@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "apps.registrations",
     "apps.operations",
     "apps.profiles",
+    "apps.performance.apps.PerformanceConfig",
     "apps.verification.apps.VerificationConfig",
     "apps.notifications.apps.NotificationsConfig",
 ]
