@@ -94,4 +94,22 @@ class Migration(migrations.Migration):
                 ],
             },
         ),
+        migrations.CreateModel(
+            name="PerformanceEventReview",
+            fields=[
+                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ("decision", models.CharField(choices=[("approved", "Approved"), ("rejected", "Rejected"), ("more_evidence", "More evidence requested")], max_length=20)),
+                ("reason", models.TextField()),
+                ("requested_evidence", models.TextField(blank=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("event", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name="review_history", to="performance.performanceevent")),
+                ("reviewer", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name="performance_event_reviews", to=settings.AUTH_USER_MODEL)),
+            ],
+            options={
+                "ordering": ["-created_at"],
+                "indexes": [
+                    models.Index(fields=["event", "created_at"], name="perf_review_event_time_idx"),
+                ],
+            },
+        ),
     ]
