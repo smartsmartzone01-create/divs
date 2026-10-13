@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.db import models
 
 
@@ -21,7 +22,7 @@ class DriverScore(models.Model):
     manual_override_score = models.PositiveSmallIntegerField(null=True, blank=True)
     manual_override_reason = models.TextField(blank=True)
     manual_override_by = models.ForeignKey(
-        "identity.Account",
+        settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name="performance_score_overrides",
         null=True,
