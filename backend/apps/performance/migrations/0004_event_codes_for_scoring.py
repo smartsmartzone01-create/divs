@@ -23,9 +23,9 @@ class Migration(migrations.Migration):
             field=models.CharField(default="", max_length=64),
             preserve_default=False,
         ),
-        migrations.AlterIndexTogether(
-            name="performancescoringrule",
-            index_together=set(),
+        migrations.RemoveIndex(
+            model_name="performancescoringrule",
+            name="perf_rule_lookup_idx",
         ),
         migrations.AddIndex(
             model_name="performancescoringrule",
