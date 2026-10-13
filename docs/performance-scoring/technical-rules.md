@@ -18,6 +18,15 @@ This document describes implemented behavior only. Product requirements and prop
 - `DriverScore` is a one-to-one record for an existing driver profile. `calculated_score` may be null until baseline eligibility and history-review rules are finalized. Null means “not yet established,” not zero.
 - A database constraint restricts non-null calculated scores to 0–100.
 
+### Event review workflow
+
+- `PerformanceEventReview` stores each reviewer decision as a separate historical row with reviewer, reason, optional requested evidence, and timestamp.
+- The `review_performance_event` service permits approved Operations Admins and Operators to approve, reject, or request more evidence.
+- A reason is required for every decision; requesting more evidence also requires a description of what is needed.
+- The current event status and latest decision fields are updated transactionally with the review-history insert.
+- Approved and rejected events are final in this service; a later challenge must use the planned appeal/correction workflow rather than silently replacing the original decision.
+- Event approval currently records a decision only. It does not change a score because approved scoring rules and score calculation are not implemented.
+
 ### Score history and override state
 
 - `ScoreHistory` records a score transition with its change type, previous and new score, reason, optional event reference, optional rule reference, actor, and timestamp.
@@ -31,13 +40,13 @@ This document describes implemented behavior only. Product requirements and prop
 ### Prepared tests
 
 - Model-definition tests cover the score range intent, event categories, effective-score selection, and signed history delta.
-- Service tests cover Admin override history creation, preservation of the calculated score, Operator denial, and score/reason validation.
+- Service tests cover Admin override history creation, preservation of the calculated score, Operator denial, and score/reason validation. Event-review tests cover Operator review, evidence requests, and prevention of silent final-decision replacement.
 - These tests have been committed but have **not** been executed in a local Django environment.
 
 ## Not implemented yet
 
 - Runtime validation of the hand-prepared initial migration, verification of model loading, and local test execution. The Performance app is now listed in Django settings.
-- Event submission/review APIs, service-layer workflow, and role/capability enforcement.
+- Event submission/review APIs, event-submission validation, and endpoint-level permissions. Service-level review decisions are implemented.
 - Active scoring rules, event point values, score calculation, or baseline assignment.
 - API endpoint and request/response validation for Admin score overrides; enforcement of append-only history at the database/service boundary beyond the current write-only workflow.
 - Appeals, correction processing, critical-incident restrictions, low-score restrictions, and restoration approvals.
