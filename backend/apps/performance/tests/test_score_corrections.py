@@ -199,7 +199,7 @@ class ScoreCorrectionTests(TestCase):
             rule=later_rule,
             rule_name_snapshot=later_rule.name,
             points_delta=-3,
-            previous_score=72,
+            previous_score=75,
             new_score=72,
             reason="Later event application fixture.",
         )
