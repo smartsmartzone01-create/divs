@@ -1,6 +1,6 @@
 # DIVS Performance & Scoring — Technical Rules
 
-**Status:** Foundation in progress; scoring workflows are not active yet.  
+**Status:** Model foundation in progress; scoring workflows are not active yet.  
 **Target app:** `backend/apps/performance/`  
 **Branch:** `development`
 
@@ -18,12 +18,22 @@ This document describes implemented behavior only. Product requirements and prop
 - `DriverScore` is a one-to-one record for an existing driver profile. `calculated_score` may be null until baseline eligibility and history-review rules are finalized. Null means “not yet established,” not zero.
 - A database constraint restricts non-null calculated scores to 0–100.
 
+### Score history and override state
+
+- `ScoreHistory` records a score transition with its change type, previous and new score, reason, optional event reference, optional rule reference, actor, and timestamp.
+- `change_amount` is derived from the previous and new scores. A baseline entry has no previous score and therefore no delta.
+- History rows are intended to be append-only through normal application workflows. Service-layer protections and permissions are not implemented yet.
+- `DriverScore.calculated_score` remains the automatic calculation field.
+- `DriverScore.manual_override_score` is a separate optional display override. `effective_score` returns the override when present, otherwise the calculated score. The override does not update the automatic calculation.
+- The override state includes a reason, Admin account, and timestamp fields. Override authorization, required-reason validation, and automatic history-row creation are not implemented yet.
+- Both calculated and override scores are constrained to 0–100 when non-null; score-history previous/new values are likewise constrained to 0–100.
+
 ## Not implemented yet
 
-- App registration in Django settings, migrations, and verification of model loading.
+- Migrations and verification of model loading. The Performance app is now listed in Django settings.
 - Event submission/review APIs, service-layer workflow, and role/capability enforcement.
 - Active scoring rules, event point values, score calculation, or baseline assignment.
-- Append-only score history, manual Admin overrides, and override audit records.
+- Service-enforced append-only score history, manual Admin override workflows, and override audit/history creation.
 - Appeals, correction processing, critical-incident restrictions, low-score restrictions, and restoration approvals.
 - Notifications and integration with Operations, Verification, and driver availability.
 - Automatic trusted-source checks or government API adapters.
