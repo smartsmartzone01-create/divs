@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from apps.operations.models import OperationsMembership
 from apps.performance.models import PerformanceEvent, PerformanceEventReview
+from apps.performance.services.scoring import apply_approved_event_score
 
 
 def _require_event_reviewer(actor):
@@ -30,11 +31,7 @@ def review_performance_event(
     reason,
     requested_evidence="",
 ):
-    """Record an authorized review decision without applying score effects.
-
-    Scoring is intentionally separate until approved scoring rules are implemented.
-    Each decision is recorded as a new review-history row.
-    """
+    """Record a review decision and score eligible approvals using approved rules."""
     _require_event_reviewer(reviewer)
 
     allowed_decisions = PerformanceEventReview.Decision.values
@@ -75,4 +72,13 @@ def review_performance_event(
         requested_evidence=requested_evidence.strip() if requested_evidence else "",
         reviewer=reviewer,
     )
+
+    if decision == PerformanceEvent.Status.APPROVED and event.category in (
+        PerformanceEvent.Category.POSITIVE,
+        PerformanceEvent.Category.NEGATIVE,
+    ):
+        # If no approved rule or no established calculated score exists, the
+        # event remains approved but receives no score effect yet.
+        apply_approved_event_score(event_id=event.pk, actor=reviewer)
+
     return event, review
