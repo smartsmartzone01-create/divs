@@ -33,8 +33,8 @@ class Migration(migrations.Migration):
                     models.Index(fields=["score", "created_at"], name="perf_correction_score_time_idx"),
                 ],
                 "constraints": [
-                    models.CheckConstraint(condition=models.Q(("previous_calculated_score__isnull", True), ("previous_calculated_score__gte", 0), ("previous_calculated_score__lte", 100), _connector="OR"), name="perf_correction_previous_range"),
-                    models.CheckConstraint(condition=models.Q(("new_calculated_score__isnull", True), ("new_calculated_score__gte", 0), ("new_calculated_score__lte", 100), _connector="OR"), name="perf_correction_new_range"),
+                    models.CheckConstraint(condition=models.Q(("previous_calculated_score__isnull", True)) | models.Q(("previous_calculated_score__gte", 0), ("previous_calculated_score__lte", 100)), name="perf_correction_previous_range"),
+                    models.CheckConstraint(condition=models.Q(("new_calculated_score__isnull", True)) | models.Q(("new_calculated_score__gte", 0), ("new_calculated_score__lte", 100)), name="perf_correction_new_range"),
                 ],
             },
         ),
