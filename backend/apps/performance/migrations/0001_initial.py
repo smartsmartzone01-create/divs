@@ -63,8 +63,8 @@ class Migration(migrations.Migration):
                 "verbose_name": "Driver performance score",
                 "verbose_name_plural": "Driver performance scores",
                 "constraints": [
-                    models.CheckConstraint(condition=models.Q(("calculated_score__isnull", True), ("calculated_score__gte", 0), ("calculated_score__lte", 100), _connector="OR"), name="performance_score_between_0_and_100"),
-                    models.CheckConstraint(condition=models.Q(("manual_override_score__isnull", True), ("manual_override_score__gte", 0), ("manual_override_score__lte", 100), _connector="OR"), name="performance_override_score_between_0_and_100"),
+                    models.CheckConstraint(condition=models.Q(("calculated_score__isnull", True)) | models.Q(("calculated_score__gte", 0), ("calculated_score__lte", 100)), name="performance_score_between_0_and_100"),
+                    models.CheckConstraint(condition=models.Q(("manual_override_score__isnull", True)) | models.Q(("manual_override_score__gte", 0), ("manual_override_score__lte", 100)), name="performance_override_score_between_0_and_100"),
                 ],
             },
         ),
@@ -90,7 +90,7 @@ class Migration(migrations.Migration):
                 ],
                 "constraints": [
                     models.CheckConstraint(condition=models.Q(("new_score__gte", 0), ("new_score__lte", 100)), name="perf_history_new_score_range"),
-                    models.CheckConstraint(condition=models.Q(("previous_score__isnull", True), ("previous_score__gte", 0), ("previous_score__lte", 100), _connector="OR"), name="perf_history_previous_score_range"),
+                    models.CheckConstraint(condition=models.Q(("previous_score__isnull", True)) | models.Q(("previous_score__gte", 0), ("previous_score__lte", 100)), name="perf_history_previous_score_range"),
                 ],
             },
         ),
