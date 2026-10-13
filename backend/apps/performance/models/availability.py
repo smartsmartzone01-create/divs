@@ -68,6 +68,11 @@ class AvailabilityRestriction(models.Model):
                 condition=models.Q(status="active", source_event__isnull=False),
                 name="perf_one_active_event_restriction",
             ),
+            models.UniqueConstraint(
+                fields=["source_score", "kind"],
+                condition=models.Q(status="active", source_score__isnull=False),
+                name="perf_one_active_score_restriction",
+            ),
         ]
 
     def __str__(self):
