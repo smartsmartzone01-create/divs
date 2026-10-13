@@ -37,10 +37,29 @@ This document describes implemented behavior only. Product requirements and prop
 - The override state includes a reason, Admin account, and timestamp fields. The `override_driver_score` service checks for an approved Operations Admin membership, validates the score and required reason, locks the score row in a transaction, updates only the override fields, and creates a `ScoreHistory` entry in the same transaction. It deliberately does not change availability restrictions. An API endpoint is not implemented yet.
 - Both calculated and override scores are constrained to 0–100 when non-null; score-history previous/new values are likewise constrained to 0–100.
 
+### Appeals
+
+- A driver can submit an appeal only for an event with a final approved/rejected decision, and only from the account linked to that event's driver profile.
+- An appeal requires a reason and may include evidence references. Only one pending appeal is allowed per event.
+- Authorized Operations Admins and Operators can decide a pending appeal as upheld or denied; every decision is recorded in `PerformanceAppealDecision`.
+- An upheld appeal sets `correction_required=True`. This explicitly flags follow-up work; it does **not** silently rewrite score history or change a score yet because the score correction/recalculation engine is not implemented.
+- Submitting or deciding an appeal does not alter an existing availability restriction. Pending appeals leave current score and restrictions unchanged.
+
+### Availability restrictions
+
+- `AvailabilityRestriction` represents performance-based restrictions independently from driver profile lifecycle and verification status.
+- Restriction kinds are `critical_incident` and `low_score`; each has an explicit active/released state, reason, source reference, actor, and timestamps.
+- `place_critical_incident_restriction` accepts only a critical-severity event that has not been rejected, places the event into `under_review`, and creates an active restriction. The reason is required to document why precautionary review is warranted. This is not a finding of fault.
+- `apply_low_score_restriction` uses the effective score and applies the restriction only when the score is strictly below 40. A score of exactly 40 does not trigger it. An unset score cannot trigger it.
+- Only an Operations Admin can release a low-score restriction. Admins and Operators can release a critical-incident restriction with a reason.
+- Placement and release decisions are stored in `AvailabilityRestrictionDecision`. A release does not delete the restriction record.
+- `has_active_performance_restriction` answers whether any active performance restriction exists. It is a component for future hire-availability checks, not a complete availability/verification decision.
+- Score overrides do not automatically release restrictions. A separate authorized release decision is required.
+
 ### Prepared tests
 
 - Model-definition tests cover the score range intent, event categories, effective-score selection, and signed history delta.
-- Service tests cover Admin override history creation, preservation of the calculated score, Operator denial, and score/reason validation. Event-review tests cover Operator review, evidence requests, and prevention of silent final-decision replacement.
+- Service tests cover Admin override history creation, preservation of the calculated score, Operator denial, and score/reason validation. Event-review tests cover Operator review, evidence requests, and prevention of silent final-decision replacement. Appeal/availability tests cover driver-only appeal submission, pending-appeal invariants, successful appeal audit, duplicate appeals, the strict below-40 threshold, Admin-only low-score restoration, critical-incident review restrictions, and release history.
 - These tests have been committed but have **not** been executed in a local Django environment.
 
 ## Not implemented yet
@@ -49,7 +68,7 @@ This document describes implemented behavior only. Product requirements and prop
 - Event submission/review APIs, event-submission validation, and endpoint-level permissions. Service-level review decisions are implemented.
 - Active scoring rules, event point values, score calculation, or baseline assignment.
 - API endpoint and request/response validation for Admin score overrides; enforcement of append-only history at the database/service boundary beyond the current write-only workflow.
-- Appeals, correction processing, critical-incident restrictions, low-score restrictions, and restoration approvals.
+- Runtime validation of the second migration and local execution of the new appeal/availability tests. Score correction/recalculation after a successful appeal remains unimplemented.
 - Notifications and integration with Operations, Verification, and driver availability.
 - Automatic trusted-source checks or government API adapters.
 
