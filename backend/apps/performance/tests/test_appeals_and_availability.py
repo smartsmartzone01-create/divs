@@ -118,7 +118,7 @@ class AppealAndAvailabilityWorkflowTests(TestCase):
         self.assertTrue(appeal.correction_required)
         self.assertEqual(history.status, PerformanceAppeal.Status.UPHELD)
         self.assertEqual(PerformanceAppealDecision.objects.count(), 1)
-        # The correction engine is not active yet; no score is silently changed.
+        # Deciding an appeal only flags correction; an Admin must apply the audited correction workflow.
         self.assertEqual(self.score.calculated_score, 35)
 
     def test_low_score_restriction_uses_strictly_below_40_threshold(self):
