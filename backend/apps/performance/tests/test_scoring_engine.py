@@ -112,6 +112,7 @@ class ScoringEngineTests(TestCase):
                 actor=self.admin,
                 name="Wrong sign",
                 category=PerformanceScoringRule.Category.NEGATIVE,
+                event_code="minor_traffic_violation",
                 severity=PerformanceEvent.Severity.MINOR,
                 points_delta=3,
                 reason="Negative rules must deduct points.",
