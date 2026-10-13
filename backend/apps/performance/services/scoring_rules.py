@@ -16,9 +16,13 @@ def _require_admin(actor):
         raise PermissionDenied("Only an Operations Admin may manage scoring rules.")
 
 
-def _validate_rule_values(*, category, points_delta, name, reason):
+def _validate_rule_values(*, category, event_code, points_delta, name, reason):
     if category not in PerformanceScoringRule.Category.values:
         raise ValidationError({"category": "Choose a positive or negative event category."})
+    if not isinstance(event_code, str) or not event_code.strip():
+        raise ValidationError({"event_code": "A stable event code is required."})
+    if len(event_code.strip()) > 64 or any(char not in "abcdefghijklmnopqrstuvwxyz0123456789-_." for char in event_code.strip().lower()):
+        raise ValidationError({"event_code": "Use up to 64 lowercase letters, numbers, hyphens, underscores, or dots."})
     if isinstance(points_delta, bool) or not isinstance(points_delta, int):
         raise ValidationError({"points_delta": "Enter a whole-number point change."})
     if not -100 <= points_delta <= 100:
@@ -39,6 +43,7 @@ def propose_scoring_rule(
     actor,
     name,
     category,
+    event_code,
     severity="",
     points_delta,
     reason,
@@ -47,6 +52,7 @@ def propose_scoring_rule(
     _require_admin(actor)
     _validate_rule_values(
         category=category,
+        event_code=event_code,
         points_delta=points_delta,
         name=name,
         reason=reason,
@@ -58,6 +64,7 @@ def propose_scoring_rule(
     return PerformanceScoringRule.objects.create(
         name=name.strip(),
         category=category,
+        event_code=event_code.strip().lower(),
         severity=severity,
         points_delta=points_delta,
         status=PerformanceScoringRule.Status.PROPOSED,
@@ -68,7 +75,7 @@ def propose_scoring_rule(
 
 @transaction.atomic
 def approve_scoring_rule(*, rule_id, actor):
-    """Approve a proposed rule; one approved rule may match each category/severity."""
+    """Approve a proposed rule; one approved rule may match each category/event-code/severity combination."""
     _require_admin(actor)
     rule = PerformanceScoringRule.objects.select_for_update().get(pk=rule_id)
     if rule.status != PerformanceScoringRule.Status.PROPOSED:
@@ -81,7 +88,7 @@ def approve_scoring_rule(*, rule_id, actor):
         rule.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
     except IntegrityError as exc:
         raise ValidationError({
-            "rule": "An approved rule already exists for this category and severity. Retire it before approving a replacement."
+            "rule": "An approved rule already exists for this category, event code, and severity. Retire it before approving a replacement."
         }) from exc
     return rule
 
