@@ -6,6 +6,7 @@ from apps.performance.models.appeals import PerformanceAppeal, PerformanceAppeal
 from apps.performance.models.availability import AvailabilityRestriction, AvailabilityRestrictionDecision
 from apps.performance.models.scoring_rules import PerformanceScoringRule
 from apps.performance.models.scoring_applications import PerformanceEventScoreApplication
+from apps.performance.models.corrections import PerformanceScoreCorrection
 
 __all__ = [
     "ScoreHistory",
@@ -18,4 +19,5 @@ __all__ = [
     "AvailabilityRestrictionDecision",
     "PerformanceScoringRule",
     "PerformanceEventScoreApplication",
+    "PerformanceScoreCorrection",
 ]
