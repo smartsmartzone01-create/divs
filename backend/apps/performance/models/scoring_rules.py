@@ -19,6 +19,7 @@ class PerformanceScoringRule(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=160)
     category = models.CharField(max_length=16, choices=Category.choices)
+    event_code = models.CharField(max_length=64)
     severity = models.CharField(
         max_length=16,
         choices=[
@@ -56,7 +57,7 @@ class PerformanceScoringRule(models.Model):
     class Meta:
         ordering = ["category", "severity", "-created_at"]
         indexes = [
-            models.Index(fields=["category", "severity", "status"], name="perf_rule_lookup_idx"),
+            models.Index(fields=["category", "event_code", "severity", "status"], name="perf_rule_lookup_idx"),
         ]
         constraints = [
             models.CheckConstraint(
@@ -64,7 +65,7 @@ class PerformanceScoringRule(models.Model):
                 name="perf_rule_delta_range",
             ),
             models.UniqueConstraint(
-                fields=["category", "severity"],
+                fields=["category", "event_code", "severity"],
                 condition=models.Q(status="approved"),
                 name="perf_one_approved_rule_match",
             ),
