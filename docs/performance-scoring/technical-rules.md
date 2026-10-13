@@ -15,8 +15,15 @@ This document describes implemented behavior only. Product requirements and prop
 - Event statuses currently defined in the model are `submitted`, `under_review`, `more_evidence`, `approved`, and `rejected`. Service-level review transitions and role checks are implemented; API endpoints are not.
 - `idempotency_key` can hold a source-provided unique key to support future duplicate protection. Full incident deduplication logic is not implemented yet.
 - `evidence_references` stores references/metadata only. Do not put raw government records, identity numbers, or sensitive source payloads in it.
-- `DriverScore` is a one-to-one record for an existing driver profile. `calculated_score` may be null until baseline eligibility and history-review rules are finalized. Null means “not yet established,” not zero.
+- `DriverScore` is a one-to-one record for an existing driver profile. `calculated_score` may be null until an Admin establishes an eligible baseline. Null means “not yet established,” not zero.
 - A database constraint restricts non-null calculated scores to 0–100.
+
+### Baseline establishment
+
+- `establish_driver_baseline` is Admin-only and assigns the agreed baseline of 80 only after the caller explicitly confirms driver verification, review of applicable history, and that applicable history was found.
+- A baseline requires a reason and creates a `ScoreHistory` entry with no previous score.
+- If no applicable history is found, the service rejects baseline establishment and leaves the score unset. This is a conservative interim behavior; the product policy for drivers with no history remains unresolved.
+- Baseline establishment is blocked if a calculated score or any score-history entry already exists. It does not overwrite a score or act as a recalculation.
 
 ### Event review workflow
 
@@ -79,9 +86,9 @@ This document describes implemented behavior only. Product requirements and prop
 
 - Runtime validation of hand-prepared migrations, verification of model loading, and local test execution. The Performance app is listed in Django settings.
 - Event submission/review APIs, event-submission validation, and endpoint-level permissions. Service-level review decisions are implemented.
-- Baseline assignment and its eligibility checks; exact point values remain unapproved and no rules are active by default.
+- API endpoints for baseline establishment and the wider Performance app; exact point values remain unapproved and no rules are active by default. The baseline service exists, but eligibility confirmations are currently supplied to the service and have not yet been connected to the Verification workflow.
 - API endpoint and request/response validation for Admin score overrides; enforcement of append-only history at the database/service boundary beyond the current write-only workflow.
-- Runtime validation of migrations 0001–0005 and local execution of all tests. API endpoints and the initial baseline eligibility workflow remain to be built.
+- Runtime validation of migrations 0001–0005 and local execution of all tests. API endpoints, integration with Verification, and notification/availability wiring remain to be built.
 - Notifications and integration with Operations, Verification, and driver availability.
 - Automatic trusted-source checks or government API adapters.
 
