@@ -1,6 +1,6 @@
 # DIVS Performance & Scoring — Requirements and Agreed Rules
 
-**Status:** Workflow agreed; implementation not started.  
+**Status:** Workflow agreed; implementation in progress.  
 **Target app:** `backend/apps/performance/`  
 **Branch:** `development`  
 **Purpose:** Define the product rules before creating the Performance & Scoring app. This document records agreed decisions and distinguishes them from proposed point values that still need final approval.
