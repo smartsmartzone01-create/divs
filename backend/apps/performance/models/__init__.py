@@ -4,5 +4,18 @@ from apps.performance.models.scores import DriverScore
 from apps.performance.models.reviews import PerformanceEventReview
 from apps.performance.models.appeals import PerformanceAppeal, PerformanceAppealDecision
 from apps.performance.models.availability import AvailabilityRestriction, AvailabilityRestrictionDecision
+from apps.performance.models.scoring_rules import PerformanceScoringRule
+from apps.performance.models.scoring_applications import PerformanceEventScoreApplication
 
-__all__ = ["ScoreHistory", "PerformanceEvent", "DriverScore", "PerformanceEventReview", "PerformanceAppeal", "PerformanceAppealDecision", "AvailabilityRestriction", "AvailabilityRestrictionDecision"]
+__all__ = [
+    "ScoreHistory",
+    "PerformanceEvent",
+    "DriverScore",
+    "PerformanceEventReview",
+    "PerformanceAppeal",
+    "PerformanceAppealDecision",
+    "AvailabilityRestriction",
+    "AvailabilityRestrictionDecision",
+    "PerformanceScoringRule",
+    "PerformanceEventScoreApplication",
+]
