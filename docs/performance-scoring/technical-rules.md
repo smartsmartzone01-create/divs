@@ -42,7 +42,7 @@ This document describes implemented behavior only. Product requirements and prop
 - A driver can submit an appeal only for an event with a final approved/rejected decision, and only from the account linked to that event's driver profile.
 - An appeal requires a reason and may include evidence references. Only one pending appeal is allowed per event.
 - Authorized Operations Admins and Operators can decide a pending appeal as upheld or denied; every decision is recorded in `PerformanceAppealDecision`.
-- An upheld appeal sets `correction_required=True`. This explicitly flags follow-up work; it does **not** silently rewrite score history or change a score yet because the score correction/recalculation engine is not implemented.
+- An upheld appeal sets `correction_required=True`. An Operations Admin must then explicitly run the score-correction service with a reason. The service recalculates the automatic score by replaying immutable event applications while excluding the overturned event and any previously corrected events. It creates a separate `PerformanceScoreCorrection` record and a `ScoreHistory` correction entry when the calculated score changes. The original event, rule application, and historical snapshots are not rewritten. If the appealed event never affected a score, the workflow records that outcome without inventing a score change. Manual overrides and active availability restrictions are never automatically removed.
 - Submitting or deciding an appeal does not alter an existing availability restriction. Pending appeals leave current score and restrictions unchanged.
 
 ### Availability restrictions
@@ -67,7 +67,7 @@ This document describes implemented behavior only. Product requirements and prop
 - `PerformanceEventScoreApplication` records the rule, rule-name snapshot, points, previous/new calculated score, reason, and application time. Its one-to-one event relation prevents the same event from being scored twice through this service. A corresponding `ScoreHistory` row records the transition and actor.
 - If the event has no matching approved rule or the driver has no established calculated score, the service returns without changing the score. An Admin can configure a rule later, and the approved event can then be explicitly processed by the scoring service.
 - If the resulting effective score is below 40, the scoring service asks the availability workflow to place a low-score restriction when an Operations actor is supplied. Score increases and manual overrides never release existing restrictions automatically.
-- Successful appeals still only set `correction_required=True`. Reversing/recalculating an already applied event after an upheld appeal is not implemented yet; the original event application and history must remain intact when that workflow is added.
+- Successful appeal corrections are handled by the Admin-only `correct_score_after_upheld_appeal` service. The recalculation excludes the overturned event while retaining original application records, adds a correction audit record, and never automatically releases restrictions or clears manual overrides.
 
 ### Prepared tests
 
@@ -77,11 +77,11 @@ This document describes implemented behavior only. Product requirements and prop
 
 ## Not implemented yet
 
-- Runtime validation of the hand-prepared initial migration, verification of model loading, and local test execution. The Performance app is now listed in Django settings.
+- Runtime validation of hand-prepared migrations, verification of model loading, and local test execution. The Performance app is listed in Django settings.
 - Event submission/review APIs, event-submission validation, and endpoint-level permissions. Service-level review decisions are implemented.
 - Baseline assignment and its eligibility checks; exact point values remain unapproved and no rules are active by default.
 - API endpoint and request/response validation for Admin score overrides; enforcement of append-only history at the database/service boundary beyond the current write-only workflow.
-- Runtime validation of migrations 0001–0004 and local execution of all tests. Score correction/recalculation after a successful appeal remains unimplemented.
+- Runtime validation of migrations 0001–0005 and local execution of all tests. API endpoints and the initial baseline eligibility workflow remain to be built.
 - Notifications and integration with Operations, Verification, and driver availability.
 - Automatic trusted-source checks or government API adapters.
 
