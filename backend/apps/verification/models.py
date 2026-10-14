@@ -32,10 +32,24 @@ class DriverVerification(models.Model):
             status=DriverVerificationCheck.Status.PASSED,
             result_code=DriverVerificationCheck.ResultCode.VALID,
         ).first()
+        successful_results = {
+            DriverVerificationCheck.CheckType.NATIONAL_IDENTITY: DriverVerificationCheck.ResultCode.MATCH,
+            DriverVerificationCheck.CheckType.DRIVING_LICENCE: DriverVerificationCheck.ResultCode.VALID,
+            DriverVerificationCheck.CheckType.TRAFFIC_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
+            DriverVerificationCheck.CheckType.ACCIDENT_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
+        }
+        all_checks_successful = all(
+            self.checks.filter(
+                check_type=check_type,
+                status=DriverVerificationCheck.Status.PASSED,
+                result_code=result_code,
+            ).exists()
+            for check_type, result_code in successful_results.items()
+        )
         return (
             self.profile.status == "active"
             and self.status == self.Status.APPROVED
-            and self.checks.filter(status=DriverVerificationCheck.Status.PASSED).count() == len(DriverVerificationCheck.CheckType.choices)
+            and all_checks_successful
             and licence_check is not None
             and licence_check.verified_licence_classes.filter(is_current=True).exists()
         )
