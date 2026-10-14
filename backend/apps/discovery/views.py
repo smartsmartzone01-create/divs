@@ -1,13 +1,13 @@
 from django.db.models import Prefetch
+from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import status
 
-from apps.performance.models import AvailabilityRestriction
+from apps.discovery.serializers import PublicDriverSerializer
+from apps.performance.models import AvailabilityRestriction, DriverScore
 from apps.profiles.models import DriverProfile
 from apps.verification.models import DriverVerificationCheck
-from apps.discovery.serializers import PublicDriverSerializer
 
 
 class PublicDriverDiscoveryView(APIView):
@@ -80,10 +80,7 @@ class PublicDriverDiscoveryView(APIView):
 
             try:
                 score = profile.performance_score.effective_score
-            except Exception as exc:
-                from apps.performance.models import DriverScore
-                if not isinstance(exc, DriverScore.DoesNotExist):
-                    raise
+            except DriverScore.DoesNotExist:
                 score = None
             if min_score is not None and (score is None or score < min_score):
                 continue
