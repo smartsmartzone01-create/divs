@@ -18,6 +18,10 @@ export default function HomePage() {
           Explore driver profiles, verified driving qualifications, and
           performance information in one place.
         </p>
+        <div className="home-actions">
+          <a className="home-primary-link" href="/register">Create an account</a>
+          <a className="home-secondary-link" href="/sign-in">Sign in</a>
+        </div>
         <p className="setup-note">
           Frontend foundation is ready. Public discovery will connect to the
           Django API as the interface is built.
