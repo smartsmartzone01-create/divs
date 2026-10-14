@@ -65,15 +65,21 @@ class PublicDriverDiscoveryView(APIView):
             if params.get("experience") and params["experience"] != registration.driving_experience:
                 continue
 
-            licence_check = profile.verification.checks.filter(
-                check_type=DriverVerificationCheck.CheckType.DRIVING_LICENCE,
-                status=DriverVerificationCheck.Status.PASSED,
-                result_code=DriverVerificationCheck.ResultCode.VALID,
-            ).first()
-            classes = [] if licence_check is None else list(
-                licence_check.verified_licence_classes.filter(is_current=True)
-                .order_by("licence_class")
-                .values_list("licence_class", flat=True)
+            # Use the prefetched relations instead of issuing per-driver queries.
+            checks = list(profile.verification.checks.all())
+            licence_check = next(
+                (
+                    check for check in checks
+                    if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
+                    and check.status == DriverVerificationCheck.Status.PASSED
+                    and check.result_code == DriverVerificationCheck.ResultCode.VALID
+                ),
+                None,
+            )
+            classes = [] if licence_check is None else sorted(
+                licence_class.licence_class
+                for licence_class in licence_check.verified_licence_classes.all()
+                if licence_class.is_current
             )
             if requested_class and requested_class not in classes:
                 continue
