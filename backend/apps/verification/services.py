@@ -70,6 +70,16 @@ def review_driver_check(
         raise VerificationReviewError("Verification check not found.")
     if result_code and result_code not in compatible_results[check.check_type]:
         raise VerificationReviewError("Result code does not match this check type.")
+    if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE:
+        if result_code == DriverVerificationCheck.ResultCode.VALID and status != DriverVerificationCheck.Status.PASSED:
+            raise VerificationReviewError("A valid licence result must use the passed status.")
+        if result_code == DriverVerificationCheck.ResultCode.INVALID and status != DriverVerificationCheck.Status.FAILED:
+            raise VerificationReviewError("An invalid licence result must use the failed status.")
+        if result_code == DriverVerificationCheck.ResultCode.INCONCLUSIVE and status in {
+            DriverVerificationCheck.Status.PASSED,
+            DriverVerificationCheck.Status.FAILED,
+        }:
+            raise VerificationReviewError("An inconclusive licence result requires further review.")
 
     verification = DriverVerification.objects.select_for_update().get(pk=check.verification_id)
     previous_overall_status = verification.status
