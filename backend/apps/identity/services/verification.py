@@ -7,6 +7,10 @@ from django.core.mail import send_mail
 from django.utils import timezone
 
 from apps.identity.models import VerificationCode
+from apps.identity.services.phone_auth import (
+    PhoneAuthenticationNotConfigured,
+    request_phone_verification,
+)
 
 
 CODE_TTL_MINUTES = 10
@@ -67,10 +71,22 @@ def issue_verification_code(
         if sent != 1:
             record.delete()
             raise VerificationDeliveryNotConfigured("Email delivery did not accept the message.")
+    elif channel == VerificationCode.Channel.PHONE:
+        try:
+            request_phone_verification(
+                target,
+                raw_code,
+                expires_in_seconds=CODE_TTL_MINUTES * 60,
+            )
+        except PhoneAuthenticationNotConfigured as exc:
+            record.delete()
+            raise VerificationDeliveryNotConfigured(str(exc)) from exc
+        except Exception:
+            record.delete()
+            raise
     else:
-        # Never pretend a phone code was sent without a configured SMS provider.
         record.delete()
-        raise VerificationDeliveryNotConfigured("SMS/OTP delivery provider is not configured.")
+        raise VerificationDeliveryNotConfigured("Unsupported verification channel.")
 
     return record
 
