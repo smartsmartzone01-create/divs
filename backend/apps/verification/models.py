@@ -113,3 +113,54 @@ class DriverVerificationCheck(models.Model):
 
     def __str__(self):
         return f"{self.check_type} — {self.status}"
+
+
+class VerifiedDriverLicenceClass(models.Model):
+    """A licence class confirmed during validation of the driver's presented licence."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    licence_check = models.ForeignKey(
+        DriverVerificationCheck,
+        on_delete=models.PROTECT,
+        related_name="verified_licence_classes",
+    )
+    licence_class = models.CharField(max_length=12)
+    is_current = models.BooleanField(default=True)
+    verified_at = models.DateTimeField()
+    verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="verified_driver_licence_classes",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["licence_class"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["licence_check", "licence_class"],
+                name="uniq_verified_licence_class_per_check",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["licence_class", "is_current"],
+                name="verified_lic_class_current_idx",
+            ),
+        ]
+
+    @property
+    def qualifies_for_discovery(self):
+        """Only current classes on a passed, valid licence check qualify."""
+        return (
+            self.is_current
+            and self.licence_check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
+            and self.licence_check.status == DriverVerificationCheck.Status.PASSED
+            and self.licence_check.result_code == DriverVerificationCheck.ResultCode.VALID
+        )
+
+    def __str__(self):
+        return f"{self.licence_class} ({self.licence_check.verification.profile_id})"
