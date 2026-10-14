@@ -18,9 +18,7 @@ class PublicDriverDiscoveryTests(APITestCase):
         self.url = reverse("discovery:public-drivers")
 
     def _create_verified_driver(self, email, score=80, area="Mikocheni"):
-        account = Account.objects.create_user(
-            email=email, password="StrongPassword123!", phone_number="+255700000001"
-        )
+        account = Account.objects.create_user(email=email, password="StrongPassword123!")
         registration = DriverRegistration.objects.create(
             account=account,
             first_name="Amani",
