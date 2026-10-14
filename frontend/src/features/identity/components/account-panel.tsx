@@ -4,14 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GoogleSignInButton } from "@/features/identity/components/google-sign-in-button";
-import {
-  AuthAccount,
-  AuthSession,
-  getCurrentAccount,
-  getSessions,
-  logout,
-  revokeSession,
-} from "@/features/identity/api";
+import type { AuthAccount, AuthSession } from "@/features/identity/api";
+import { getCurrentAccount, getSessions, logout, revokeSession } from "@/features/identity/api";
 
 export function AccountPanel() {
   const router = useRouter();
