@@ -45,7 +45,9 @@ class PhoneReadinessView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         try:
-            import_string(provider_path)
+            provider_class = import_string(provider_path)
+            if not callable(provider_class) or not hasattr(provider_class, "send_verification_code"):
+                raise AttributeError("SMS adapter must implement send_verification_code.")
         except (ImportError, AttributeError):
             return Response(
                 {
