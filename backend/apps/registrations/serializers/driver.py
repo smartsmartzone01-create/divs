@@ -17,6 +17,7 @@ class DriverRegistrationSerializer(serializers.ModelSerializer):
             "nationality",
             "region",
             "district",
+            "residential_area",
             "current_residential_address",
             "driving_experience",
             "contact_email",
@@ -29,7 +30,7 @@ class DriverRegistrationSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         for field in (
             "first_name", "middle_name", "last_name", "nationality",
-            "region", "district", "current_residential_address",
+            "region", "district", "residential_area", "current_residential_address",
         ):
             if field in attrs and isinstance(attrs[field], str):
                 attrs[field] = attrs[field].strip()
