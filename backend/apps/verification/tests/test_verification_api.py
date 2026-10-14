@@ -178,6 +178,58 @@ class VerificationReviewServiceTests(APITestCase):
                 result_code=DriverVerificationCheck.ResultCode.INVALID,
             )
 
+    def test_identity_mismatch_cannot_be_marked_passed(self):
+        check = next(
+            item for item in self.checks
+            if item.check_type == DriverVerificationCheck.CheckType.NATIONAL_IDENTITY
+        )
+        with self.assertRaisesMessage(Exception, "only pass when its result confirms"):
+            review_driver_check(
+                check_id=check.id,
+                reviewer=self.reviewer,
+                status=DriverVerificationCheck.Status.PASSED,
+                result_code=DriverVerificationCheck.ResultCode.MISMATCH,
+            )
+
+    def test_record_found_cannot_be_marked_passed(self):
+        check = next(
+            item for item in self.checks
+            if item.check_type == DriverVerificationCheck.CheckType.TRAFFIC_RECORDS
+        )
+        with self.assertRaisesMessage(Exception, "only pass when its result confirms"):
+            review_driver_check(
+                check_id=check.id,
+                reviewer=self.reviewer,
+                status=DriverVerificationCheck.Status.PASSED,
+                result_code=DriverVerificationCheck.ResultCode.RECORD_FOUND,
+            )
+
+    def test_check_cannot_pass_without_a_result(self):
+        check = next(
+            item for item in self.checks
+            if item.check_type == DriverVerificationCheck.CheckType.NATIONAL_IDENTITY
+        )
+        with self.assertRaisesMessage(Exception, "only pass when its result confirms"):
+            review_driver_check(
+                check_id=check.id,
+                reviewer=self.reviewer,
+                status=DriverVerificationCheck.Status.PASSED,
+                result_code="",
+            )
+
+    def test_inconclusive_result_cannot_be_marked_passed(self):
+        check = next(
+            item for item in self.checks
+            if item.check_type == DriverVerificationCheck.CheckType.NATIONAL_IDENTITY
+        )
+        with self.assertRaisesMessage(Exception, "inconclusive result requires further review"):
+            review_driver_check(
+                check_id=check.id,
+                reviewer=self.reviewer,
+                status=DriverVerificationCheck.Status.PASSED,
+                result_code=DriverVerificationCheck.ResultCode.INCONCLUSIVE,
+            )
+
     def test_failed_check_rejects_verification(self):
         review_driver_check(
             check_id=self.checks[0].id,
