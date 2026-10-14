@@ -40,7 +40,7 @@ class PasswordResetAPITests(TestCase):
         self.assertEqual(response.status_code, 202)
         self.assertEqual(
             response.data["detail"],
-            "If an active account with a verified email exists, reset instructions will be sent.",
+            "If an active account with a verified email or phone exists, reset instructions will be sent.",
         )
 
     def test_reset_requires_password_reset_purpose_code(self):
