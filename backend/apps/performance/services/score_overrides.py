@@ -3,7 +3,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.operations.models import OperationsMembership
-from apps.operations.permissions import capabilities_for, is_initial_system_superuser
+from apps.operations.permissions import is_initial_system_superuser
 from apps.performance.models import DriverScore, ScoreHistory
 
 
@@ -15,7 +15,7 @@ def _require_admin(actor):
         return
     is_admin = OperationsMembership.objects.filter(
         account=actor, role=OperationsMembership.Role.ADMIN
-    ).exists() and "manage_driver_performance" in capabilities_for(actor)
+    ).exists()
     if not is_admin:
         raise PermissionDenied("Only an active Operations Admin may override a score.")
 
