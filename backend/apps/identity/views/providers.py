@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.utils.module_loading import import_string
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -23,7 +25,7 @@ class GoogleReadinessView(APIView):
             {
                 "provider": "google",
                 "configured": True,
-                "message": "Google ID-token validation is configured; registration and account linking remain separate work.",
+                "message": "Google ID-token validation is configured. Identity sign-in does not select a driver or client role.",
             }
         )
 
@@ -32,11 +34,31 @@ class PhoneReadinessView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
+        provider_path = getattr(settings, "SMS_OTP_PROVIDER_CLASS", "")
+        if not provider_path:
+            return Response(
+                {
+                    "provider": "phone",
+                    "configured": False,
+                    "message": "An SMS/OTP delivery adapter is not configured.",
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        try:
+            import_string(provider_path)
+        except (ImportError, AttributeError):
+            return Response(
+                {
+                    "provider": "phone",
+                    "configured": False,
+                    "message": "The configured SMS/OTP delivery adapter could not be loaded.",
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         return Response(
             {
                 "provider": "phone",
-                "configured": False,
-                "message": "SMS/OTP delivery integration has not been added.",
-            },
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                "configured": True,
+                "message": "An SMS/OTP adapter is configured. Verify delivery with provider test credentials before production use.",
+            }
         )
