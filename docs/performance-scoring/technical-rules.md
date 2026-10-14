@@ -12,7 +12,7 @@ This document describes implemented behavior only. Product requirements and prop
 
 - `PerformanceEvent` records a reported event against the existing `profiles.DriverProfile`. It does not create a second driver identity.
 - Events have a category (`positive`, `negative`, `correction`), a stable `event_code` used for rule matching, optional severity (`minor`, `serious`, `critical`), a lifecycle status, title, description, occurrence time, source type/reference, evidence references, submitter, reviewer, decision timestamp, and decision reason.
-- Event statuses currently defined in the model are `submitted`, `under_review`, `more_evidence`, `approved`, and `rejected`. Service-level review transitions and role checks are implemented; API endpoints are not.
+- Event statuses currently defined in the model are `submitted`, `under_review`, `more_evidence`, `approved`, and `rejected`. Service-level review transitions and role checks are implemented, and the initial REST endpoints are registered. API behavior and permission enforcement still require runtime testing.
 - `idempotency_key` can hold a source-provided unique key to support future duplicate protection. Full incident deduplication logic is not implemented yet.
 - `evidence_references` stores references/metadata only. Do not put raw government records, identity numbers, or sensitive source payloads in it.
 - `DriverScore` is a one-to-one record for an existing driver profile. `calculated_score` may be null until an Admin establishes an eligible baseline. Null means “not yet established,” not zero.
@@ -38,7 +38,7 @@ This document describes implemented behavior only. Product requirements and prop
 
 - `ScoreHistory` records a score transition with its change type, previous and new score, reason, optional event reference, optional rule reference, actor, and timestamp.
 - `change_amount` is derived from the previous and new scores. A baseline entry has no previous score and therefore no delta.
-- History rows are intended to be append-only through normal application workflows. Service-layer protections and permissions are not implemented yet.
+- History rows are intended to be append-only through normal application workflows. The API exposes history as read-only, but database-level immutability is not enforced; direct database edits or future unsafe code paths could still alter records.
 - `DriverScore.calculated_score` remains the automatic calculation field.
 - `DriverScore.manual_override_score` is a separate optional display override. `effective_score` returns the override when present, otherwise the calculated score. The override does not update the automatic calculation.
 - The override state includes a reason, Admin account, and timestamp fields. The `override_driver_score` service checks for an approved Operations Admin membership, validates the score and required reason, locks the score row in a transaction, updates only the override fields, and creates a `ScoreHistory` entry in the same transaction. It deliberately does not change availability restrictions. An API endpoint is now available under the Performance API.
@@ -109,7 +109,7 @@ These endpoints have not been run against Django/DRF locally. The baseline endpo
 - A baseline API endpoint; exact point values remain unapproved and no rules are active by default. The baseline service exists, but eligibility confirmations must be derived from server-side Verification/history records before an endpoint is exposed.
 - API integration tests for Admin score overrides, scoring-rule lifecycle, appeals, and score corrections.
 - Runtime validation of migrations 0001–0005 and local execution of all tests. Integration with Verification and notification/availability wiring remain to be built.
-- Notifications and integration with Verification and public driver hire-availability filtering.
+- Performance-event notifications and deeper integration with Verification outcomes remain unimplemented. Public discovery now excludes drivers with active performance restrictions and excludes effective scores below 40; this is an initial eligibility filter, not the complete hire/contact workflow.
 - Automatic trusted-source checks or government API adapters.
 
 No proposed point values are active by default. An approved event changes a score only after an Admin approves a matching rule and the driver has an established calculated score.
