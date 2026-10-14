@@ -90,6 +90,7 @@ if REDIS_URL:
         }
     }
 else:
+    # Local-only fallback; production should use shared Redis for reliable throttles.
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
@@ -150,3 +151,12 @@ SIMPLE_JWT["TOKEN_OBTAIN_SERIALIZER"] = "apps.identity.serializers.SharedTokenOb
 
 GOOGLE_OIDC_CLIENT_ID = os.environ.get("GOOGLE_OIDC_CLIENT_ID", "")
 GOOGLE_OIDC_CLIENT_SECRET = os.environ.get("GOOGLE_OIDC_CLIENT_SECRET", "")
+GOOGLE_OIDC_REDIRECT_URI = os.environ.get("GOOGLE_OIDC_REDIRECT_URI", "")
+EMAIL_VERIFICATION_PROVIDER = os.environ.get("EMAIL_VERIFICATION_PROVIDER", "")
+SMS_OTP_PROVIDER = os.environ.get("SMS_OTP_PROVIDER", "")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() == "true"
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "no-reply@divs.local")
