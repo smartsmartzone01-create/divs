@@ -53,10 +53,24 @@ export async function identityRequest<T>(
     } catch {
       // Preserve a non-JSON error body for diagnostics.
     }
-    const detail =
-      typeof payload === "object" && payload !== null && "detail" in payload
-        ? String((payload as { detail: unknown }).detail)
-        : `Authentication request failed (${response.status}).`;
+    let detail = `Authentication request failed (${response.status}).`;
+    if (typeof payload === "string" && payload) {
+      detail = payload;
+    } else if (typeof payload === "object" && payload !== null) {
+      const record = payload as Record<string, unknown>;
+      if (typeof record.detail === "string") {
+        detail = record.detail;
+      } else if (Array.isArray(record.non_field_errors)) {
+        detail = record.non_field_errors.map(String).join(" ");
+      } else {
+        const firstFieldError = Object.entries(record).find(([, value]) => value !== undefined);
+        if (firstFieldError) {
+          const [field, value] = firstFieldError;
+          const message = Array.isArray(value) ? value.map(String).join(" ") : String(value);
+          detail = `${field.replaceAll("_", " ")}: ${message}`;
+        }
+      }
+    }
     throw new IdentityApiError(detail, response.status, payload);
   }
 
