@@ -39,7 +39,7 @@ class VerificationCode(models.Model):
         ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["channel", "target", "created_at"]),
-            models.Index(fields=["channel", "purpose", "target", "created_at"]),
+            models.Index(fields=["channel", "purpose", "target", "created_at"], name="id_vercode_purpose_idx"),
         ]
 
     @property
