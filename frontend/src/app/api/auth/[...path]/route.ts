@@ -30,15 +30,14 @@ function applyAuthCookies(response: NextResponse, tokens: { access: string; refr
 
 function clearAuthCookies(response: NextResponse) {
   const common = {
-    value: "",
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax" as const,
     path: "/api/auth",
     maxAge: 0,
   };
-  response.cookies.set(ACCESS_COOKIE, common);
-  response.cookies.set(REFRESH_COOKIE, common);
+  response.cookies.set(ACCESS_COOKIE, "", common);
+  response.cookies.set(REFRESH_COOKIE, "", common);
 }
 
 async function upstreamRequest(
