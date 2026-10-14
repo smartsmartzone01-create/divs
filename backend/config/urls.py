@@ -9,5 +9,6 @@ urlpatterns = [
     path("api/v1/operations/", include("apps.operations.urls")),
     path("api/v1/verification/", include("apps.verification.urls")),
     path("api/v1/performance/", include("apps.performance.urls")),
+    path("api/v1/discovery/", include("apps.discovery.urls")),
     path("api/v1/notifications/", include("apps.notifications.urls")),
 ]
