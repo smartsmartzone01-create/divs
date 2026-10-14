@@ -22,7 +22,7 @@ function applyAuthCookies(response: NextResponse, tokens: { access: string; refr
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax" as const,
-    path: "/api/auth",
+    path: "/api",
   };
   response.cookies.set(ACCESS_COOKIE, tokens.access, { ...common, maxAge: ACCESS_MAX_AGE });
   response.cookies.set(REFRESH_COOKIE, tokens.refresh, { ...common, maxAge: REFRESH_MAX_AGE });
@@ -33,7 +33,7 @@ function clearAuthCookies(response: NextResponse) {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax" as const,
-    path: "/api/auth",
+    path: "/api",
     maxAge: 0,
   };
   response.cookies.set(ACCESS_COOKIE, "", common);
