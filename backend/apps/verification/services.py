@@ -81,6 +81,29 @@ def review_driver_check(
         }:
             raise VerificationReviewError("An inconclusive licence result requires further review.")
 
+    successful_results = {
+        DriverVerificationCheck.CheckType.NATIONAL_IDENTITY: DriverVerificationCheck.ResultCode.MATCH,
+        DriverVerificationCheck.CheckType.DRIVING_LICENCE: DriverVerificationCheck.ResultCode.VALID,
+        DriverVerificationCheck.CheckType.TRAFFIC_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
+        DriverVerificationCheck.CheckType.ACCIDENT_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
+    }
+    successful_result = successful_results[check.check_type]
+    if status == DriverVerificationCheck.Status.PASSED and result_code != successful_result:
+        raise VerificationReviewError(
+            "A check can only pass when its result confirms a successful verification."
+        )
+    if status == DriverVerificationCheck.Status.FAILED and result_code == successful_result:
+        raise VerificationReviewError(
+            "A successful verification result cannot be recorded as failed."
+        )
+    if result_code == DriverVerificationCheck.ResultCode.INCONCLUSIVE and status in {
+        DriverVerificationCheck.Status.PASSED,
+        DriverVerificationCheck.Status.FAILED,
+    }:
+        raise VerificationReviewError(
+            "An inconclusive result requires further review and cannot pass or fail."
+        )
+
     verification = DriverVerification.objects.select_for_update().get(pk=check.verification_id)
     previous_overall_status = verification.status
     now = timezone.now()
