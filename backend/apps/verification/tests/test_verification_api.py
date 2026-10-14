@@ -134,6 +134,26 @@ class VerificationReviewServiceTests(APITestCase):
         )
         self.assertTrue(self.verification.is_discoverable)
 
+    def test_discovery_rechecks_result_codes_even_if_status_says_passed(self):
+        self._pass_all_checks()
+        licence_check = next(
+            check for check in self.checks
+            if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
+        )
+        record_verified_licence_classes(
+            check_id=licence_check.id,
+            reviewer=self.reviewer,
+            licence_classes=["C"],
+        )
+        identity_check = next(
+            check for check in self.checks
+            if check.check_type == DriverVerificationCheck.CheckType.NATIONAL_IDENTITY
+        )
+        DriverVerificationCheck.objects.filter(pk=identity_check.pk).update(
+            result_code=DriverVerificationCheck.ResultCode.MISMATCH
+        )
+        self.assertFalse(self.verification.is_discoverable)
+
     def test_licence_classes_cannot_be_recorded_before_validation(self):
         licence_check = next(
             check for check in self.checks
