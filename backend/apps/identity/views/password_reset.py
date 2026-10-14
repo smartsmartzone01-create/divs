@@ -9,11 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.identity.models import AuthSession, VerificationCode
-from apps.identity.services.verification import (
-    VerificationDeliveryNotConfigured,
-    issue_verification_code,
-    verify_code,
-)
+from apps.identity.services.verification import issue_verification_code, verify_code
 from common.throttles.authentication import (
     VerificationConfirmThrottle,
     VerificationRequestThrottle,
@@ -56,8 +52,9 @@ class PasswordResetRequestView(APIView):
                     account=account,
                     purpose=VerificationCode.Purpose.PASSWORD_RESET,
                 )
-            except Exception:
-                logger.exception("Password reset email delivery failed.")
+            except Exception as exc:
+                # Avoid logging the recipient address or provider exception details.
+                logger.warning("Password reset email delivery failed (%s).", type(exc).__name__)
         return Response(
             {"detail": "If an active account with a verified email exists, reset instructions will be sent."},
             status=status.HTTP_202_ACCEPTED,
@@ -70,7 +67,10 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     new_password = serializers.CharField(write_only=True, trim_whitespace=False)
 
     def validate_new_password(self, value):
-        password_validation.validate_password(value)
+        try:
+            password_validation.validate_password(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages) from exc
         return value
 
 
