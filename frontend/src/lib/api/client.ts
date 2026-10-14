@@ -1,7 +1,3 @@
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") ??
-  "http://127.0.0.1:8000/api/v1";
-
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -35,11 +31,12 @@ export async function apiRequest<T>(
   }
 
   const response = await fetch(
-    `${API_BASE_URL}/${normalizedPath}`,
+    `/api/backend/${normalizedPath}`,
     {
       ...options,
       headers,
       body,
+      credentials: "same-origin",
     },
   );
 
