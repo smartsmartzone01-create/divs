@@ -66,3 +66,33 @@ class PhoneVerificationDeliveryTests(TestCase):
                 target="+255712345678",
             ).exists()
         )
+
+    @override_settings(
+        SMS_OTP_PROVIDER_CLASS="apps.identity.tests.test_phone_auth.FakeSMSProvider"
+    )
+    def test_newly_delivered_code_invalidates_previous_code(self):
+        issue_verification_code(
+            VerificationCode.Channel.PHONE,
+            "+255712345678",
+        )
+        old_code = FakeSMSProvider.deliveries[-1]["code"]
+        issue_verification_code(
+            VerificationCode.Channel.PHONE,
+            "+255712345678",
+        )
+        new_code = FakeSMSProvider.deliveries[-1]["code"]
+
+        self.assertFalse(
+            verify_code(
+                VerificationCode.Channel.PHONE,
+                "+255712345678",
+                old_code,
+            )
+        )
+        self.assertTrue(
+            verify_code(
+                VerificationCode.Channel.PHONE,
+                "+255712345678",
+                new_code,
+            )
+        )
