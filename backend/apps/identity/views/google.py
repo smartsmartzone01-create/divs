@@ -66,6 +66,15 @@ class GoogleSignInView(APIView):
 
         # Identity creates no driver/client role. The relevant registration workflow does that later.
         if request.user and request.user.is_authenticated:
+            existing_email_account = Account.objects.filter(email__iexact=email).first()
+            if existing_email_account is not None and existing_email_account.id != request.user.id:
+                return Response(
+                    {
+                        "detail": "This verified Google email already belongs to another DIVS account.",
+                        "account_linking_required": True,
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
             account = request.user
         else:
             existing_account = Account.objects.filter(email__iexact=email).first()
