@@ -47,11 +47,15 @@ Run `pnpm build` before treating a change as ready. The scaffold has not been in
 
 ## Environment variables
 
-`.env.example` documents the public API base URL. Copy it to `.env.local` for local work and adjust the URL if the backend runs elsewhere:
+`.env.example` documents the Django API base URL and the public Google Identity Services client ID. Copy it to `.env.local` for local work and adjust the URL if the backend runs elsewhere:
 
 ```dotenv
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api/v1
+DIVS_API_BASE_URL=http://127.0.0.1:8000/api/v1
+NEXT_PUBLIC_GOOGLE_OIDC_CLIENT_ID=
 ```
+
+The frontend uses a same-origin Next.js API proxy for Django requests. Access and refresh JWTs are stored in `HttpOnly`, `SameSite=Lax` cookies and are never returned to browser JavaScript. The proxy refreshes expired access tokens and revokes/clears cookies on logout. `DIVS_API_BASE_URL` is server-only; the Google client ID is public by design. Configure the matching `GOOGLE_OIDC_CLIENT_ID` in the Django environment.
 
 Only values intended to be visible to the browser may use the `NEXT_PUBLIC_` prefix. **Never place passwords, private API keys, signing secrets, or database credentials in a `NEXT_PUBLIC_` variable.** Keep local `.env.local` files out of Git.
 
@@ -99,6 +103,17 @@ frontend/
 ```
 
 Each feature should own its feature-specific components, API service functions, types, validation schemas, hooks, and tests as those are introduced. Keep route files in `src/app/` thin: they should compose feature components rather than own domain rules. Shared folders are for genuinely reusable code; do not duplicate backend validation or scoring rules in the browser.
+
+## Identity routes now scaffolded
+
+- `/sign-in` — email or verified-phone password sign-in, plus Google sign-in when configured.
+- `/register` — create a shared identity without selecting a role.
+- `/verify` — request and confirm email or phone verification codes.
+- `/forgot-password` — request and confirm password recovery by verified email or phone.
+- `/account` — review contact verification and manage active sessions, including revocation and logout.
+- `/api/auth/[...path]` and `/api/backend/[...path]` — same-origin server-side proxies; JWTs stay in HttpOnly cookies.
+
+These screens and proxy routes are code-complete foundations, but frontend dependency installation, type checking, linting, production build, backend integration, and real provider tests have not been run in this environment.
 
 ## Dependency policy
 
