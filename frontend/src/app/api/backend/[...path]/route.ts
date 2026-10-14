@@ -46,6 +46,8 @@ async function sendUpstream(
 ) {
   const headers = new Headers({ Accept: "application/json" });
   const contentType = request.headers.get("content-type");
+  const userAgent = request.headers.get("user-agent");
+  if (userAgent) headers.set("User-Agent", userAgent);
   if (contentType) headers.set("Content-Type", contentType);
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
   return fetch(`${apiBaseUrl()}/${path}/${request.nextUrl.search}`, {
