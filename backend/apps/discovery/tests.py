@@ -81,6 +81,12 @@ class PublicDriverDiscoveryTests(APITestCase):
         self.assertEqual(response.data["results"][0]["performance_score"], 40)
         self.assertIsNone(response.data["results"][1]["performance_score"])
 
+    def test_score_below_hiring_threshold_excludes_driver_without_restriction_row(self):
+        self._create_verified_driver("low-score@example.com", score=39)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 0)
+
     def test_active_restriction_excludes_driver_from_available_results(self):
         profile = self._create_verified_driver("restricted@example.com", score=95)
         AvailabilityRestriction.objects.create(
