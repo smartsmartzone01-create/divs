@@ -64,7 +64,7 @@ Only values intended to be visible to the browser may use the `NEXT_PUBLIC_` pre
 1. Push the `development` branch to GitHub and import the DIVS repository in Vercel.
 2. Set the Vercel **Root Directory** to `frontend`.
 3. Use the Next.js framework preset. Vercel should detect the build command and output settings automatically.
-4. Configure `NEXT_PUBLIC_API_BASE_URL` separately for Preview and Production, using the reachable HTTPS URL for the deployed Django API.
+4. Configure `DIVS_API_BASE_URL` as a server-side environment variable for Preview and Production, using the reachable HTTPS URL for the deployed Django API. Keep `NEXT_PUBLIC_API_BASE_URL` aligned as a fallback and set `NEXT_PUBLIC_GOOGLE_OIDC_CLIENT_ID` plus the matching backend `GOOGLE_OIDC_CLIENT_ID` when enabling Google sign-in.
 5. Deploy the development branch as a Preview deployment while building and checking features. Do not make `development` the Production Branch or change `main` without explicit project approval.
 6. Before release, check backend CORS/CSRF and authentication settings against the actual frontend origin; do not use permissive production CORS settings.
 
