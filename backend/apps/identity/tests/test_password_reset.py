@@ -1,3 +1,4 @@
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -49,7 +50,7 @@ class PasswordResetAPITests(TestCase):
             purpose=VerificationCode.Purpose.IDENTITY_VERIFICATION,
             target=self.account.email,
             code_hash="unused",
-            expires_at=timezone.now() + timezone.timedelta(minutes=10),
+            expires_at=timezone.now() + timedelta(minutes=10),
         )
         response = self.client.post(
             "/api/v1/auth/password-reset/confirm/",
@@ -66,7 +67,7 @@ class PasswordResetAPITests(TestCase):
     def test_successful_reset_changes_password_and_revokes_sessions(self, verify):
         session = AuthSession.objects.create(
             account=self.account,
-            expires_at=timezone.now() + timezone.timedelta(days=7),
+            expires_at=timezone.now() + timedelta(days=7),
         )
         response = self.client.post(
             "/api/v1/auth/password-reset/confirm/",
