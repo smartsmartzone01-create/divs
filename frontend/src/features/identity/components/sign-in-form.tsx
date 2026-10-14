@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "@/features/identity/api";
 import { GoogleSignInButton } from "@/features/identity/components/google-sign-in-button";
@@ -36,7 +36,7 @@ export function SignInForm() {
         <input
           id="identifier"
           autoComplete="username"
-          inputMode="email"
+          inputMode="text"
           required
           value={identifier}
           onChange={(event) => setIdentifier(event.target.value)}
