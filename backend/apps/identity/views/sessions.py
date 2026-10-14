@@ -24,7 +24,11 @@ class SessionListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return AuthSession.objects.filter(account=self.request.user)
+        return AuthSession.objects.filter(
+            account=self.request.user,
+            revoked_at__isnull=True,
+            expires_at__gt=timezone.now(),
+        )
 
 
 class LogoutView(APIView):
