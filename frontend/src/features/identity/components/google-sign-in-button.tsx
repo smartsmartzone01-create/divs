@@ -2,7 +2,6 @@
 
 import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { identityRequest } from "@/features/identity/api";
 
 type GoogleCredentialResponse = { credential?: string };
@@ -27,7 +26,6 @@ declare global {
 }
 
 export function GoogleSignInButton() {
-  const router = useRouter();
   const buttonRef = useRef<HTMLDivElement>(null);
   const [scriptReady, setScriptReady] = useState(false);
   const [error, setError] = useState("");
@@ -52,8 +50,7 @@ export function GoogleSignInButton() {
             method: "POST",
             body: { credential },
           });
-          router.replace("/account");
-          router.refresh();
+          window.location.assign("/account");
         } catch (caught) {
           setError(caught instanceof Error ? caught.message : "Google sign-in failed.");
         } finally {
@@ -68,7 +65,7 @@ export function GoogleSignInButton() {
       shape: "rectangular",
       width: "280",
     });
-  }, [clientId, router, scriptReady]);
+  }, [clientId, scriptReady]);
 
   if (!clientId) {
     return <p className="auth-helper">Google sign-in will be available when DIVS Google OAuth is configured.</p>;
