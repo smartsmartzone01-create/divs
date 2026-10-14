@@ -18,60 +18,56 @@ function apiBaseUrl(): string {
 }
 
 function applyAuthCookies(response: NextResponse, tokens: { access: string; refresh: string }) {
-  const secure = process.env.NODE_ENV === "production";
   const common = {
     httpOnly: true,
-    secure,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax" as const,
     path: "/api/auth",
   };
-  response.cookies.set(ACCESS_COOKIE, tokens.access, {
-    ...common,
-    maxAge: ACCESS_MAX_AGE,
-  });
-  response.cookies.set(REFRESH_COOKIE, tokens.refresh, {
-    ...common,
-    maxAge: REFRESH_MAX_AGE,
-  });
+  response.cookies.set(ACCESS_COOKIE, tokens.access, { ...common, maxAge: ACCESS_MAX_AGE });
+  response.cookies.set(REFRESH_COOKIE, tokens.refresh, { ...common, maxAge: REFRESH_MAX_AGE });
 }
 
 function clearAuthCookies(response: NextResponse) {
-  const secure = process.env.NODE_ENV === "production";
-  for (const name of [ACCESS_COOKIE, REFRESH_COOKIE]) {
-    response.cookies.set(name, "", {
-      httpOnly: true,
-      secure,
-      sameSite: "lax",
-      path: "/api/auth",
-      maxAge: 0,
-    });
-  }
+  const common = {
+    value: "",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/api/auth",
+    maxAge: 0,
+  };
+  response.cookies.set(ACCESS_COOKIE, common);
+  response.cookies.set(REFRESH_COOKIE, common);
 }
 
 async function upstreamRequest(
   request: NextRequest,
   routePath: string,
   accessToken?: string,
-  overrideBody?: string,
+  body?: string,
 ) {
   const url = `${apiBaseUrl()}/auth/${routePath}/${request.nextUrl.search}`;
   const headers = new Headers({ Accept: "application/json" });
-  const incomingContentType = request.headers.get("content-type");
-  if (incomingContentType) headers.set("Content-Type", incomingContentType);
+  const contentType = request.headers.get("content-type");
+  if (contentType) headers.set("Content-Type", contentType);
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
-
-  let body: string | undefined = overrideBody;
-  if (body === undefined && request.method !== "GET" && request.method !== "HEAD") {
-    body = await request.text();
-  }
 
   return fetch(url, {
     method: request.method,
     headers,
-    body,
+    body: request.method === "GET" || request.method === "HEAD" ? undefined : body,
     cache: "no-store",
     redirect: "manual",
   });
+}
+
+async function makeResponse(upstream: Response): Promise<NextResponse> {
+  const text = await upstream.text();
+  const headers = new Headers();
+  const contentType = upstream.headers.get("content-type");
+  if (contentType) headers.set("Content-Type", contentType);
+  return new NextResponse(text || null, { status: upstream.status, headers });
 }
 
 async function handler(request: NextRequest, context: RouteContext) {
@@ -81,7 +77,8 @@ async function handler(request: NextRequest, context: RouteContext) {
   }
 
   const routePath = path.join("/");
-  const requestBody = request.method === "GET" || request.method === "HEAD" ? undefined : await request.text();
+  const body =
+    request.method === "GET" || request.method === "HEAD" ? undefined : await request.text();
   const refreshToken = request.cookies.get(REFRESH_COOKIE)?.value;
   let accessToken = request.cookies.get(ACCESS_COOKIE)?.value;
   let upstream: Response;
@@ -92,30 +89,19 @@ async function handler(request: NextRequest, context: RouteContext) {
       clearAuthCookies(response);
       return response;
     }
-    upstream = await upstreamRequest(
-      request,
-      routePath,
-      undefined,
-      JSON.stringify({ refresh: refreshToken }),
-    );
+    upstream = await fetch(`${apiBaseUrl()}/auth/token/refresh/`, {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh: refreshToken }),
+      cache: "no-store",
+    });
   } else {
-    upstream = await upstreamRequest(request, routePath, accessToken, requestBody);
+    upstream = await upstreamRequest(request, routePath, accessToken, body);
   }
 
   let rotatedTokens: { access: string; refresh: string } | undefined;
-  if (
-    routePath === "token/refresh" &&
-    upstream.ok
-  ) {
-    const payload = (await upstream.clone().json().catch(() => null)) as
-      | { access?: string; refresh?: string }
-      | null;
-    if (payload?.access && payload.refresh) {
-      rotatedTokens = { access: payload.access, refresh: payload.refresh };
-    }
-  }
 
-  // Retry an expired access token once using the HttpOnly refresh cookie.
+  // Retry a protected request once when its access token has expired.
   if (
     upstream.status === 401 &&
     refreshToken &&
@@ -131,37 +117,49 @@ async function handler(request: NextRequest, context: RouteContext) {
     const refreshed = (await refreshResponse.json().catch(() => null)) as
       | { access?: string; refresh?: string }
       | null;
+
     if (refreshResponse.ok && refreshed?.access && refreshed.refresh) {
       rotatedTokens = { access: refreshed.access, refresh: refreshed.refresh };
       accessToken = refreshed.access;
-      upstream = await upstreamRequest(request, routePath, accessToken, requestBody);
+      upstream = await upstreamRequest(request, routePath, accessToken, body);
     } else {
-      const upstreamText = await upstream.text();
-  const upstreamContentType = upstream.headers.get("content-type");
-  const responseHeaders = new Headers();
-  if (upstreamContentType) responseHeaders.set("Content-Type", upstreamContentType);
-  const response = new NextResponse(upstreamText || null, {
-    status: upstream.status,
-    headers: responseHeaders,
-  });
-  if (rotatedTokens) applyAuthCookies(response, rotatedTokens);
-
-  let upstreamPayload: unknown;
-  try {
-    upstreamPayload = upstreamText ? JSON.parse(upstreamText) : undefined;
-  } catch {
-    upstreamPayload = undefined;
+      const response = await makeResponse(upstream);
+      clearAuthCookies(response);
+      return response;
+    }
   }
 
-  // Tokens are stored only in HttpOnly cookies, never returned to browser JavaScript.
+  const upstreamText = await upstream.text();
+  let payload: unknown;
+  try {
+    payload = upstreamText ? JSON.parse(upstreamText) : undefined;
+  } catch {
+    payload = undefined;
+  }
+
+  const contentType = upstream.headers.get("content-type");
+  const headers = new Headers();
+  if (contentType) headers.set("Content-Type", contentType);
+  const response = new NextResponse(upstreamText || null, {
+    status: upstream.status,
+    headers,
+  });
+
+  if (rotatedTokens) applyAuthCookies(response, rotatedTokens);
+
+  // Never expose access or refresh tokens to browser JavaScript.
   if (
     upstream.ok &&
-    (routePath === "token" || routePath === "token/refresh" || routePath === "providers/google/sign-in")
+    (routePath === "token" ||
+      routePath === "token/refresh" ||
+      routePath === "providers/google/sign-in")
   ) {
-    const payload = upstreamPayload as { access?: string; refresh?: string; [key: string]: unknown } | undefined;
-    if (payload?.access && payload.refresh) {
-      const tokens = { access: payload.access, refresh: payload.refresh };
-      const sanitized = { ...payload };
+    const tokenPayload = payload as
+      | { access?: string; refresh?: string; [key: string]: unknown }
+      | undefined;
+    if (tokenPayload?.access && tokenPayload.refresh) {
+      const tokens = { access: tokenPayload.access, refresh: tokenPayload.refresh };
+      const sanitized = { ...tokenPayload };
       delete sanitized.access;
       delete sanitized.refresh;
       const safeResponse = NextResponse.json(sanitized, { status: upstream.status });
@@ -169,19 +167,11 @@ async function handler(request: NextRequest, context: RouteContext) {
       return safeResponse;
     }
   }
-  if (routePath === "logout") clearAuthCookies(response);
-  return response;
-}
 
-async function makeResponse(upstream: Response): Promise<NextResponse> {
-  const text = await upstream.text();
-  const contentType = upstream.headers.get("content-type");
-  const headers = new Headers();
-  if (contentType) headers.set("Content-Type", contentType);
-  return new NextResponse(text || null, {
-    status: upstream.status,
-    headers,
-  });
+  if (routePath === "logout" || (routePath === "token/refresh" && !upstream.ok)) {
+    clearAuthCookies(response);
+  }
+  return response;
 }
 
 export const GET = handler;
