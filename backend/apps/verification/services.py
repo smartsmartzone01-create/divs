@@ -3,7 +3,11 @@ from django.utils import timezone
 
 from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
-from apps.verification.models import DriverVerification, DriverVerificationCheck
+from apps.verification.models import (
+    DriverVerification,
+    DriverVerificationCheck,
+    VerifiedDriverLicenceClass,
+)
 
 
 class VerificationReviewError(Exception):
@@ -105,9 +109,18 @@ def review_driver_check(
     if verification.status != previous_overall_status:
         driver_account = verification.profile.registration.account
         status_titles = {
-            DriverVerification.Status.IN_REVIEW: ("Verification in review", "Your driver verification is being reviewed."),
-            DriverVerification.Status.APPROVED: ("Driver verification approved", "Your driver verification is approved."),
-            DriverVerification.Status.REJECTED: ("Driver verification not approved", "Your driver verification was not approved. Please review your verification workspace for the current status."),
+            DriverVerification.Status.IN_REVIEW: (
+                "Verification in review",
+                "Your driver verification is being reviewed.",
+            ),
+            DriverVerification.Status.APPROVED: (
+                "Driver verification approved",
+                "Your driver verification is approved.",
+            ),
+            DriverVerification.Status.REJECTED: (
+                "Driver verification not approved",
+                "Your driver verification was not approved. Please review your verification workspace for the current status.",
+            ),
         }
         title, message = status_titles.get(
             verification.status,
@@ -122,3 +135,60 @@ def review_driver_check(
         )
 
     return check
+
+
+@transaction.atomic
+def record_verified_licence_classes(*, check_id, licence_classes, reviewer):
+    """Record only classes confirmed from a presented and validated licence."""
+    check = (
+        DriverVerificationCheck.objects.select_for_update()
+        .filter(pk=check_id)
+        .first()
+    )
+    if check is None:
+        raise VerificationReviewError("Verification check not found.")
+    if (
+        check.check_type != DriverVerificationCheck.CheckType.DRIVING_LICENCE
+        or check.status != DriverVerificationCheck.Status.PASSED
+        or check.result_code != DriverVerificationCheck.ResultCode.VALID
+    ):
+        raise VerificationReviewError(
+            "Licence classes can only be recorded after the driving licence is validated."
+        )
+    if not licence_classes:
+        raise VerificationReviewError("Provide at least one validated licence class.")
+
+    normalized = []
+    for value in licence_classes:
+        licence_class = str(value).strip().upper()
+        if (
+            not licence_class
+            or len(licence_class) > 12
+            or not licence_class.isalnum()
+        ):
+            raise VerificationReviewError(
+                "Licence classes must contain only letters and numbers, up to 12 characters."
+            )
+        if licence_class in normalized:
+            raise VerificationReviewError("Duplicate licence classes are not allowed.")
+        normalized.append(licence_class)
+
+    now = timezone.now()
+    VerifiedDriverLicenceClass.objects.filter(
+        licence_check=check,
+        is_current=True,
+    ).update(is_current=False, updated_at=now)
+
+    records = []
+    for licence_class in normalized:
+        record, _created = VerifiedDriverLicenceClass.objects.update_or_create(
+            licence_check=check,
+            licence_class=licence_class,
+            defaults={
+                "is_current": True,
+                "verified_at": now,
+                "verified_by": reviewer,
+            },
+        )
+        records.append(record)
+    return records
