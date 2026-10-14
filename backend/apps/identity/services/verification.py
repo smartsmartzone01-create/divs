@@ -24,13 +24,19 @@ def normalize_target(channel, target):
     return value
 
 
-def issue_verification_code(channel, target, account=None):
+def issue_verification_code(
+    channel,
+    target,
+    account=None,
+    purpose=VerificationCode.Purpose.IDENTITY_VERIFICATION,
+):
     target = normalize_target(channel, target)
     raw_code = f"{secrets.randbelow(1_000_000):06d}"
     now = timezone.now()
     record = VerificationCode.objects.create(
         account=account,
         channel=channel,
+        purpose=purpose,
         target=target,
         code_hash=make_password(raw_code),
         expires_at=now + timedelta(minutes=CODE_TTL_MINUTES),
@@ -39,8 +45,18 @@ def issue_verification_code(channel, target, account=None):
     if channel == VerificationCode.Channel.EMAIL:
         try:
             sent = send_mail(
-                subject="Your DIVS verification code",
-                message=f"Your DIVS verification code is {raw_code}. It expires in {CODE_TTL_MINUTES} minutes.",
+                subject=(
+                    "Reset your DIVS password"
+                    if purpose == VerificationCode.Purpose.PASSWORD_RESET
+                    else "Your DIVS verification code"
+                ),
+                message=(
+                    f"Your DIVS password reset code is {raw_code}. "
+                    f"It expires in {CODE_TTL_MINUTES} minutes."
+                    if purpose == VerificationCode.Purpose.PASSWORD_RESET
+                    else f"Your DIVS verification code is {raw_code}. "
+                    f"It expires in {CODE_TTL_MINUTES} minutes."
+                ),
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[target],
                 fail_silently=False,
@@ -59,10 +75,16 @@ def issue_verification_code(channel, target, account=None):
     return record
 
 
-def verify_code(channel, target, raw_code):
+def verify_code(
+    channel,
+    target,
+    raw_code,
+    purpose=VerificationCode.Purpose.IDENTITY_VERIFICATION,
+):
     target = normalize_target(channel, target)
     record = VerificationCode.objects.filter(
         channel=channel,
+        purpose=purpose,
         target=target,
         consumed_at__isnull=True,
     ).order_by("-created_at").first()
