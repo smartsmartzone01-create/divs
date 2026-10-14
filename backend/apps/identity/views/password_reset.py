@@ -22,7 +22,13 @@ Account = get_user_model()
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = serializers.EmailField(required=False)
+    phone_number = serializers.CharField(required=False, max_length=32)
+
+    def validate(self, attrs):
+        if bool(attrs.get("email")) == bool(attrs.get("phone_number")):
+            raise serializers.ValidationError("Provide exactly one of email or phone_number.")
+        return attrs
 
 
 class PasswordResetRequestView(APIView):
@@ -35,36 +41,54 @@ class PasswordResetRequestView(APIView):
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data["email"].strip().lower()
-        account = Account.objects.filter(
-            email__iexact=email,
-            email_verified=True,
-            is_active=True,
-        ).first()
+        data = serializer.validated_data
 
-        # Keep the response identical for unknown addresses and delivery failures so this
-        # endpoint cannot be used to enumerate registered email addresses.
+        if data.get("email"):
+            channel = VerificationCode.Channel.EMAIL
+            target = data["email"].strip().lower()
+            account = Account.objects.filter(
+                email__iexact=target,
+                email_verified=True,
+                is_active=True,
+            ).first()
+        else:
+            channel = VerificationCode.Channel.PHONE
+            target = data["phone_number"].strip()
+            account = Account.objects.filter(
+                phone_number=target,
+                phone_verified=True,
+                is_active=True,
+            ).first()
+
+        # Keep the response identical for unknown addresses/numbers and delivery failures
+        # so this endpoint cannot be used to enumerate registered accounts.
         if account is not None:
             try:
                 issue_verification_code(
-                    VerificationCode.Channel.EMAIL,
-                    email,
+                    channel,
+                    target,
                     account=account,
                     purpose=VerificationCode.Purpose.PASSWORD_RESET,
                 )
             except Exception as exc:
-                # Avoid logging the recipient address or provider exception details.
-                logger.warning("Password reset email delivery failed (%s).", type(exc).__name__)
+                # Avoid logging the destination or provider exception details.
+                logger.warning("Password reset delivery failed (%s).", type(exc).__name__)
         return Response(
-            {"detail": "If an active account with a verified email exists, reset instructions will be sent."},
+            {"detail": "If an active account with a verified email or phone exists, reset instructions will be sent."},
             status=status.HTTP_202_ACCEPTED,
         )
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = serializers.EmailField(required=False)
+    phone_number = serializers.CharField(required=False, max_length=32)
     code = serializers.RegexField(r"^\d{6}$")
     new_password = serializers.CharField(write_only=True, trim_whitespace=False)
+
+    def validate(self, attrs):
+        if bool(attrs.get("email")) == bool(attrs.get("phone_number")):
+            raise serializers.ValidationError("Provide exactly one of email or phone_number.")
+        return attrs
 
     def validate_new_password(self, value):
         try:
@@ -82,12 +106,28 @@ class PasswordResetConfirmView(APIView):
         serializer = PasswordResetConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        email = data["email"].strip().lower()
+
+        if data.get("email"):
+            channel = VerificationCode.Channel.EMAIL
+            target = data["email"].strip().lower()
+            account_lookup = {
+                "email__iexact": target,
+                "email_verified": True,
+                "is_active": True,
+            }
+        else:
+            channel = VerificationCode.Channel.PHONE
+            target = data["phone_number"].strip()
+            account_lookup = {
+                "phone_number": target,
+                "phone_verified": True,
+                "is_active": True,
+            }
 
         with transaction.atomic():
             if not verify_code(
-                VerificationCode.Channel.EMAIL,
-                email,
+                channel,
+                target,
                 data["code"],
                 purpose=VerificationCode.Purpose.PASSWORD_RESET,
             ):
@@ -96,11 +136,7 @@ class PasswordResetConfirmView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            account = Account.objects.filter(
-                email__iexact=email,
-                email_verified=True,
-                is_active=True,
-            ).first()
+            account = Account.objects.filter(**account_lookup).first()
             if account is None:
                 return Response(
                     {"detail": "The reset code is invalid, expired, or no longer usable."},
@@ -112,6 +148,7 @@ class PasswordResetConfirmView(APIView):
             except DjangoValidationError as exc:
                 # Raising inside the transaction rolls back consumption of the valid code.
                 raise serializers.ValidationError({"new_password": exc.messages}) from exc
+
             account.set_password(data["new_password"])
             account.save(update_fields=["password", "updated_at"])
             # Session JWT authentication checks this record on every request, so revoking
