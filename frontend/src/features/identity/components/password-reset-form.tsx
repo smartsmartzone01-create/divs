@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { type FormEvent, useState } from "react";
 import Link from "next/link";
 import { confirmPasswordReset, requestPasswordReset } from "@/features/identity/api";
 
