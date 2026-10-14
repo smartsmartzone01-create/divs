@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "@/features/identity/api";
+import { GoogleSignInButton } from "@/features/identity/components/google-sign-in-button";
 
 export function SignInForm() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export function SignInForm() {
   }
 
   return (
+    <>
     <form className="auth-form" onSubmit={handleSubmit}>
       <div className="auth-field">
         <label htmlFor="identifier">Email or verified phone number</label>
@@ -62,5 +64,7 @@ export function SignInForm() {
       </button>
       <p className="auth-helper">Your email or phone must be verified before password sign-in.</p>
     </form>
+    <GoogleSignInButton />
+    </>
   );
 }
