@@ -89,6 +89,14 @@ def issue_verification_code(
         record.delete()
         raise VerificationDeliveryNotConfigured("Unsupported verification channel.")
 
+    # Only the newest successfully delivered code for this destination and purpose remains usable.
+    VerificationCode.objects.filter(
+        channel=channel,
+        purpose=purpose,
+        target=target,
+        consumed_at__isnull=True,
+    ).exclude(id=record.id).update(consumed_at=now)
+
     return record
 
 
