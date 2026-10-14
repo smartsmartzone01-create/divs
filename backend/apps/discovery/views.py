@@ -82,6 +82,10 @@ class PublicDriverDiscoveryView(APIView):
                 score = profile.performance_score.effective_score
             except DriverScore.DoesNotExist:
                 score = None
+            # The public hiring directory must enforce the threshold even if a
+            # restriction record is missing or has not yet been created.
+            if score is not None and score < 40:
+                continue
             if min_score is not None and (score is None or score < min_score):
                 continue
             if max_score is not None and (score is None or score > max_score):
