@@ -3,6 +3,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.operations.models import OperationsMembership
+from apps.operations.permissions import capabilities_for, is_initial_system_superuser
 from apps.performance.models import (
     PerformanceAppeal,
     PerformanceAppealDecision,
@@ -13,14 +14,16 @@ from apps.performance.models import (
 def _require_appeal_reviewer(actor):
     if not getattr(actor, "is_authenticated", False):
         raise PermissionDenied("An authenticated Operations reviewer is required.")
-    if not OperationsMembership.objects.filter(
-        account=actor,
-        role__in=[
-            OperationsMembership.Role.ADMIN,
-            OperationsMembership.Role.OPERATOR,
-        ],
-    ).exists():
-        raise PermissionDenied("Only an approved Operations Admin or Operator may decide appeals.")
+    if is_initial_system_superuser(actor):
+        return
+    if (
+        OperationsMembership.objects.filter(
+            account=actor,
+            role__in=[OperationsMembership.Role.ADMIN, OperationsMembership.Role.OPERATOR],
+        ).first() is None
+        or "manage_driver_performance" not in capabilities_for(actor)
+    ):
+        raise PermissionDenied("Only an active Operations Admin or Operator may decide appeals.")
 
 
 @transaction.atomic
