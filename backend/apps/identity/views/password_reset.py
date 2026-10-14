@@ -1,6 +1,7 @@
 import logging
 
 from django.contrib.auth import get_user_model, password_validation
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import permissions, serializers, status
@@ -106,7 +107,11 @@ class PasswordResetConfirmView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            password_validation.validate_password(data["new_password"], user=account)
+            try:
+                password_validation.validate_password(data["new_password"], user=account)
+            except DjangoValidationError as exc:
+                # Raising inside the transaction rolls back consumption of the valid code.
+                raise serializers.ValidationError({"new_password": exc.messages}) from exc
             account.set_password(data["new_password"])
             account.save(update_fields=["password", "updated_at"])
             # Session JWT authentication checks this record on every request, so revoking
