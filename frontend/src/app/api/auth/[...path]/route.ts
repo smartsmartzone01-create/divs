@@ -81,6 +81,7 @@ async function handler(request: NextRequest, context: RouteContext) {
   }
 
   const routePath = path.join("/");
+  const requestBody = request.method === "GET" || request.method === "HEAD" ? undefined : await request.text();
   const refreshToken = request.cookies.get(REFRESH_COOKIE)?.value;
   let accessToken = request.cookies.get(ACCESS_COOKIE)?.value;
   let upstream: Response;
@@ -98,7 +99,7 @@ async function handler(request: NextRequest, context: RouteContext) {
       JSON.stringify({ refresh: refreshToken }),
     );
   } else {
-    upstream = await upstreamRequest(request, routePath, accessToken);
+    upstream = await upstreamRequest(request, routePath, accessToken, requestBody);
   }
 
   let rotatedTokens: { access: string; refresh: string } | undefined;
@@ -133,37 +134,41 @@ async function handler(request: NextRequest, context: RouteContext) {
     if (refreshResponse.ok && refreshed?.access && refreshed.refresh) {
       rotatedTokens = { access: refreshed.access, refresh: refreshed.refresh };
       accessToken = refreshed.access;
-      upstream = await upstreamRequest(request, routePath, accessToken);
+      upstream = await upstreamRequest(request, routePath, accessToken, requestBody);
     } else {
-      const response = await makeResponse(upstream);
-      clearAuthCookies(response);
-      return response;
-    }
-  }
-
-  const response = await makeResponse(upstream);
+      const upstreamText = await upstream.text();
+  const upstreamContentType = upstream.headers.get("content-type");
+  const responseHeaders = new Headers();
+  if (upstreamContentType) responseHeaders.set("Content-Type", upstreamContentType);
+  const response = new NextResponse(upstreamText || null, {
+    status: upstream.status,
+    headers: responseHeaders,
+  });
   if (rotatedTokens) applyAuthCookies(response, rotatedTokens);
+
+  let upstreamPayload: unknown;
+  try {
+    upstreamPayload = upstreamText ? JSON.parse(upstreamText) : undefined;
+  } catch {
+    upstreamPayload = undefined;
+  }
 
   // Tokens are stored only in HttpOnly cookies, never returned to browser JavaScript.
   if (
     upstream.ok &&
     (routePath === "token" || routePath === "token/refresh" || routePath === "providers/google/sign-in")
   ) {
-    const payload = (await upstream.clone().json().catch(() => null)) as
-      | { access?: string; refresh?: string }
-      | null;
+    const payload = upstreamPayload as { access?: string; refresh?: string; [key: string]: unknown } | undefined;
     if (payload?.access && payload.refresh) {
-      applyAuthCookies(response, { access: payload.access, refresh: payload.refresh });
+      const tokens = { access: payload.access, refresh: payload.refresh };
       const sanitized = { ...payload };
       delete sanitized.access;
       delete sanitized.refresh;
       const safeResponse = NextResponse.json(sanitized, { status: upstream.status });
-      // Preserve the rotated/new cookies on the replacement response.
-      applyAuthCookies(safeResponse, { access: payload.access, refresh: payload.refresh });
+      applyAuthCookies(safeResponse, tokens);
       return safeResponse;
     }
   }
-
   if (routePath === "logout") clearAuthCookies(response);
   return response;
 }
