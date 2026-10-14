@@ -3,6 +3,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.operations.models import OperationsMembership
+from apps.operations.permissions import capabilities_for, is_initial_system_superuser
 from apps.performance.models import (
     AvailabilityRestriction,
     AvailabilityRestrictionDecision,
@@ -17,9 +18,11 @@ LOW_SCORE_RESTRICTION_THRESHOLD = 40
 def _membership_role(actor):
     if not getattr(actor, "is_authenticated", False):
         raise PermissionDenied("An authenticated Operations user is required.")
+    if is_initial_system_superuser(actor):
+        return OperationsMembership.Role.ADMIN
     membership = OperationsMembership.objects.filter(account=actor).first()
-    if membership is None:
-        raise PermissionDenied("An approved Operations membership is required.")
+    if membership is None or "manage_driver_performance" not in capabilities_for(actor):
+        raise PermissionDenied("An active Operations membership is required.")
     return membership.role
 
 
