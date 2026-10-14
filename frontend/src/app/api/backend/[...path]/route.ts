@@ -83,7 +83,22 @@ async function handler(request: NextRequest, context: RouteContext) {
       : await request.arrayBuffer();
   const refreshToken = request.cookies.get(REFRESH_COOKIE)?.value;
   let accessToken = request.cookies.get(ACCESS_COOKIE)?.value;
-  let upstream = await sendUpstream(request, routePath, accessToken, body);
+  let upstream: Response;
+  if (routePath === "auth/token/refresh" && request.method === "POST") {
+    if (!refreshToken) {
+      const response = NextResponse.json({ detail: "No active refresh session." }, { status: 401 });
+      clearTokens(response);
+      return response;
+    }
+    upstream = await fetch(`${apiBaseUrl()}/auth/token/refresh/`, {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh: refreshToken }),
+      cache: "no-store",
+    });
+  } else {
+    upstream = await sendUpstream(request, routePath, accessToken, body);
+  }
   let rotatedTokens: { access: string; refresh: string } | undefined;
 
   // Authentication and other protected API calls share the same server-side session cookies.
