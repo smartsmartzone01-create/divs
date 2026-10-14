@@ -3,7 +3,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.operations.models import OperationsMembership
-from apps.operations.permissions import capabilities_for, is_initial_system_superuser
+from apps.operations.permissions import is_initial_system_superuser
 from apps.performance.models import PerformanceScoringRule
 
 
@@ -12,11 +12,10 @@ def _require_admin(actor):
         raise PermissionDenied("An authenticated Operations Admin is required.")
     if is_initial_system_superuser(actor):
         return
-    membership = OperationsMembership.objects.filter(
+    if not OperationsMembership.objects.filter(
         account=actor, role=OperationsMembership.Role.ADMIN
-    ).first()
-    if membership is None or "manage_driver_performance" not in capabilities_for(actor):
-        raise PermissionDenied("Only an active Operations Admin may manage scoring rules.")
+    ).exists():
+        raise PermissionDenied("Only an Operations Admin may manage scoring rules.")
 
 
 def _validate_rule_values(*, category, event_code, points_delta, name, reason):
