@@ -5,6 +5,7 @@ from apps.identity.serializers.tokens import TrackedTokenRefreshSerializer
 from apps.identity.views.auth import CurrentAccountView
 from apps.identity.views.google import GoogleSignInView
 from apps.identity.views.providers import GoogleReadinessView, PhoneReadinessView
+from apps.identity.views.password_reset import PasswordResetConfirmView, PasswordResetRequestView
 from apps.identity.views.registration import AccountRegistrationView
 from apps.identity.views.sessions import LogoutView, RevokeSessionView, SessionListView
 from apps.identity.views.tokens import SharedTokenObtainPairView
@@ -26,6 +27,8 @@ urlpatterns = [
     path("logout/", LogoutView.as_view(), name="logout"),
     path("verification/request/", VerificationRequestView.as_view(), name="verification-request"),
     path("verification/confirm/", VerificationConfirmView.as_view(), name="verification-confirm"),
+    path("password-reset/request/", PasswordResetRequestView.as_view(), name="password-reset-request"),
+    path("password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
     path("providers/google/", GoogleReadinessView.as_view(), name="google-readiness"),
     path("providers/google/sign-in/", GoogleSignInView.as_view(), name="google-sign-in"),
     path("providers/phone/", PhoneReadinessView.as_view(), name="phone-readiness"),
