@@ -26,32 +26,47 @@ class DriverVerification(models.Model):
 
     @property
     def is_discoverable(self):
-        """Require overall approval and a validated licence with at least one class."""
-        licence_check = self.checks.filter(
-            check_type=DriverVerificationCheck.CheckType.DRIVING_LICENCE,
-            status=DriverVerificationCheck.Status.PASSED,
-            result_code=DriverVerificationCheck.ResultCode.VALID,
-        ).first()
+        """Require approval and successful outcomes for every check and a current licence class."""
         successful_results = {
             DriverVerificationCheck.CheckType.NATIONAL_IDENTITY: DriverVerificationCheck.ResultCode.MATCH,
             DriverVerificationCheck.CheckType.DRIVING_LICENCE: DriverVerificationCheck.ResultCode.VALID,
             DriverVerificationCheck.CheckType.TRAFFIC_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
             DriverVerificationCheck.CheckType.ACCIDENT_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
         }
-        all_checks_successful = all(
-            self.checks.filter(
-                check_type=check_type,
-                status=DriverVerificationCheck.Status.PASSED,
-                result_code=result_code,
-            ).exists()
-            for check_type, result_code in successful_results.items()
+        # Use prefetched rows when callers load discovery results in batches.
+        checks_by_type = {
+            check.check_type: check
+            for check in self.checks.all()
+        }
+        all_checks_successful = True
+        for check_type, result_code in successful_results.items():
+            check = checks_by_type.get(check_type)
+            if (
+                check is None
+                or check.status != DriverVerificationCheck.Status.PASSED
+                or check.result_code != result_code
+            ):
+                all_checks_successful = False
+                break
+
+        licence_check = checks_by_type.get(
+            DriverVerificationCheck.CheckType.DRIVING_LICENCE
+        )
+        has_current_class = (
+            licence_check is not None
+            and any(
+                licence_class.is_current
+                for licence_class in licence_check.verified_licence_classes.all()
+            )
         )
         return (
             self.profile.status == "active"
             and self.status == self.Status.APPROVED
             and all_checks_successful
             and licence_check is not None
-            and licence_check.verified_licence_classes.filter(is_current=True).exists()
+            and licence_check.status == DriverVerificationCheck.Status.PASSED
+            and licence_check.result_code == DriverVerificationCheck.ResultCode.VALID
+            and has_current_class
         )
 
     def __str__(self):
