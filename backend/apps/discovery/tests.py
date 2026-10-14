@@ -87,6 +87,28 @@ class PublicDriverDiscoveryTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 0)
 
+    def test_score_of_exactly_40_remains_eligible(self):
+        self._create_verified_driver("threshold@example.com", score=40)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+
+    def test_invalid_score_filter_is_rejected(self):
+        response = self.client.get(self.url, {"min_score": "101"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_minimum_score_filter_excludes_unscored_driver(self):
+        self._create_verified_driver("no-score-filter@example.com", score=None)
+        response = self.client.get(self.url, {"min_score": "0"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 0)
+
+    def test_min_score_cannot_exceed_max_score(self):
+        response = self.client.get(
+            self.url, {"min_score": "80", "max_score": "60"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_active_restriction_excludes_driver_from_available_results(self):
         profile = self._create_verified_driver("restricted@example.com", score=95)
         AvailabilityRestriction.objects.create(
