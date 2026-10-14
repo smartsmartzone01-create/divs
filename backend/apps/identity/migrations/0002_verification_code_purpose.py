@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
             model_name="verificationcode",
             index=models.Index(
                 fields=["channel", "purpose", "target", "created_at"],
-                name="identity_ver_channel_83cbd1_idx",
+                name="id_vercode_purpose_idx",
             ),
         ),
     ]
