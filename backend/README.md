@@ -33,7 +33,9 @@ SQLite and local-memory caching are used by default for local development. Confi
 - `POST /api/v1/auth/verification/request/` and `POST /api/v1/auth/verification/confirm/` — request and confirm an email or phone verification code.
 - `POST /api/v1/auth/token/refresh/` — refresh a token while its tracked device session remains active.
 - `GET /api/v1/auth/sessions/`, `DELETE /api/v1/auth/sessions/<session_id>/`, and `POST /api/v1/auth/logout/` — manage tracked sessions.
-- `POST /api/v1/auth/providers/google/sign-in/` — validate a Google ID token and sign in only when that Google subject is already linked to a DIVS account.
+- `POST /api/v1/auth/providers/google/sign-in/` — validate a Google ID token, sign in a linked identity, create a bare identity for a first-time Google user, or link Google to the current authenticated account. It never selects a driver/client role and never auto-merges an existing account by email alone.
+- `POST /api/v1/auth/password-reset/request/` and `POST /api/v1/auth/password-reset/confirm/` — request and complete a purpose-scoped reset using a verified email or phone. A successful reset revokes all tracked sessions.
+- `GET /api/v1/auth/providers/google/` and `GET /api/v1/auth/providers/phone/` — report whether the required provider configuration is present.
 
 ## Driver registration and profile
 
@@ -89,7 +91,7 @@ Invitation codes are hashed, tied to the invited email, and consumed when an app
 - Verification sends are limited per destination and have a resend cooldown. Invitation-code validation is also rate-limited.
 - Tracked sessions last as long as the refresh-token lifetime (currently seven days), and revoking a session invalidates its access and refresh use.
 - Google ID tokens are verified server-side against the configured client ID. Matching email addresses alone never auto-link a Google identity to an existing account.
-- Email/SMS delivery and government API integration require provider configuration and are not claimed to be operational until integrated and tested.
+- Email delivery requires SMTP configuration. Phone OTP delivery requires `SMS_OTP_PROVIDER_CLASS` to point to a Python adapter implementing `send_verification_code(phone_number, code, expires_in_seconds=...)`. The adapter must deliver the code, raise on failure, and never log the code. Provider configuration and government API integration are not claimed operational until integrated and tested.
 
 ## In-app notifications
 
