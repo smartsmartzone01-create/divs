@@ -1,27 +1,20 @@
 from django.urls import path
 
-from apps.performance.views.events import (
-    PerformanceEventListCreateView,
-    PerformanceEventReviewView,
-)
+from apps.performance.views.events import PerformanceEventListCreateView, PerformanceEventReviewView
 from apps.performance.views.scoring import (
-    ScoringRuleActionView,
-    ScoringRuleListCreateView,
-    ScoreHistoryListView,
-    ScoreOverrideView,
-    DriverMyPerformanceView,
+    ScoringRuleActionView, ScoringRuleListCreateView, ScoreHistoryListView,
+    ScoreOverrideView, DriverMyPerformanceView,
 )
-from apps.performance.views.appeals import (
-    AppealCorrectionView,
-    AppealReviewView,
-    DriverAppealsView,
-)
+from apps.performance.views.appeals import AppealCorrectionView, AppealReviewView, DriverAppealsView
+from apps.performance.views.availability import CriticalRestrictionView, RestrictionReleaseView
 
 app_name = "performance"
 
 urlpatterns = [
     path("events/", PerformanceEventListCreateView.as_view(), name="event-list-create"),
     path("events/<uuid:event_id>/review/", PerformanceEventReviewView.as_view(), name="event-review"),
+    path("events/<uuid:event_id>/critical-restriction/", CriticalRestrictionView.as_view(), name="critical-restriction"),
+    path("restrictions/<uuid:restriction_id>/release/", RestrictionReleaseView.as_view(), name="restriction-release"),
     path("rules/", ScoringRuleListCreateView.as_view(), name="scoring-rule-list-create"),
     path("rules/<uuid:rule_id>/<str:action>/", ScoringRuleActionView.as_view(), name="scoring-rule-action"),
     path("driver/me/", DriverMyPerformanceView.as_view(), name="driver-my-performance"),
