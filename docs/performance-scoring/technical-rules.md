@@ -1,6 +1,6 @@
 # DIVS Performance & Scoring — Technical Rules
 
-**Status:** Scoring-rule approval and one-time event scoring are implemented in the development branch; runtime validation remains pending.  
+**Status:** Service layer and an initial REST API layer are committed on `development`; runtime validation remains pending.  
 **Target app:** `backend/apps/performance/`  
 **Branch:** `development`
 
@@ -41,7 +41,7 @@ This document describes implemented behavior only. Product requirements and prop
 - History rows are intended to be append-only through normal application workflows. Service-layer protections and permissions are not implemented yet.
 - `DriverScore.calculated_score` remains the automatic calculation field.
 - `DriverScore.manual_override_score` is a separate optional display override. `effective_score` returns the override when present, otherwise the calculated score. The override does not update the automatic calculation.
-- The override state includes a reason, Admin account, and timestamp fields. The `override_driver_score` service checks for an approved Operations Admin membership, validates the score and required reason, locks the score row in a transaction, updates only the override fields, and creates a `ScoreHistory` entry in the same transaction. It deliberately does not change availability restrictions. An API endpoint is not implemented yet.
+- The override state includes a reason, Admin account, and timestamp fields. The `override_driver_score` service checks for an approved Operations Admin membership, validates the score and required reason, locks the score row in a transaction, updates only the override fields, and creates a `ScoreHistory` entry in the same transaction. It deliberately does not change availability restrictions. An API endpoint is now available under the Performance API.
 - Both calculated and override scores are constrained to 0–100 when non-null; score-history previous/new values are likewise constrained to 0–100.
 
 ### Appeals
@@ -82,13 +82,31 @@ This document describes implemented behavior only. Product requirements and prop
 - Service tests cover Admin override history creation, preservation of the calculated score, Operator denial, and score/reason validation. Baseline tests cover Admin-only establishment, required verification/history confirmations, the unresolved no-history case, and prevention of duplicate baselines. Scoring-engine tests cover inactive proposals, Admin-only rule management, sign validation, one-time event application, score clamping, and withholding score changes when the calculated score is unset. Correction tests cover removing an overturned event from recalculation, replaying later valid events, preserving original applications, and retaining manual overrides/restrictions. Event-review tests cover Operator review, evidence requests, and prevention of silent final-decision replacement. Appeal/availability tests cover driver-only appeal submission, pending-appeal invariants, successful appeal audit, duplicate appeals, the strict below-40 threshold, Admin-only low-score restoration, critical-incident review restrictions, and release history.
 - These tests have been committed but have **not** been executed in a local Django environment.
 
+
+
+### Initial REST API layer
+
+The following routes are registered under `/api/v1/performance/` and use authenticated profile/capability permissions:
+
+- `GET/POST events/`: Operations users with the performance capability can list and submit event reports.
+- `POST events/<event_id>/review/`: Operations users can approve, reject, or request more evidence, with a required reason.
+- `GET/POST rules/`: list and propose scoring rules. The service layer restricts rule management to Admins.
+- `POST rules/<rule_id>/<approve|retire>/`: approve or retire a proposed/active rule; Admin-only service checks still apply.
+- `GET driver/me/`: a driver can inspect their own score, recent score history, and active performance restrictions.
+- `GET driver/appeals/` and `POST driver/events/<event_id>/appeal/`: drivers can list their own appeals and appeal their own final event decisions.
+- `POST appeals/<appeal_id>/review/`: authorized Operations users can decide pending appeals.
+- `POST appeals/<appeal_id>/correct-score/`: Admin-only service applies an upheld-appeal correction with an audit reason.
+- `POST scores/<score_id>/override/` and `GET scores/<score_id>/history/`: Admin score override and operations history inspection.
+
+These endpoints have not been run against Django/DRF locally. A critical-incident restriction endpoint, explicit restriction-release endpoint, and baseline endpoint remain pending. The baseline endpoint is intentionally withheld until verification and history eligibility can be checked server-side rather than trusting booleans submitted by a client.
+
 ## Not implemented yet
 
 - Runtime validation of hand-prepared migrations, verification of model loading, and local test execution. The Performance app is listed in Django settings.
-- Event submission/review APIs, event-submission validation, and endpoint-level permissions. Service-level review decisions are implemented.
-- API endpoints for baseline establishment and the wider Performance app; exact point values remain unapproved and no rules are active by default. The baseline service exists, but eligibility confirmations are currently supplied to the service and have not yet been connected to the Verification workflow.
-- API endpoint and request/response validation for Admin score overrides; enforcement of append-only history at the database/service boundary beyond the current write-only workflow.
-- Runtime validation of migrations 0001–0005 and local execution of all tests. API endpoints, integration with Verification, and notification/availability wiring remain to be built.
+- API integration tests and local runtime validation of event submission/review, serializer validation, and permission enforcement.
+- A baseline API endpoint; exact point values remain unapproved and no rules are active by default. The baseline service exists, but eligibility confirmations must be derived from server-side Verification/history records before an endpoint is exposed.
+- API integration tests for Admin score overrides, scoring-rule lifecycle, appeals, and score corrections.
+- Runtime validation of migrations 0001–0005 and local execution of all tests. Integration with Verification and notification/availability wiring remain to be built.
 - Notifications and integration with Operations, Verification, and driver availability.
 - Automatic trusted-source checks or government API adapters.
 
