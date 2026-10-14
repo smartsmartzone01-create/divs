@@ -14,7 +14,7 @@ Identity must not create duplicate profile or role records. A Google first sign-
 - Short-lived access JWTs and rotating refresh tokens tied to tracked server-side sessions.
 - Current-account endpoint, session listing, single-session revocation, and current-session logout.
 - Email/phone verification codes with expiry, hashed storage, bounded attempts, resend throttling, and separate code purposes.
-- Email password reset using a purpose-scoped code. A successful reset revokes all tracked sessions.
+- Email or verified-phone password reset using a purpose-scoped code. A successful reset revokes all tracked sessions.
 - Google account linking only when the caller is authenticated. Matching email alone never silently merges an existing account.
 
 ## Security rules
