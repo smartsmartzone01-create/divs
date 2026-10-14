@@ -1,13 +1,15 @@
+import Link from "next/link";
+
 export default function HomePage() {
   return (
     <main className="page-shell">
       <header className="site-header">
-        <a className="brand" href="/" aria-label="DIVS home">
+        <Link className="brand" href="/" aria-label="DIVS home">
           <span className="brand-mark" aria-hidden="true">
             D
           </span>
           <span>DIVS</span>
-        </a>
+        </Link>
         <span className="header-note">Driver Identification &amp; Verification</span>
       </header>
 
@@ -19,8 +21,8 @@ export default function HomePage() {
           performance information in one place.
         </p>
         <div className="home-actions">
-          <a className="home-primary-link" href="/register">Create an account</a>
-          <a className="home-secondary-link" href="/sign-in">Sign in</a>
+          <Link className="home-primary-link" href="/register">Create an account</Link>
+          <Link className="home-secondary-link" href="/sign-in">Sign in</Link>
         </div>
         <p className="setup-note">
           Frontend foundation is ready. Public discovery will connect to the
