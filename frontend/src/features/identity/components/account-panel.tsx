@@ -93,9 +93,15 @@ export function AccountPanel() {
               <p>Expires: {new Date(session.expires_at).toLocaleString()}</p>
               {session.current ? <span className="session-current">Current session</span> : null}
             </div>
-            <button className="session-revoke" type="button" onClick={() => handleRevoke(session.id)}>
-              Revoke
-            </button>
+            {session.current ? (
+              <button className="session-revoke" type="button" onClick={handleLogout}>
+                Sign out
+              </button>
+            ) : (
+              <button className="session-revoke" type="button" onClick={() => handleRevoke(session.id)}>
+                Revoke
+              </button>
+            )}
           </article>
         )) : <p className="auth-helper">No active sessions were returned.</p>}
       </section>
