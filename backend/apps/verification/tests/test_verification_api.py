@@ -165,6 +165,19 @@ class VerificationReviewServiceTests(APITestCase):
             [item["licence_class"] for item in response.data], ["C", "CE"]
         )
 
+    def test_invalid_licence_cannot_be_marked_passed(self):
+        licence_check = next(
+            check for check in self.checks
+            if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
+        )
+        with self.assertRaisesMessage(Exception, "invalid licence result must use the failed status"):
+            review_driver_check(
+                check_id=licence_check.id,
+                reviewer=self.reviewer,
+                status=DriverVerificationCheck.Status.PASSED,
+                result_code=DriverVerificationCheck.ResultCode.INVALID,
+            )
+
     def test_failed_check_rejects_verification(self):
         review_driver_check(
             check_id=self.checks[0].id,
