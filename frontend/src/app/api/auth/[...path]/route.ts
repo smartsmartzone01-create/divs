@@ -80,6 +80,16 @@ async function handler(request: NextRequest, context: RouteContext) {
     request.method === "GET" || request.method === "HEAD" ? undefined : await request.text();
   const refreshToken = request.cookies.get(REFRESH_COOKIE)?.value;
   let accessToken = request.cookies.get(ACCESS_COOKIE)?.value;
+  const tokenlessRoutes = new Set([
+    "register",
+    "token",
+    "verification/request",
+    "verification/confirm",
+    "password-reset/request",
+    "password-reset/confirm",
+    "providers/google",
+    "providers/phone",
+  ]);
   let upstream: Response;
 
   if (routePath === "token/refresh" && request.method === "POST") {
@@ -95,7 +105,7 @@ async function handler(request: NextRequest, context: RouteContext) {
       cache: "no-store",
     });
   } else {
-    upstream = await upstreamRequest(request, routePath, accessToken, body);
+    upstream = await upstreamRequest(request, routePath, tokenlessRoutes.has(routePath) ? undefined : accessToken, body);
   }
 
   let rotatedTokens: { access: string; refresh: string } | undefined;
@@ -104,6 +114,7 @@ async function handler(request: NextRequest, context: RouteContext) {
   if (
     upstream.status === 401 &&
     refreshToken &&
+    !tokenlessRoutes.has(routePath) &&
     routePath !== "token" &&
     routePath !== "token/refresh"
   ) {
