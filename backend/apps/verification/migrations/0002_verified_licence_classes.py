@@ -1,4 +1,4 @@
-# Generated manually for verified licence classes and structured driver location.
+# Generated manually for validated driver licence classes.
 import uuid
 
 from django.conf import settings
@@ -9,7 +9,6 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
     dependencies = [
         ("verification", "0001_initial"),
-        ("registrations", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -35,10 +34,5 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="verifieddriverlicenceclass",
             index=models.Index(fields=["licence_class", "is_current"], name="verified_lic_class_current_idx"),
-        ),
-        migrations.AddField(
-            model_name="driverregistration",
-            name="residential_area",
-            field=models.CharField(blank=True, max_length=120),
         ),
     ]
