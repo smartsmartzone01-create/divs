@@ -90,6 +90,8 @@ The following routes are registered under `/api/v1/performance/` and use authent
 
 - `GET/POST events/`: Operations users with the performance capability can list and submit event reports.
 - `POST events/<event_id>/review/`: Operations users can approve, reject, or request more evidence, with a required reason.
+- `POST events/<event_id>/critical-restriction/`: an authorized Operations user can record why a critical event warrants precautionary review and temporary unavailability.
+- `POST restrictions/<restriction_id>/release/`: an authorized Operations user can record a restriction release; the service enforces Admin-only release for low-score restrictions.
 - `GET/POST rules/`: list and propose scoring rules. The service layer restricts rule management to Admins.
 - `POST rules/<rule_id>/<approve|retire>/`: approve or retire a proposed/active rule; Admin-only service checks still apply.
 - `GET driver/me/`: a driver can inspect their own score, recent score history, and active performance restrictions.
@@ -98,7 +100,7 @@ The following routes are registered under `/api/v1/performance/` and use authent
 - `POST appeals/<appeal_id>/correct-score/`: Admin-only service applies an upheld-appeal correction with an audit reason.
 - `POST scores/<score_id>/override/` and `GET scores/<score_id>/history/`: Admin score override and operations history inspection.
 
-These endpoints have not been run against Django/DRF locally. A critical-incident restriction endpoint, explicit restriction-release endpoint, and baseline endpoint remain pending. The baseline endpoint is intentionally withheld until verification and history eligibility can be checked server-side rather than trusting booleans submitted by a client.
+These endpoints have not been run against Django/DRF locally. The baseline endpoint remains pending. The baseline endpoint is intentionally withheld until verification and history eligibility can be checked server-side rather than trusting booleans submitted by a client.
 
 ## Not implemented yet
 
@@ -107,7 +109,7 @@ These endpoints have not been run against Django/DRF locally. A critical-inciden
 - A baseline API endpoint; exact point values remain unapproved and no rules are active by default. The baseline service exists, but eligibility confirmations must be derived from server-side Verification/history records before an endpoint is exposed.
 - API integration tests for Admin score overrides, scoring-rule lifecycle, appeals, and score corrections.
 - Runtime validation of migrations 0001–0005 and local execution of all tests. Integration with Verification and notification/availability wiring remain to be built.
-- Notifications and integration with Operations, Verification, and driver availability.
+- Notifications and integration with Verification and public driver hire-availability filtering.
 - Automatic trusted-source checks or government API adapters.
 
 No proposed point values are active by default. An approved event changes a score only after an Admin approves a matching rule and the driver has an established calculated score.
