@@ -80,7 +80,7 @@ export function GoogleSignInButton() {
       <Script
         src="https://accounts.google.com/gsi/client"
         strategy="afterInteractive"
-        onLoad={() => setScriptReady(true)}
+        onReady={() => setScriptReady(true)}
       />
       <div className={busy ? "google-button-wrap is-busy" : "google-button-wrap"} ref={buttonRef} />
       {busy ? <p className="auth-helper">Connecting to Google…</p> : null}
