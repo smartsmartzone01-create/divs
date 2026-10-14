@@ -67,3 +67,35 @@ class ScoreHistoryListView(OperationsPerformanceAPIView):
         score = get_object_or_404(DriverScore, pk=score_id)
         history = ScoreHistory.objects.filter(score=score).order_by("-created_at")[:200]
         return Response(ScoreHistorySerializer(history, many=True).data)
+
+
+from apps.performance.models import AvailabilityRestriction
+from apps.performance.serializers import AvailabilityRestrictionSerializer
+from common.views import RoleProtectedAPIView
+from django.shortcuts import get_object_or_404
+
+
+class DriverMyPerformanceView(RoleProtectedAPIView):
+    required_profile_type = "driver"
+
+    def get(self, request):
+        score = DriverScore.objects.filter(
+            driver__registration__account=request.user
+        ).first()
+        if score is None:
+            return Response({
+                "score": None,
+                "history": [],
+                "active_restrictions": [],
+                "score_status": "not_established",
+            })
+        history = ScoreHistory.objects.filter(score=score).order_by("-created_at")[:100]
+        restrictions = AvailabilityRestriction.objects.filter(
+            driver=score.driver, status=AvailabilityRestriction.Status.ACTIVE
+        )
+        return Response({
+            "score": ScoreSummarySerializer(score).data,
+            "history": ScoreHistorySerializer(history, many=True).data,
+            "active_restrictions": AvailabilityRestrictionSerializer(restrictions, many=True).data,
+            "score_status": "not_established" if score.calculated_score is None else "established",
+        })
