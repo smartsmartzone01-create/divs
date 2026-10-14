@@ -8,6 +8,7 @@ from apps.operations.models import OperationsMembership
 from apps.profiles.models import DriverProfile, OperationsProfile
 from apps.registrations.models import DriverRegistration
 from apps.verification.models import DriverVerification, DriverVerificationCheck
+from apps.verification.services import record_verified_licence_classes, review_driver_check
 
 
 class DriverVerificationAPITests(APITestCase):
@@ -101,9 +102,7 @@ class VerificationReviewServiceTests(APITestCase):
         self.assertEqual(response.data["method"], "manual")
         self.assertEqual(response.data["status"], "passed")
 
-    def test_all_four_passed_checks_approve_verification(self):
-        from apps.verification.services import review_driver_check
-
+    def _pass_all_checks(self):
         result_codes = {
             DriverVerificationCheck.CheckType.NATIONAL_IDENTITY: DriverVerificationCheck.ResultCode.MATCH,
             DriverVerificationCheck.CheckType.DRIVING_LICENCE: DriverVerificationCheck.ResultCode.VALID,
@@ -117,13 +116,56 @@ class VerificationReviewServiceTests(APITestCase):
                 status=DriverVerificationCheck.Status.PASSED,
                 result_code=result_codes[check.check_type],
             )
+
+    def test_all_checks_and_validated_licence_class_are_required_for_discovery(self):
+        self._pass_all_checks()
         self.verification.refresh_from_db()
         self.assertEqual(self.verification.status, DriverVerification.Status.APPROVED)
+        self.assertFalse(self.verification.is_discoverable)
+
+        licence_check = next(
+            check for check in self.checks
+            if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
+        )
+        record_verified_licence_classes(
+            check_id=licence_check.id,
+            reviewer=self.reviewer,
+            licence_classes=["C", "CE"],
+        )
         self.assertTrue(self.verification.is_discoverable)
 
-    def test_failed_check_rejects_verification(self):
-        from apps.verification.services import review_driver_check
+    def test_licence_classes_cannot_be_recorded_before_validation(self):
+        licence_check = next(
+            check for check in self.checks
+            if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
+        )
+        with self.assertRaisesMessage(Exception, "only be recorded after"):
+            record_verified_licence_classes(
+                check_id=licence_check.id,
+                reviewer=self.reviewer,
+                licence_classes=["C"],
+            )
 
+    def test_operations_user_can_record_validated_licence_classes(self):
+        self._pass_all_checks()
+        licence_check = next(
+            check for check in self.checks
+            if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
+        )
+        self.client.force_authenticate(user=self.reviewer)
+        url = reverse(
+            "verification:operations-verified-licence-classes",
+            kwargs={"check_id": licence_check.id},
+        )
+        response = self.client.post(
+            url, {"licence_classes": ["C", "CE"]}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [item["licence_class"] for item in response.data], ["C", "CE"]
+        )
+
+    def test_failed_check_rejects_verification(self):
         review_driver_check(
             check_id=self.checks[0].id,
             reviewer=self.reviewer,
