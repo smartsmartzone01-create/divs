@@ -173,7 +173,7 @@ class IdentityFoundationTests(TestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 409)
-        self.assertTrue(response.data["registration_required"])
+        self.assertTrue(response.data["account_linking_required"])
         self.assertEqual(ExternalIdentity.objects.count(), 0)
 
     def test_wrong_verification_code_counts_toward_attempt_limit(self):
