@@ -4,6 +4,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.mail import send_mail
+from django.db import transaction
 from django.utils import timezone
 
 from apps.identity.models import VerificationCode
@@ -91,6 +92,7 @@ def issue_verification_code(
     return record
 
 
+@transaction.atomic
 def verify_code(
     channel,
     target,
@@ -98,7 +100,7 @@ def verify_code(
     purpose=VerificationCode.Purpose.IDENTITY_VERIFICATION,
 ):
     target = normalize_target(channel, target)
-    record = VerificationCode.objects.filter(
+    record = VerificationCode.objects.select_for_update().filter(
         channel=channel,
         purpose=purpose,
         target=target,
