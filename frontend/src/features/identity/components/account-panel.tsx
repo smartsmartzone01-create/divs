@@ -60,7 +60,7 @@ export function AccountPanel() {
           <p className="account-summary-label">Signed in</p>
           <h2>{account.email || account.phone_number}</h2>
           <p className="auth-helper">
-            {account.email_verified ? "Email verified" : "Email not verified"}
+            {account.email ? (account.email_verified ? "Email verified" : "Email not verified") : "No email added"}
             {account.phone_number ? ` · ${account.phone_verified ? "Phone verified" : "Phone not verified"}` : ""}
           </p>
         </div>
