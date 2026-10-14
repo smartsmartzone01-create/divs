@@ -84,3 +84,49 @@ class PasswordResetAPITests(TestCase):
         self.assertTrue(self.account.check_password("New-Strong-Password-987!"))
         self.assertIsNotNone(session.revoked_at)
         verify.assert_called_once()
+
+    @patch("apps.identity.views.password_reset.issue_verification_code")
+    def test_verified_phone_can_request_password_reset(self, issue_code):
+        phone_account = Account.objects.create_user(
+            phone_number="+255712345678",
+            password="Old-Phone-Password-987!",
+            phone_verified=True,
+        )
+        response = self.client.post(
+            "/api/v1/auth/password-reset/request/",
+            {"phone_number": phone_account.phone_number},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 202)
+        issue_code.assert_called_once_with(
+            VerificationCode.Channel.PHONE,
+            phone_account.phone_number,
+            account=phone_account,
+            purpose=VerificationCode.Purpose.PASSWORD_RESET,
+        )
+
+    @patch("apps.identity.views.password_reset.verify_code", return_value=True)
+    def test_verified_phone_can_reset_password(self, verify):
+        phone_account = Account.objects.create_user(
+            phone_number="+255712345678",
+            password="Old-Phone-Password-987!",
+            phone_verified=True,
+        )
+        response = self.client.post(
+            "/api/v1/auth/password-reset/confirm/",
+            {
+                "phone_number": phone_account.phone_number,
+                "code": "123456",
+                "new_password": "New-Phone-Password-987!",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        phone_account.refresh_from_db()
+        self.assertTrue(phone_account.check_password("New-Phone-Password-987!"))
+        verify.assert_called_once_with(
+            VerificationCode.Channel.PHONE,
+            phone_account.phone_number,
+            "123456",
+            purpose=VerificationCode.Purpose.PASSWORD_RESET,
+        )
