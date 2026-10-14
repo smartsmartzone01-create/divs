@@ -67,7 +67,7 @@ export async function identityRequest<T>(
         if (firstFieldError) {
           const [field, value] = firstFieldError;
           const message = Array.isArray(value) ? value.map(String).join(" ") : String(value);
-          detail = `${field.replaceAll("_", " ")}: ${message}`;
+          detail = `${field.replace(/_/g, " ")}: ${message}`;
         }
       }
     }
