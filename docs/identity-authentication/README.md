@@ -63,3 +63,20 @@ The adapter must deliver the provided code, raise an exception on delivery failu
 - Test Google credentials against the configured OAuth audience and test provider callbacks/delivery with real test credentials.
 - Verify production HTTPS, trusted proxy/IP settings, CORS/CSRF policy where applicable, secure deployment settings, and Redis-backed throttling.
 - Review account linking and recovery UX with the frontend once screens are implemented.
+
+## Completion checklist for local verification
+
+Use this checklist after installing the backend dependencies and applying the migrations locally:
+
+- [ ] A new email account can register, request an email code, verify the email, and sign in with email + password.
+- [ ] A phone account can register, receive a code through the configured SMS adapter, verify the phone, and sign in with phone + password.
+- [ ] Unverified contacts and incorrect passwords cannot sign in.
+- [ ] A first-time Google identity creates a bare identity account and signs in without a DIVS OTP.
+- [ ] A Google identity matching an existing password account is not silently merged; signing in to that account and linking Google is required.
+- [ ] Password-reset codes cannot be reused as contact-verification codes, expire, and stop working after the attempt limit.
+- [ ] A successful password reset changes the password and revokes all active sessions.
+- [ ] Revoking a device session blocks both access-token use and refresh-token use.
+- [ ] Public verification/reset responses do not disclose whether an account exists.
+- [ ] The frontend keeps JWTs in HttpOnly cookies, refreshes expired access tokens, and signs out cleanly.
+- [ ] Run backend migrations/checks/tests and frontend lint/typecheck/build. These have **not** been run as part of the online code changes.
+
