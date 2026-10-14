@@ -29,17 +29,21 @@ class PublicDriverSerializer(serializers.ModelSerializer):
         return f"{registration.first_name} {registration.last_name}".strip()
 
     def get_verified_licence_classes(self, obj):
-        check = obj.verification.checks.filter(
-            check_type=DriverVerificationCheck.CheckType.DRIVING_LICENCE,
-            status=DriverVerificationCheck.Status.PASSED,
-            result_code=DriverVerificationCheck.ResultCode.VALID,
-        ).first()
+        check = next(
+            (
+                item for item in obj.verification.checks.all()
+                if item.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
+                and item.status == DriverVerificationCheck.Status.PASSED
+                and item.result_code == DriverVerificationCheck.ResultCode.VALID
+            ),
+            None,
+        )
         if check is None:
             return []
-        return list(
-            check.verified_licence_classes.filter(is_current=True)
-            .order_by("licence_class")
-            .values_list("licence_class", flat=True)
+        return sorted(
+            item.licence_class
+            for item in check.verified_licence_classes.all()
+            if item.is_current
         )
 
     def get_performance_score(self, obj):
