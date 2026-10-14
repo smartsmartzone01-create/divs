@@ -17,7 +17,7 @@ export async function apiRequest<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const normalizedPath = path.replace(/^\/+/, "");
+  const normalizedPath = path.split("/").filter(Boolean).join("/");
   const headers = new Headers(options.headers);
 
   headers.set("Accept", "application/json");
