@@ -19,7 +19,8 @@ A driver is shown as available for hire only when all required conditions are sa
 2. The overall driver verification is approved and all required verification checks have passed.
 3. The driving-licence check specifically passed with result `valid` and at least one current verified licence class is recorded.
 4. The driver has no active performance-based availability restriction.
-5. The driver meets any selected search filters.
+5. If an effective performance score exists, it must be at least 40. A score below 40 excludes the driver from public hiring results even if a restriction record is missing; a score of exactly 40 is not excluded by this threshold.
+6. The driver meets any selected search filters.
 
 Verification, profile lifecycle, performance review, and availability are separate decisions. Passing one does not automatically satisfy the others.
 
