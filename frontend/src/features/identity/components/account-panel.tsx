@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { GoogleSignInButton } from "@/features/identity/components/google-sign-in-button";
 import {
   AuthAccount,
   AuthSession,
@@ -70,6 +71,7 @@ export function AccountPanel() {
           </p>
         </div>
       </div>
+      <GoogleSignInButton />
       <div className="account-actions">
         <Link className="auth-secondary-link" href="/verify">Verify a contact method</Link>
         <button className="auth-secondary-button" type="button" onClick={handleLogout} disabled={busy}>
