@@ -192,3 +192,26 @@ class IdentityFoundationTests(TestCase):
             self.assertEqual(response.status_code, 400)
         record.refresh_from_db()
         self.assertEqual(record.attempts, 5)
+
+    def test_revoked_session_cannot_refresh_tokens(self):
+        account = Account.objects.create_user(
+            email="refresh-revoked@example.com",
+            password=PASSWORD,
+            email_verified=True,
+        )
+        login_response = self.client.post(
+            "/api/v1/auth/token/",
+            {"identifier": account.email, "password": PASSWORD},
+            format="json",
+        )
+        self.assertEqual(login_response.status_code, 200)
+        session = AuthSession.objects.get(id=login_response.data["session_id"])
+        session.revoked_at = timezone.now()
+        session.save(update_fields=["revoked_at"])
+
+        refresh_response = self.client.post(
+            "/api/v1/auth/token/refresh/",
+            {"refresh": login_response.data["refresh"]},
+            format="json",
+        )
+        self.assertEqual(refresh_response.status_code, 401)
