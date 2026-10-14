@@ -101,7 +101,7 @@ class ScoreCorrectionSerializer(serializers.Serializer):
 
 
 class ScoreSummarySerializer(serializers.ModelSerializer):
-    driver_id = serializers.UUIDField(source="driver_id", read_only=True)
+    driver_id = serializers.UUIDField(read_only=True)
     effective_score = serializers.IntegerField(read_only=True)
 
     class Meta:
