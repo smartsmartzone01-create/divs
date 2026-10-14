@@ -5,7 +5,6 @@ from rest_framework import permissions, status
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.exceptions import AuthenticationFailed as JWTAuthenticationFailed
 
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
@@ -46,7 +45,6 @@ class GoogleSignInView(APIView):
         except RuntimeError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except Exception:
-            # Do not trust claims from a token that failed signature/audience checks.
             return Response(
                 {"detail": "Google sign-in could not be verified."},
                 status=status.HTTP_401_UNAUTHORIZED,
@@ -57,13 +55,16 @@ class GoogleSignInView(APIView):
             subject=subject,
         ).first()
         if external is not None:
+            if request.user and request.user.is_authenticated and external.account_id != request.user.id:
+                return Response(
+                    {"detail": "This Google identity is linked to a different DIVS account."},
+                    status=status.HTTP_409_CONFLICT,
+                )
             if not external.account.is_active:
                 raise AuthenticationFailed("This account is inactive.")
             return Response(create_auth_session(external.account, request), status=status.HTTP_200_OK)
 
-        # A verified Google email may create a bare identity account. DIVS registration
-        # remains responsible for choosing driver/client; identity does not choose a role.
-        # Never merge an existing password account merely because its email matches.
+        # Identity creates no driver/client role. The relevant registration workflow does that later.
         if request.user and request.user.is_authenticated:
             account = request.user
         else:
@@ -93,12 +94,13 @@ class GoogleSignInView(APIView):
                     provider_email=email,
                 )
         except IntegrityError:
-            # A concurrent first sign-in may have created the provider link already.
             external = ExternalIdentity.objects.select_related("account").filter(
                 provider=ExternalIdentity.Provider.GOOGLE,
                 subject=subject,
             ).first()
-            if external is None:
+            if external is None or (
+                request.user and request.user.is_authenticated and external.account_id != request.user.id
+            ):
                 return Response(
                     {"detail": "This Google identity could not be linked safely. Please retry."},
                     status=status.HTTP_409_CONFLICT,
