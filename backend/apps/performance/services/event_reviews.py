@@ -3,7 +3,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.operations.models import OperationsMembership
-from apps.operations.permissions import capabilities_for, is_initial_system_superuser
+from apps.operations.permissions import is_initial_system_superuser
 from apps.performance.models import PerformanceEvent, PerformanceEventReview
 from apps.performance.services.scoring import apply_approved_event_score
 
@@ -15,9 +15,8 @@ def _require_event_reviewer(actor):
     if is_initial_system_superuser(actor):
         return
     allowed_roles = [OperationsMembership.Role.ADMIN, OperationsMembership.Role.OPERATOR]
-    membership = OperationsMembership.objects.filter(account=actor, role__in=allowed_roles).first()
-    if membership is None or "manage_driver_performance" not in capabilities_for(actor):
-        raise PermissionDenied("Only an active Operations Admin or Operator may review events.")
+    if not OperationsMembership.objects.filter(account=actor, role__in=allowed_roles).exists():
+        raise PermissionDenied("Only an approved Operations Admin or Operator may review events.")
 
 
 @transaction.atomic
