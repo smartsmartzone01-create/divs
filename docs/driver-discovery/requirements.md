@@ -10,6 +10,8 @@
 - Public discovery must never expose private contact details, licence documents, identity numbers, raw government responses, or sensitive verification evidence.
 - Driver discovery uses existing registration, profile, verification, performance, and availability records. It does not create duplicate driver identities or verification workflows.
 - Initial public endpoint: `GET /api/v1/discovery/drivers/`.
+- This endpoint implements public discovery only. Driver contact, paid contact unlock, hiring requests, and payment processing are separate flows and are not implemented by this endpoint.
+- In this response, `availability: "available"` means eligible to appear in the hiring directory under the rules below; it does not guarantee the driver has an open schedule or has accepted a job.
 
 ## Eligibility before ranking
 
@@ -53,7 +55,7 @@ The initial public endpoint supports:
 - `min_score` and `max_score` (integers from 0 to 100, using effective score)
 - `limit` (1–100; defaults to 25)
 
-Only eligible, unrestricted drivers are returned, so returned drivers are marked `available`.
+Only eligible, unrestricted drivers are returned, so returned drivers are marked `available`. The label means eligible for the directory, not a real-time schedule confirmation.
 
 ## Ranking
 
@@ -76,4 +78,4 @@ Public result summaries include a display name, region, district, residential ar
 
 ## Validation status
 
-Automated tests have been added or updated for verified-class gating, public access, filtering, ranking unscored drivers below scored drivers, active restriction exclusion, and private-field exclusion. They have **not** been executed in a local Django environment. Migration application, endpoint runtime behavior, and integration tests remain pending.
+Automated tests have been added or updated for verified-class gating, public access, filtering, ranking unscored drivers below scored drivers, active restriction exclusion, private-field exclusion, the strict score-40 boundary, invalid score filters, and score-filter behavior for unscored drivers. The discovery query and serializer now reuse prefetched verification/class relations to reduce per-driver database queries. These tests have **not** been executed in a local Django environment. Migration application, endpoint runtime behavior, query-count validation, and integration tests remain pending.
