@@ -26,6 +26,7 @@ class DriverRegistration(models.Model):
     nationality = models.CharField(max_length=100)
     region = models.CharField(max_length=120)
     district = models.CharField(max_length=120)
+    residential_area = models.CharField(max_length=120, blank=True)
     current_residential_address = models.TextField()
     driving_experience = models.CharField(
         max_length=24,
