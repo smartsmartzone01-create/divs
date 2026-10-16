@@ -4,30 +4,16 @@ import Link from "next/link";
 import { useState } from "react";
 import { useDIVSPreferences } from "@/components/preferences/preferences-provider";
 
-const benefits = [
-  {
-    number: "01",
-    title: "{t.benefitOneTitle}",
-    description:
-      "{t.benefitOneCopy}",
-  },
-  {
-    number: "02",
-    title: "{t.performanceInsights}",
-    description:
-      "{t.benefitTwoCopy}",
-  },
-  {
-    number: "03",
-    title: "{t.benefitThreeTitle}",
-    description:
-      "{t.benefitThreeCopy}",
-  },
-];
+
 
 export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { language, setLanguage, theme, toggleTheme, t } = useDIVSPreferences();
+  const benefits = [
+    { number: "01", title: t.benefitOneTitle, description: t.benefitOneCopy },
+    { number: "02", title: t.benefitTwoTitle, description: t.benefitTwoCopy },
+    { number: "03", title: t.benefitThreeTitle, description: t.benefitThreeCopy },
+  ];
 
   function closeMenu() {
     setMenuOpen(false);
@@ -42,14 +28,14 @@ export default function HomePage() {
           </span>
           <span className="landing-brand-copy">
             <strong>DIVS</strong>
-            <small>Driver verification</small>
+            <small>{language === "en" ? "Driver verification" : "Uhakiki wa madereva"}</small>
           </span>
         </Link>
 
         <button
           className="mobile-menu-toggle"
           type="button"
-          aria-label={menuOpen ? {t.closeMenu} : {t.openMenu}}
+          aria-label={menuOpen ? t.closeMenu : t.openMenu}
           aria-expanded={menuOpen}
           aria-controls="landing-navigation"
           onClick={() => setMenuOpen((open) => !open)}
@@ -64,10 +50,10 @@ export default function HomePage() {
           id="landing-navigation"
           aria-label="Main navigation"
         >
-          <a href="#how-it-works" onClick={closeMenu}>How it works</a>
-          <a href="#verification" onClick={closeMenu}>Verification</a>
-          <a href="#get-started" onClick={closeMenu}>Get started</a>
-          <div className="landing-preference-controls" aria-label="Display preferences">
+          <a href="#how-it-works" onClick={closeMenu}>{t.navHow}</a>
+          <a href="#verification" onClick={closeMenu}>{t.navVerification}</a>
+          <a href="#get-started" onClick={closeMenu}>{t.navGetStarted}</a>
+          <div className="landing-preference-controls" aria-label={t.languageLabel}>
             <button className="landing-language-toggle" type="button" onClick={() => setLanguage(language === "en" ? "sw" : "en")} aria-label={t.languageLabel} title={t.languageLabel}>
               {language === "en" ? "SW" : "EN"}
             </button>
@@ -80,8 +66,8 @@ export default function HomePage() {
             </button>
           </div>
           <div className="landing-nav-actions">
-            <Link className="landing-login-link" href="/sign-in" onClick={closeMenu}>Log in</Link>
-            <Link className="landing-nav-cta" href="/register" onClick={closeMenu}>Create account</Link>
+            <Link className="landing-login-link" href="/sign-in" onClick={closeMenu}>{t.login}</Link>
+            <Link className="landing-nav-cta" href="/register" onClick={closeMenu}>{t.createAccount}</Link>
           </div>
         </nav>
       </header>
