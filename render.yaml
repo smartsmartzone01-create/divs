@@ -15,7 +15,7 @@ services:
     rootDir: backend
     buildCommand: pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --no-input
     startCommand: >-
-      if [ "$DIVS_BOOTSTRAP_SUPERUSER" = "true" ]; then python manage.py bootstrap_superuser || exit $?; fi; exec gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+      if [ "$DIVS_RESET_SUPERUSER_PASSWORD" = "true" ]; then python manage.py reset_superuser_password || exit $?; fi; exec gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
     envVars:
       - key: DATABASE_URL
         fromDatabase:
