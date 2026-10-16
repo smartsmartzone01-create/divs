@@ -97,12 +97,12 @@ export default function HomePage() {
               {t.explore} <span aria-hidden="true">↗</span>
             </a>
           </div>
-          <div className="landing-hero-note">
-            <span className="landing-note-icon" aria-hidden="true">✓</span>
-            <p>{t.heroNote}</p>
-          </div>
+
         </div>
 
+      </section>
+
+      <section className="landing-trust-section" id="how-it-works" aria-labelledby="trust-title">
         <div className="landing-hero-visual" aria-label="Illustration of driver verification information">
           <div className="visual-orbit visual-orbit-one" />
           <div className="visual-orbit visual-orbit-two" />
@@ -151,12 +151,6 @@ export default function HomePage() {
             {t.builtAroundTrust}
           </div>
         </div>
-        <div className="landing-hero-bottom" aria-hidden="true">
-          <span>{t.identify}</span><i /><span>{t.verify}</span><i /><span>{t.discover}</span>
-        </div>
-      </section>
-
-      <section className="landing-trust-section" id="how-it-works" aria-labelledby="trust-title">
         <div className="landing-section-heading">
           <p className="landing-eyebrow">{t.trustEyebrow}</p>
           <h2 id="trust-title">{t.trustTitle}</h2>
