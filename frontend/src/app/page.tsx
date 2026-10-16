@@ -76,15 +76,14 @@ export default function HomePage() {
         <div className="landing-hero-content">
           <p className="landing-eyebrow">
             <span className="landing-eyebrow-dot" />
-            A clearer way to choose a driver
+            {t.eyebrow}
           </p>
           <h1 id="landing-hero-title">
             {t.heroLineOne}
             <span>{t.heroLineTwo}</span>
           </h1>
           <p className="landing-hero-copy">
-            Discover professional drivers, review their verified qualifications,
-            and make more informed hiring decisions — all in one place.
+            {t.heroCopy}
           </p>
           <div className="landing-hero-actions">
             <a className="landing-button landing-button-primary" href="#get-started">
