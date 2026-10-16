@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { DIVSPreferencesProvider } from "@/components/preferences/preferences-provider";
 
 export const metadata: Metadata = {
   title: {
@@ -23,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body><DIVSPreferencesProvider>{children}</DIVSPreferencesProvider></body>
     </html>
   );
 }
