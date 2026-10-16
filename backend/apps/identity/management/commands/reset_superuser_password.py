@@ -28,9 +28,13 @@ class Command(BaseCommand):
             )
 
         user.set_password(password)
-        user.save(update_fields=["password"])
+        # The DIVS authentication backend requires a verified email even for admin login.
+        # This command is restricted to an existing staff superuser, whose email is the
+        # configured bootstrap/admin identity.
+        user.email_verified = True
+        user.save(update_fields=["password", "email_verified"])
 
         self.stdout.write(self.style.SUCCESS(
-            "Superuser password reset successfully. Remove the temporary environment "
-            "variables and disable DIVS_RESET_SUPERUSER_PASSWORD now."
+            "Superuser password reset successfully and email verified. Remove the temporary "
+            "environment variables and disable DIVS_RESET_SUPERUSER_PASSWORD now."
         ))
