@@ -123,7 +123,7 @@ class Migration(migrations.Migration):
             options={
                 "ordering": ["-created_at"],
                 "indexes": [
-                    models.Index(fields=["channel", "target", "created_at"], name="id_vercode_chan_tgt_created_idx"),
+                    models.Index(fields=["channel", "target", "created_at"], name="id_vcode_chan_tgt_idx"),
                 ],
             },
         ),
