@@ -136,7 +136,7 @@ const messages = {
   },
 } as const;
 
-type Messages = (typeof messages)["en"];
+type Messages = { [Key in keyof (typeof messages)["en"]]: string };
 
 type PreferencesContextValue = {
   language: DIVSLanguage;
