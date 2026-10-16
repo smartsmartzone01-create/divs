@@ -59,7 +59,7 @@ class AvailabilityRestriction(models.Model):
     class Meta:
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["driver", "status"], name="perf_restrict_driver_status_idx"),
+            models.Index(fields=["driver", "status"], name="perf_rest_driver_stat_idx"),
             models.Index(fields=["kind", "status"], name="perf_restrict_kind_status_idx"),
         ]
         constraints = [
@@ -106,7 +106,7 @@ class AvailabilityRestrictionDecision(models.Model):
     class Meta:
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["restriction", "created_at"], name="perf_restrict_decision_time_idx"),
+            models.Index(fields=["restriction", "created_at"], name="perf_rest_dec_time_idx"),
         ]
 
     def __str__(self):
