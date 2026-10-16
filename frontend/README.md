@@ -8,7 +8,7 @@ The DIVS frontend is a **Next.js App Router application written in strict TypeSc
 - Node.js **24.18.0** (pinned in `.nvmrc`)
 - pnpm **11.15.1** (pinned in `package.json`)
 - The DIVS Django backend for API-connected features
-- A Vercel account when deploying the frontend
+- A Netlify account when deploying the frontend
 
 The Node.js version is managed independently from Python/Django. Install Node.js first, then enable pnpm through Corepack if your Node distribution includes it. If Corepack is not available, install the pinned pnpm release using the official pnpm installation instructions.
 
@@ -59,16 +59,19 @@ The frontend uses a same-origin Next.js API proxy for Django requests. Access an
 
 Only values intended to be visible to the browser may use the `NEXT_PUBLIC_` prefix. **Never place passwords, private API keys, signing secrets, or database credentials in a `NEXT_PUBLIC_` variable.** Keep local `.env.local` files out of Git.
 
-## Vercel deployment
+## Netlify deployment
 
-1. Push the `development` branch to GitHub and import the DIVS repository in Vercel.
-2. Set the Vercel **Root Directory** to `frontend`.
-3. Use the Next.js framework preset. Vercel should detect the build command and output settings automatically.
-4. Configure `DIVS_API_BASE_URL` as a server-side environment variable for Preview and Production, using the reachable HTTPS URL for the deployed Django API. Keep `NEXT_PUBLIC_API_BASE_URL` aligned as a fallback and set `NEXT_PUBLIC_GOOGLE_OIDC_CLIENT_ID` plus the matching backend `GOOGLE_OIDC_CLIENT_ID` when enabling Google sign-in.
-5. Deploy the development branch as a Preview deployment while building and checking features. Do not make `development` the Production Branch or change `main` without explicit project approval.
-6. Before release, check backend CORS/CSRF and authentication settings against the actual frontend origin; do not use permissive production CORS settings.
+The repository-level `netlify.toml` configures the Next.js app in this directory as the site base. Netlify builds the frontend; it does not host the Django API or PostgreSQL database.
 
-Vercel builds the frontend; it does not host the Django API or PostgreSQL database as part of this frontend configuration. The API must be deployed and reachable independently.
+1. In Netlify, choose **Add new project** / **Import an existing project** and connect this GitHub repository.
+2. Set the site base directory to `frontend` if Netlify has not picked it up from `netlify.toml`.
+3. Keep the build command as `pnpm build` and let Netlify's Next.js runtime handle the Next.js output.
+4. Configure `development` as a branch deploy or use Deploy Previews so commits on `development` can be inspected without changing the production branch.
+5. Do **not** change the production branch to `development`; keep `main` untouched unless the project owner explicitly approves a release.
+6. When the Django API is deployed, configure `DIVS_API_BASE_URL` as a server-side environment variable using its reachable HTTPS URL. Set the Google client ID and matching backend setting only when Google sign-in is being enabled.
+7. Before enabling authenticated API flows, check backend CORS/CSRF and cookie settings against the deployed frontend origin. Do not use permissive production CORS settings.
+
+The current repository does not include a generated `pnpm-lock.yaml` yet. Netlify's first dependency install may generate one only in its build environment; for reproducible deployments, the lockfile should be generated and committed when a package-install environment is available. Do not claim a successful build until Netlify reports one.
 
 ## File organization
 
