@@ -151,6 +151,7 @@ const PreferencesContext = createContext<PreferencesContextValue | null>(null);
 export function DIVSPreferencesProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<DIVSLanguage>("en");
   const [theme, setThemeState] = useState<DIVSTheme>("light");
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
 
   useEffect(() => {
     const savedLanguage = window.localStorage.getItem("divs-language");
@@ -161,15 +162,17 @@ export function DIVSPreferencesProvider({ children }: { children: ReactNode }) {
     if (savedTheme === "light" || savedTheme === "dark") {
       setThemeState(savedTheme);
     }
+    setPreferencesLoaded(true);
   }, []);
 
   useEffect(() => {
+    if (!preferencesLoaded) return;
     document.documentElement.lang = language;
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
     window.localStorage.setItem("divs-language", language);
     window.localStorage.setItem("divs-theme", theme);
-  }, [language, theme]);
+  }, [language, theme, preferencesLoaded]);
 
   const setLanguage = useCallback((nextLanguage: DIVSLanguage) => {
     setLanguageState(nextLanguage);
