@@ -73,7 +73,7 @@ class PerformanceEvent(models.Model):
         ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["driver", "status"], name="performance_driver_status_idx"),
-            models.Index(fields=["category", "status"], name="performance_category_status_idx"),
+            models.Index(fields=["category", "status"], name="perf_event_cat_status_idx"),
         ]
 
     def __str__(self):
