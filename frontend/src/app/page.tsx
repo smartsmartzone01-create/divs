@@ -2,30 +2,32 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useDIVSPreferences } from "@/components/preferences/preferences-provider";
 
 const benefits = [
   {
     number: "01",
-    title: "Verified qualifications",
+    title: "{t.benefitOneTitle}",
     description:
-      "See clear verification statuses and licence information validated through the available review process.",
+      "{t.benefitOneCopy}",
   },
   {
     number: "02",
-    title: "Performance insights",
+    title: "{t.performanceInsights}",
     description:
-      "Understand a driver's performance history and the reasons behind changes to their score.",
+      "{t.benefitTwoCopy}",
   },
   {
     number: "03",
-    title: "A more responsible process",
+    title: "{t.benefitThreeTitle}",
     description:
-      "Designed for authorized verification integrations, with manual review where required.",
+      "{t.benefitThreeCopy}",
   },
 ];
 
 export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { language, setLanguage, theme, toggleTheme, t } = useDIVSPreferences();
 
   function closeMenu() {
     setMenuOpen(false);
@@ -47,7 +49,7 @@ export default function HomePage() {
         <button
           className="mobile-menu-toggle"
           type="button"
-          aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-label={menuOpen ? {t.closeMenu} : {t.openMenu}}
           aria-expanded={menuOpen}
           aria-controls="landing-navigation"
           onClick={() => setMenuOpen((open) => !open)}
@@ -65,6 +67,18 @@ export default function HomePage() {
           <a href="#how-it-works" onClick={closeMenu}>How it works</a>
           <a href="#verification" onClick={closeMenu}>Verification</a>
           <a href="#get-started" onClick={closeMenu}>Get started</a>
+          <div className="landing-preference-controls" aria-label="Display preferences">
+            <button className="landing-language-toggle" type="button" onClick={() => setLanguage(language === "en" ? "sw" : "en")} aria-label={t.languageLabel} title={t.languageLabel}>
+              {language === "en" ? "SW" : "EN"}
+            </button>
+            <button className="landing-theme-toggle" type="button" onClick={toggleTheme} aria-label={theme === "light" ? t.themeToDark : t.themeToLight} title={theme === "light" ? t.themeToDark : t.themeToLight}>
+              {theme === "light" ? (
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5 8.5 8.5 0 1 0 20.5 15.5Z" /></svg>
+              ) : (
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" /></svg>
+              )}
+            </button>
+          </div>
           <div className="landing-nav-actions">
             <Link className="landing-login-link" href="/sign-in" onClick={closeMenu}>Log in</Link>
             <Link className="landing-nav-cta" href="/register" onClick={closeMenu}>Create account</Link>
@@ -79,8 +93,8 @@ export default function HomePage() {
             A clearer way to choose a driver
           </p>
           <h1 id="landing-hero-title">
-            Find the right driver.
-            <span>Hire with confidence.</span>
+            {t.heroLineOne}
+            <span>{t.heroLineTwo}</span>
           </h1>
           <p className="landing-hero-copy">
             Discover professional drivers, review their verified qualifications,
@@ -92,15 +106,15 @@ export default function HomePage() {
                 <circle cx="10.8" cy="10.8" r="6.8" />
                 <path d="m16 16 4.2 4.2" />
               </svg>
-              Search for a driver
+              {t.searchDriver}
             </a>
             <a className="landing-button landing-button-secondary" href="#how-it-works">
-              Explore DIVS <span aria-hidden="true">↗</span>
+              {t.explore} <span aria-hidden="true">↗</span>
             </a>
           </div>
           <div className="landing-hero-note">
             <span className="landing-note-icon" aria-hidden="true">✓</span>
-            <p>Verification status is shown transparently, based on available evidence.</p>
+            <p>{t.heroNote}</p>
           </div>
         </div>
 
@@ -110,7 +124,7 @@ export default function HomePage() {
           <div className="visual-glow" />
           <div className="visual-card visual-card-main">
             <div className="visual-card-top">
-              <span className="visual-card-label">DIVS VERIFICATION</span>
+              <span className="visual-card-label">{t.visualLabel}</span>
               <span className="visual-shield" aria-hidden="true">
                 <svg viewBox="0 0 24 24">
                   <path d="M12 3 19 6v5.2c0 4.6-3 7.8-7 9.8-4-2-7-5.2-7-9.8V6l7-3Z" />
@@ -126,42 +140,42 @@ export default function HomePage() {
                 </svg>
               </div>
               <div>
-                <strong>Driver profile</strong>
-                <span>Qualifications &amp; records</span>
+                <strong>{t.profile}</strong>
+                <span>{t.qualifications}</span>
               </div>
             </div>
             <div className="visual-divider" />
             <div className="visual-status-row">
               <span className="visual-status-icon" aria-hidden="true">✓</span>
-              <div><strong>Identity review</strong><span>Status available when reviewed</span></div>
-              <span className="visual-status-label">Status</span>
+              <div><strong>{t.identityReview}</strong><span>{t.statusAvailable}</span></div>
+              <span className="visual-status-label">{t.status}</span>
             </div>
             <div className="visual-status-row">
               <span className="visual-status-icon visual-status-icon-blue" aria-hidden="true">↗</span>
-              <div><strong>Licence information</strong><span>Validated details</span></div>
-              <span className="visual-status-label">Status</span>
+              <div><strong>{t.licenceInfo}</strong><span>{t.validatedDetails}</span></div>
+              <span className="visual-status-label">{t.status}</span>
             </div>
             <div className="visual-score-panel">
-              <div><span>Performance insights</span><strong>Clear. Fair. Traceable.</strong></div>
+              <div><span>{t.performanceInsights}</span><strong>{t.clearFairTraceable}</strong></div>
               <div className="visual-score-bars" aria-hidden="true"><i /><i /><i /><i /><i /></div>
             </div>
-            <p className="visual-disclaimer">Illustrative preview · not a live verification record</p>
+            <p className="visual-disclaimer">{t.illustrativePreview}</p>
           </div>
           <div className="visual-floating-badge">
             <span aria-hidden="true">✦</span>
-            Built around trust
+            {t.builtAroundTrust}
           </div>
         </div>
         <div className="landing-hero-bottom" aria-hidden="true">
-          <span>IDENTIFY</span><i /><span>VERIFY</span><i /><span>DISCOVER</span>
+          <span>{t.identify}</span><i /><span>{t.verify}</span><i /><span>{t.discover}</span>
         </div>
       </section>
 
       <section className="landing-trust-section" id="how-it-works" aria-labelledby="trust-title">
         <div className="landing-section-heading">
-          <p className="landing-eyebrow">Confidence through clarity</p>
-          <h2 id="trust-title">More than a name on a list.</h2>
-          <p>Useful information to help people and businesses make better-informed driver hiring decisions.</p>
+          <p className="landing-eyebrow">{t.trustEyebrow}</p>
+          <h2 id="trust-title">{t.trustTitle}</h2>
+          <p>{t.trustIntro}</p>
         </div>
         <div className="landing-benefit-grid" id="verification">
           {benefits.map((benefit) => (
@@ -183,37 +197,37 @@ export default function HomePage() {
         </div>
         <p className="landing-integration-note">
           <span aria-hidden="true">i</span>
-          Government verification integrations will be described as connected only when authorized services are live. Manual review may be used where available.
+          {t.integrationNote}
         </p>
       </section>
 
       <section className="landing-start-section" id="get-started" aria-labelledby="start-title">
         <div className="landing-start-intro">
-          <p className="landing-eyebrow">Your next step</p>
-          <h2 id="start-title">What brings you to DIVS?</h2>
-          <p>Choose how you want to get started. You can explore public information before creating an account.</p>
+          <p className="landing-eyebrow">{t.startEyebrow}</p>
+          <h2 id="start-title">{t.startTitle}</h2>
+          <p>{t.startIntro}</p>
         </div>
         <div className="landing-audience-grid">
           <article className="landing-audience-card">
             <div className="landing-audience-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="M5 17h14l-1.5-7h-11L5 17Z" /><path d="m8 10 1-4h6l1 4M7 17v2m10-2v2M7 14h.01M17 14h.01" /></svg>
             </div>
-            <p className="landing-audience-label">FOR DRIVERS</p>
-            <h3>Build your professional profile.</h3>
-            <p>Register, complete your profile, and follow your verification progress.</p>
-            <Link className="landing-text-link" href="/register">Join as a driver <span aria-hidden="true">→</span></Link>
+            <p className="landing-audience-label">{t.driverLabel}</p>
+            <h3>{t.driverTitle}</h3>
+            <p>{t.driverCopy}</p>
+            <Link className="landing-text-link" href="/register">{t.joinDriver} <span aria-hidden="true">→</span></Link>
           </article>
           <article className="landing-audience-card landing-audience-card-featured">
             <div className="landing-audience-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="M3 20h18M5 20V8l7-4 7 4v12M9 20v-5h6v5M9 10h.01M15 10h.01" /></svg>
             </div>
-            <p className="landing-audience-label">FOR CLIENTS &amp; BUSINESSES</p>
-            <h3>Find a driver for your needs.</h3>
-            <p>Explore drivers and use verified information to support your hiring decision.</p>
-            <Link className="landing-text-link" href="#get-started">Find a driver <span aria-hidden="true">→</span></Link>
+            <p className="landing-audience-label">{t.clientLabel}</p>
+            <h3>{t.clientTitle}</h3>
+            <p>{t.clientCopy}</p>
+            <Link className="landing-text-link" href="#get-started">{t.findDriver} <span aria-hidden="true">→</span></Link>
           </article>
         </div>
-        <p className="landing-existing-account">Already have an account? <Link href="/sign-in">Log in here</Link></p>
+        <p className="landing-existing-account">{t.existingAccount} <Link href="/sign-in">{t.loginHere}</Link></p>
       </section>
 
       <footer className="landing-footer">
@@ -221,9 +235,9 @@ export default function HomePage() {
           <span className="landing-brand-mark" aria-hidden="true">D</span>
           <span>DIVS</span>
         </Link>
-        <p>Driver Identification &amp; Verification System</p>
-        <a href="#landing-hero-title">Back to top ↑</a>
-        <small>© {new Date().getFullYear()} DIVS. Built for more informed decisions.</small>
+        <p>{t.footerDescriptor}</p>
+        <a href="#landing-hero-title">{t.backToTop} ↑</a>
+        <small>© {new Date().getFullYear()} DIVS. {t.footerCopyright}</small>
       </footer>
     </main>
   );
