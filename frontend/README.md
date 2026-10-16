@@ -26,7 +26,7 @@ pnpm dev
 
 Open http://localhost:3000.
 
-The first install creates `pnpm-lock.yaml`. Commit that lockfile after installation so local machines and Vercel use the same dependency resolution. For a clean, reproducible install after the lockfile exists, use:
+The first install creates `pnpm-lock.yaml`. Commit that lockfile after installation so local machines and Netlify use the same dependency resolution. For a clean, reproducible install after the lockfile exists, use:
 
 ```powershell
 pnpm install --frozen-lockfile
