@@ -32,7 +32,7 @@ class PerformanceEventScoreApplication(models.Model):
     class Meta:
         ordering = ["-applied_at"]
         indexes = [
-            models.Index(fields=["score", "applied_at"], name="perf_application_score_time_idx"),
+            models.Index(fields=["score", "applied_at"], name="perf_app_score_time_idx"),
         ]
         constraints = [
             models.CheckConstraint(
