@@ -38,7 +38,7 @@ class VerificationCode(models.Model):
     class Meta:
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["channel", "target", "created_at"], name="id_vercode_chan_tgt_created_idx"),
+            models.Index(fields=["channel", "target", "created_at"], name="id_vcode_chan_tgt_idx"),
             models.Index(fields=["channel", "purpose", "target", "created_at"], name="id_vercode_purpose_idx"),
         ]
 
