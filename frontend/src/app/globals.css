@@ -2107,3 +2107,12 @@ html[data-theme="dark"] .landing-header {
     right: 0;
   }
 }
+
+
+/* Ensure the header remains pinned while the page scrolls. */
+.landing-header {
+  position: sticky !important;
+  top: 0;
+  z-index: 1000;
+  align-self: start;
+}
