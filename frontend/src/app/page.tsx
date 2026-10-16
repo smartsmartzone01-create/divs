@@ -210,7 +210,7 @@ export default function HomePage() {
             <p className="landing-audience-label">FOR CLIENTS &amp; BUSINESSES</p>
             <h3>Find a driver for your needs.</h3>
             <p>Explore drivers and use verified information to support your hiring decision.</p>
-            <Link className="landing-text-link" href="/sign-in">Find a driver <span aria-hidden="true">→</span></Link>
+            <Link className="landing-text-link" href="#get-started">Find a driver <span aria-hidden="true">→</span></Link>
           </article>
         </div>
         <p className="landing-existing-account">Already have an account? <Link href="/sign-in">Log in here</Link></p>
