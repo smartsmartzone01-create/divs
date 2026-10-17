@@ -16,17 +16,33 @@ export function AccountPanel() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([getCurrentAccount(), getSessions()])
-      .then(([current, activeSessions]) => {
-        if (!active) return;
-        setAccount(current);
-        setSessions(activeSessions);
-      })
-      .catch(() => {
-        if (active) router.replace("/sign-in");
-      });
+
+    Promise.allSettled([getCurrentAccount(), getSessions()]).then(([accountResult, sessionsResult]) => {
+      if (!active) return;
+
+      if (accountResult.status === "fulfilled") {
+        setAccount(accountResult.value);
+      } else {
+        setError(
+          accountResult.reason instanceof Error
+            ? `Account request failed: ${accountResult.reason.message}`
+            : "Account request failed. Please try again.",
+        );
+      }
+
+      if (sessionsResult.status === "fulfilled") {
+        setSessions(sessionsResult.value);
+      } else {
+        const sessionsMessage =
+          sessionsResult.reason instanceof Error
+            ? `Sessions request failed: ${sessionsResult.reason.message}`
+            : "Sessions request failed.";
+        setError((currentError) => currentError ? `${currentError} ${sessionsMessage}` : sessionsMessage);
+      }
+    });
+
     return () => { active = false; };
-  }, [router]);
+  }, []);
 
   async function handleLogout() {
     setBusy(true);
@@ -49,7 +65,21 @@ export function AccountPanel() {
   }
 
   if (!account) {
-    return <div className="auth-loading">Loading your account…</div>;
+    return (
+      <div className="account-panel-content">
+        {error ? (
+          <>
+            <p className="auth-error" role="alert">{error}</p>
+            <p className="auth-helper">
+              Your sign-in may have succeeded, but DIVS could not load the account details.
+              <Link href="/sign-in"> Return to sign in</Link>
+            </p>
+          </>
+        ) : (
+          <div className="auth-loading">Loading your account…</div>
+        )}
+      </div>
+    );
   }
 
   return (
