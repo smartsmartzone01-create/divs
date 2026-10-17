@@ -1742,17 +1742,17 @@ a {
 
 html[data-theme="dark"] {
   color-scheme: dark;
-  background: #0b1720;
+  background: #000000;
 }
 
 html[data-theme="dark"] body {
-  background: #0b1720;
+  background: #000000;
   color: #e8f0f3;
 }
 
 html[data-theme="dark"] .landing-page {
-  --landing-page-bg: #0b1720;
-  --landing-section-bg: #101f2a;
+  --landing-page-bg: #000000;
+  --landing-section-bg: #050505;
   --landing-card-bg: #132530;
   --landing-border: #2a3d48;
   --landing-ink: #e6eef2;
