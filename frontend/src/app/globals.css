@@ -2242,3 +2242,129 @@ html[data-theme="dark"] .landing-header {
   background: #000000;
   border-bottom-color: #263944;
 }
+
+
+/* White-first public landing page: clean surfaces and reference-inspired hero */
+.landing-page {
+  background: #ffffff;
+  color: #17212b;
+}
+
+.landing-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e8e8e8;
+  box-shadow: 0 2px 12px rgb(17 24 39 / 3%);
+}
+
+.landing-hero {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.landing-hero-content {
+  max-width: 68rem;
+  text-align: left;
+}
+
+.landing-hero .landing-eyebrow {
+  justify-content: flex-start;
+}
+
+.landing-hero h1 {
+  margin-left: 0;
+  margin-right: 0;
+  color: #17212b;
+}
+
+.landing-hero h1 span {
+  color: #1769e0;
+}
+
+.landing-hero-copy {
+  margin-left: 0;
+  margin-right: 0;
+  color: #4b5563;
+}
+
+.landing-hero-actions {
+  justify-content: flex-start;
+}
+
+.landing-trust-section,
+.landing-start-section,
+.landing-footer {
+  background: #ffffff;
+}
+
+.landing-section-heading h2,
+.landing-start-intro h2 {
+  color: #17212b;
+}
+
+.landing-benefit-card,
+.landing-audience-card {
+  background: #ffffff;
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 8px 28px rgb(17 24 39 / 5%);
+}
+
+.landing-audience-card-featured {
+  background: #f7faff;
+  border-color: #dce7fb;
+}
+
+/* Keep the dark theme intentionally dark without affecting the white light theme. */
+html[data-theme="dark"] .landing-page {
+  background: #000000;
+  color: #f5f7fa;
+}
+
+html[data-theme="dark"] .landing-header {
+  background: #000000;
+  border-bottom-color: #242424;
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .landing-hero h1,
+html[data-theme="dark"] .landing-section-heading h2,
+html[data-theme="dark"] .landing-start-intro h2,
+html[data-theme="dark"] .landing-benefit-card h3,
+html[data-theme="dark"] .landing-audience-card h3 {
+  color: #f5f7fa;
+}
+
+html[data-theme="dark"] .landing-hero-copy {
+  color: #c3c8d0;
+}
+
+html[data-theme="dark"] .landing-trust-section,
+html[data-theme="dark"] .landing-start-section,
+html[data-theme="dark"] .landing-footer {
+  background: #000000;
+}
+
+html[data-theme="dark"] .landing-benefit-card,
+html[data-theme="dark"] .landing-audience-card {
+  background: #080808;
+  border-color: #242424;
+}
+
+html[data-theme="dark"] .landing-audience-card-featured {
+  background: #0b1220;
+  border-color: #1e3a5f;
+}
+
+@media (max-width: 720px) {
+  .landing-hero,
+  .landing-hero-content {
+    text-align: left;
+  }
+
+  .landing-hero .landing-eyebrow {
+    justify-content: flex-start;
+  }
+
+  .landing-hero-actions {
+    justify-content: flex-start;
+  }
+}
