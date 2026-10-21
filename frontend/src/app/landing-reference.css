@@ -1,0 +1,305 @@
+/* Clean, high-contrast landing-page styling inspired by the supplied reference. */
+.landing-page {
+  background: #ffffff;
+  color: #17242d;
+}
+
+.landing-page::before,
+.landing-page::after {
+  opacity: 0.08;
+}
+
+.landing-header {
+  min-height: 5.5rem;
+  padding-inline: max(1.25rem, calc((100% - 76rem) / 2));
+  background: #ffffff;
+  border-bottom: 1px solid #edf0f2;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.landing-brand,
+.landing-footer-brand {
+  color: #1b2b34;
+}
+
+.landing-brand-mark {
+  border-radius: 0;
+  background: transparent;
+  color: #0866ff;
+  font-size: 2rem;
+  font-weight: 900;
+}
+
+.landing-brand-copy small {
+  color: #66737b;
+}
+
+.landing-navigation > a,
+.landing-login-link {
+  color: #263640;
+}
+
+.landing-nav-cta {
+  background: #0866ff;
+  border-radius: 999px;
+  padding-inline: 1.35rem;
+}
+
+.landing-nav-cta:hover,
+.landing-button-primary:hover {
+  background: #0057e7;
+}
+
+.landing-hero {
+  width: 100%;
+  min-height: 0;
+  justify-content: flex-start;
+  padding: clamp(4rem, 9vh, 7rem) max(1.25rem, calc((100% - 76rem) / 2));
+  background: #1b2e36;
+  color: #ffffff;
+}
+
+.landing-hero-content {
+  max-width: 43rem;
+  margin: 0;
+  text-align: left;
+}
+
+.landing-hero .landing-eyebrow {
+  justify-content: flex-start;
+  color: #a8e7dc;
+}
+
+.landing-eyebrow-dot {
+  background: #4bd0ba;
+  box-shadow: 0 0 0 0.25rem rgb(75 208 186 / 15%);
+}
+
+.landing-hero h1 {
+  margin: 1.2rem 0 1.5rem;
+  color: #ffffff;
+  font-size: clamp(2.8rem, 6vw, 4.8rem);
+  letter-spacing: -0.045em;
+  line-height: 1.12;
+}
+
+.landing-hero h1 span {
+  color: #ffffff;
+}
+
+.landing-hero-copy {
+  max-width: 42rem;
+  color: #edf2f4;
+  line-height: 1.7;
+}
+
+.landing-hero-actions {
+  justify-content: flex-start;
+  margin-top: 2rem;
+}
+
+.landing-button {
+  min-height: 3.4rem;
+  border-radius: 999px;
+  padding-inline: 1.6rem;
+}
+
+.landing-button-primary {
+  background: #0866ff;
+  color: #ffffff;
+}
+
+.landing-button-secondary {
+  border-color: rgb(255 255 255 / 40%);
+  background: transparent;
+  color: #ffffff;
+}
+
+.landing-button-secondary:hover {
+  border-color: #ffffff;
+  background: rgb(255 255 255 / 8%);
+}
+
+.landing-trust-section {
+  background: #ffffff;
+  padding-top: 3.5rem;
+}
+
+.landing-section-heading h2,
+.landing-start-intro h2 {
+  color: #17242d;
+}
+
+.landing-section-heading > p:last-child,
+.landing-start-intro > p:last-child,
+.landing-benefit-card p,
+.landing-audience-card > p:not(.landing-audience-label) {
+  color: #5f6d76;
+}
+
+.landing-benefit-card,
+.landing-audience-card {
+  border-color: #e6eaed;
+  background: #ffffff;
+  box-shadow: 0 0.5rem 1.8rem rgb(20 35 45 / 4%);
+}
+
+.landing-benefit-card h3,
+.landing-audience-card h3 {
+  color: #17242d;
+}
+
+.landing-audience-card-featured {
+  border-color: #e6eaed;
+  background: #ffffff;
+}
+
+.landing-footer {
+  border-top-color: #e8ecef;
+}
+
+.landing-footer > p,
+.landing-footer > a:not(.landing-footer-brand),
+.landing-footer > small {
+  color: #66737b;
+}
+
+.mobile-menu-toggle {
+  border-color: #e0e5e8;
+  border-radius: 0.5rem;
+  background: #ffffff;
+}
+
+.mobile-menu-toggle span {
+  background: #1b2e36;
+}
+
+@media (max-width: 720px) {
+  .landing-header {
+    min-height: 4.8rem;
+    padding-inline: 1rem;
+  }
+
+  .landing-navigation {
+    border-color: #e6eaed;
+    background: #ffffff;
+    box-shadow: 0 1rem 2rem rgb(20 35 45 / 10%);
+  }
+
+  .landing-navigation > a,
+  .landing-login-link {
+    color: #263640;
+  }
+
+  .landing-nav-actions {
+    border-top-color: #edf0f2;
+  }
+
+  .landing-hero {
+    width: 100%;
+    min-height: 0;
+    padding: 4rem 1.25rem 3rem;
+  }
+
+  .landing-hero-content {
+    text-align: left;
+  }
+
+  .landing-hero .landing-eyebrow {
+    justify-content: flex-start;
+  }
+
+  .landing-hero h1 {
+    font-size: clamp(2.75rem, 10vw, 4rem);
+    line-height: 1.12;
+  }
+
+  .landing-hero-actions {
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .landing-button-primary {
+    min-width: 100%;
+  }
+
+  .landing-button-secondary {
+    min-width: 100%;
+  }
+
+  .landing-trust-section {
+    padding-top: 2.75rem;
+  }
+}
+
+/* Keep the selected dark theme dark, while the default light theme stays clean white. */
+html[data-theme="dark"] .landing-page {
+  background: #000000;
+  color: #e6eef2;
+}
+
+html[data-theme="dark"] .landing-header {
+  background: #000000;
+  border-bottom-color: #263944;
+}
+
+html[data-theme="dark"] .landing-hero {
+  background: #000000;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .landing-hero h1,
+html[data-theme="dark"] .landing-hero h1 span,
+html[data-theme="dark"] .landing-hero-copy {
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .landing-trust-section {
+  background: #050505;
+}
+
+html[data-theme="dark"] .landing-section-heading h2,
+html[data-theme="dark"] .landing-start-intro h2,
+html[data-theme="dark"] .landing-benefit-card h3,
+html[data-theme="dark"] .landing-audience-card h3 {
+  color: #e6eef2;
+}
+
+html[data-theme="dark"] .landing-benefit-card,
+html[data-theme="dark"] .landing-audience-card,
+html[data-theme="dark"] .landing-audience-card-featured {
+  background: #101010;
+  border-color: #292929;
+}
+
+html[data-theme="dark"] .landing-nav-cta,
+html[data-theme="dark"] .landing-button-primary {
+  background: #0866ff;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .landing-button-secondary {
+  background: transparent;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .landing-brand-mark {
+  background: transparent;
+  color: #4c91ff;
+}
+
+html[data-theme="dark"] .mobile-menu-toggle,
+html[data-theme="dark"] .landing-navigation.is-open {
+  background: #101010;
+  border-color: #303030;
+}
+
+html[data-theme="dark"] .mobile-menu-toggle span {
+  background: #ffffff;
+}
+
+html[data-theme="dark"] .landing-navigation > a,
+html[data-theme="dark"] .landing-login-link {
+  color: #e6eef2;
+}
