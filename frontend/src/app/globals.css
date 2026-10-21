@@ -2116,3 +2116,129 @@ html[data-theme="dark"] .landing-header {
   z-index: 1000;
   align-self: start;
 }
+
+
+/* White-first landing refresh inspired by the supplied reference */
+.landing-page {
+  --landing-page-bg: #ffffff;
+  --landing-section-bg: #ffffff;
+  --landing-card-bg: #ffffff;
+  --landing-border: #e8e8e8;
+  --landing-ink: #17212b;
+  --landing-muted: #59636e;
+  --landing-navy: #17212b;
+  --landing-teal: #1769e0;
+  --landing-soft: #f5f8ff;
+  background: #ffffff;
+  color: var(--landing-ink);
+}
+
+.landing-header {
+  background: #ffffff;
+  border-bottom-color: #eeeeee;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.landing-brand,
+.landing-footer-brand,
+.landing-brand-copy strong,
+.landing-footer-brand > span:last-child,
+.landing-hero h1,
+.landing-section-heading h2,
+.landing-start-intro h2,
+.landing-benefit-card h3,
+.landing-audience-card h3 {
+  color: #17212b;
+}
+
+.landing-brand-mark {
+  background: #1769e0;
+  color: #ffffff;
+}
+
+.landing-navigation > a,
+.landing-login-link {
+  color: #364152;
+}
+
+.landing-navigation > a:hover,
+.landing-login-link:hover,
+.landing-text-link,
+.landing-existing-account a {
+  color: #1459bd;
+}
+
+.landing-nav-cta,
+.landing-button-primary {
+  background: #1769e0;
+  color: #ffffff;
+}
+
+.landing-nav-cta:hover,
+.landing-button-primary:hover {
+  background: #0f56bd;
+}
+
+.landing-button-secondary {
+  border-color: #d9dee7;
+  background: #ffffff;
+  color: #17212b;
+}
+
+.landing-button-secondary:hover {
+  border-color: #a9c6f5;
+  background: #f7faff;
+}
+
+.landing-trust-section {
+  background: #ffffff;
+}
+
+.landing-benefit-card,
+.landing-audience-card {
+  background: #ffffff;
+  border-color: #e8e8e8;
+  box-shadow: 0 8px 28px rgb(17 24 39 / 4%);
+}
+
+.landing-audience-card-featured {
+  border-color: #dce7fb;
+  background: #f8faff;
+}
+
+.landing-preference-controls button {
+  background: #ffffff;
+}
+
+.landing-page::before,
+.landing-page::after {
+  opacity: 0.12;
+}
+
+.mobile-menu-toggle {
+  border-color: #e3e6eb;
+  background: #ffffff;
+}
+
+.mobile-menu-toggle span {
+  background: #17212b;
+}
+
+.landing-navigation.is-open {
+  border-color: #e8e8e8;
+  background: #ffffff;
+}
+
+@media (max-width: 720px) {
+  .landing-header {
+    background: #ffffff;
+    border-bottom-color: #eeeeee;
+  }
+}
+
+/* Dark mode remains available, with its own explicit palette. */
+html[data-theme="dark"] .landing-header {
+  background: #000000;
+  border-bottom-color: #263944;
+}
