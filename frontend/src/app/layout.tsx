@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./landing-reference.css";
 import { DIVSPreferencesProvider } from "@/components/preferences/preferences-provider";
 
 export const metadata: Metadata = {
