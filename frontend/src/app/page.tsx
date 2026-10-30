@@ -1,14 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getCurrentAccount, type AuthAccount } from "@/features/identity/api";
 import { useDIVSPreferences } from "@/components/preferences/preferences-provider";
 
 
 
 export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [signedInAccount, setSignedInAccount] = useState<AuthAccount | null>(null);
   const { language, setLanguage, theme, toggleTheme, t } = useDIVSPreferences();
+
+  useEffect(() => {
+    let active = true;
+    getCurrentAccount()
+      .then((account) => { if (active) setSignedInAccount(account); })
+      .catch(() => { if (active) setSignedInAccount(null); });
+    return () => { active = false; };
+  }, []);
   const benefits = [
     { number: "01", title: t.benefitOneTitle, description: t.benefitOneCopy },
     { number: "02", title: t.benefitTwoTitle, description: t.benefitTwoCopy },
@@ -32,18 +42,29 @@ export default function HomePage() {
           </span>
         </Link>
 
-        <button
-          className="mobile-menu-toggle"
-          type="button"
-          aria-label={menuOpen ? t.closeMenu : t.openMenu}
-          aria-expanded={menuOpen}
-          aria-controls="landing-navigation"
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
+        <div className="landing-header-tools">
+          {signedInAccount ? (
+            <Link className="landing-account-icon" href="/account" aria-label="Open your account" onClick={closeMenu}>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="8" r="3.5" />
+                <path d="M4.5 20c.7-3.6 3.3-5.5 7.5-5.5s6.8 1.9 7.5 5.5" />
+              </svg>
+            </Link>
+          ) : null}
+
+          <button
+            className="mobile-menu-toggle"
+            type="button"
+            aria-label={menuOpen ? t.closeMenu : t.openMenu}
+            aria-expanded={menuOpen}
+            aria-controls="landing-navigation"
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </div>
 
         <nav
           className={`landing-navigation${menuOpen ? " is-open" : ""}`}
@@ -66,8 +87,12 @@ export default function HomePage() {
             </button>
           </div>
           <div className="landing-nav-actions">
-            <Link className="landing-login-link" href="/sign-in" onClick={closeMenu}>{t.login}</Link>
-            <Link className="landing-nav-cta" href="/register" onClick={closeMenu}>{t.createAccount}</Link>
+            {signedInAccount ? (
+              <Link className="landing-login-link" href="/account" onClick={closeMenu}>My account</Link>
+            ) : (
+              <Link className="landing-login-link" href="/sign-in" onClick={closeMenu}>{t.login}</Link>
+            )}
+            {!signedInAccount ? <Link className="landing-nav-cta" href="/register" onClick={closeMenu}>{t.createAccount}</Link> : null}
           </div>
         </nav>
       </header>
