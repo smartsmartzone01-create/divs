@@ -18,7 +18,8 @@ export default function AdminWorkspacePage() {
   const [account, setAccount] = useState<Account | null>(null);
   const [access, setAccess] = useState<Access | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [applications, setApplications] = useState<Application[]>([]);\n  const [canReviewApplications, setCanReviewApplications] = useState(false);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [canReviewApplications, setCanReviewApplications] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
