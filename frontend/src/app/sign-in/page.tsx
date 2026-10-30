@@ -7,7 +7,7 @@ export default function SignInPage() {
     <AuthShell
       eyebrow="Welcome back"
       title="Log in"
-      description="Don't have an account? Create one to get started with DIVS."
+      description="Access your DIVS account using your verified email, mobile number, or Google."
       footer={<span>New to DIVS? <Link href="/register">Sign up</Link></span>}
     >
       <SignInForm />
