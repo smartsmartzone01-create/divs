@@ -53,7 +53,7 @@ export default function HomePage() {
           ) : null}
 
           <button
-            className="mobile-menu-toggle"
+            className={`mobile-menu-toggle${menuOpen ? " is-open" : ""}`}
             type="button"
             aria-label={menuOpen ? t.closeMenu : t.openMenu}
             aria-expanded={menuOpen}
