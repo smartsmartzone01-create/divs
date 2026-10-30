@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { registerAccount } from "@/features/identity/api";
@@ -34,6 +33,7 @@ export function RegisterForm() {
   }
 
   return (
+    <>
     <form className="auth-form" onSubmit={handleSubmit}>
       <div className="auth-field">
         <label>Register using</label>
@@ -80,5 +80,6 @@ export function RegisterForm() {
       <p className="auth-helper">This creates your shared DIVS identity. Choose driver or client registration after verification.</p>
     </form>
     <GoogleSignInButton />
+    </>
   );
 }
