@@ -41,7 +41,7 @@ export default function AdminWorkspacePage() {
         if (accessResult.role === "admin") {
           try {
             const pending = await getJson<Application[]>("/api/backend/operations/applications/pending/");
-            if (active) setApplications(pending);
+            if (active) { setApplications(pending); setCanReviewApplications(true); }
           } catch (caught) {
             if ((caught as { status?: number }).status !== 403 && active) {
               setError("Could not load pending operations applications.");
