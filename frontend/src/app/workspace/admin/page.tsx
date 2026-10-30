@@ -18,7 +18,7 @@ export default function AdminWorkspacePage() {
   const [account, setAccount] = useState<Account | null>(null);
   const [access, setAccess] = useState<Access | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [applications, setApplications] = useState<Application[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);\n  const [canReviewApplications, setCanReviewApplications] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -144,8 +144,8 @@ export default function AdminWorkspacePage() {
                 { title: "Driver verification", description: "Review identity and licence checks", href: "/workspace/admin/verification", available: false },
                 { title: "Driver management", description: "Review driver records and profiles", href: "/workspace/admin/drivers", available: false },
                 { title: "Performance & appeals", description: "Review performance events and appeals", href: "/workspace/admin/performance", available: false },
-                { title: "Operations access", description: "Review access applications", href: "/workspace/admin/applications", available: access?.role === "admin" },
-              ].filter((item) => item.available || item.title !== "Operations access").map((item) => (
+                { title: "Operations access", description: "Review access applications", href: "/workspace/admin/applications", available: canReviewApplications },
+              ].filter((item) => item.title !== "Operations access" || canReviewApplications).map((item) => (
                 <div key={item.title} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-4 py-3">
                   <div><p className="font-semibold">{item.title}</p><p className="mt-0.5 text-xs text-slate-500">{item.description}</p></div>
                   {item.available ? <Link href={item.href} className="shrink-0 text-sm font-semibold text-blue-800 hover:underline">Open</Link> : <span className="shrink-0 text-xs text-slate-400">Coming next</span>}
