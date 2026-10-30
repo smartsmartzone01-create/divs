@@ -303,3 +303,188 @@ html[data-theme="dark"] .landing-navigation > a,
 html[data-theme="dark"] .landing-login-link {
   color: #e6eef2;
 }
+
+/* Screenshot-matched landing header: brand left, account (when signed in), menu right. */
+.landing-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  min-height: 6rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem max(1.25rem, calc((100% - 76rem) / 2));
+  background: #ffffff;
+  border-bottom: 0;
+  box-shadow: none;
+}
+
+.landing-brand-copy small {
+  display: none;
+}
+
+.landing-header-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: clamp(1.5rem, 5vw, 3.5rem);
+  margin-left: auto;
+}
+
+.landing-account-icon {
+  display: grid;
+  width: 3.25rem;
+  height: 3.25rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: #153b34;
+  color: #ffffff;
+}
+
+.landing-account-icon svg {
+  width: 1.45rem;
+  height: 1.45rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.mobile-menu-toggle {
+  display: flex;
+  width: 3rem;
+  height: 3rem;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.mobile-menu-toggle span {
+  display: block;
+  width: 2.15rem;
+  height: 0.22rem;
+  border-radius: 999px;
+  background: #263238;
+}
+
+.landing-navigation {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: max(1rem, calc((100% - 76rem) / 2));
+  display: none;
+  width: min(21rem, calc(100vw - 2rem));
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  padding: 1rem;
+  border: 1px solid #e8ecef;
+  border-radius: 0.8rem;
+  background: #ffffff;
+  box-shadow: 0 1rem 2.5rem rgb(20 35 45 / 12%);
+}
+
+.landing-navigation.is-open {
+  display: flex;
+}
+
+.landing-navigation > a,
+.landing-login-link {
+  display: block;
+  padding: 0.75rem 0.65rem;
+  color: #263640;
+  font-size: 0.95rem;
+}
+
+.landing-preference-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem;
+  border-top: 1px solid #edf0f2;
+}
+
+.landing-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid #edf0f2;
+}
+
+.landing-nav-actions .landing-login-link {
+  padding-left: 0.65rem;
+}
+
+.landing-nav-cta {
+  justify-content: center;
+}
+
+html[data-theme="dark"] .landing-header {
+  background: #000000;
+  border-bottom: 0;
+}
+
+html[data-theme="dark"] .landing-account-icon {
+  background: #183c35;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .mobile-menu-toggle span {
+  background: #f5f7fa;
+}
+
+html[data-theme="dark"] .landing-navigation {
+  border-color: #292929;
+  background: #080808;
+  box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 40%);
+}
+
+html[data-theme="dark"] .landing-navigation > a,
+html[data-theme="dark"] .landing-login-link {
+  color: #e6eef2;
+}
+
+html[data-theme="dark"] .landing-preference-controls,
+html[data-theme="dark"] .landing-nav-actions {
+  border-color: #292929;
+}
+
+@media (max-width: 720px) {
+  .landing-header {
+    min-height: 6rem;
+    padding: 0.8rem 1.25rem;
+  }
+
+  .landing-brand {
+    gap: 0.45rem;
+  }
+
+  .landing-brand-copy strong {
+    font-size: 1.25rem;
+    letter-spacing: 0.04em;
+  }
+
+  .landing-header-tools {
+    gap: 1.5rem;
+  }
+
+  .landing-account-icon {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .landing-navigation {
+    right: 1rem;
+  }
+}
+
