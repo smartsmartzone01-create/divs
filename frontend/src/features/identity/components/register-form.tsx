@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { registerAccount } from "@/features/identity/api";
+import { GoogleSignInButton } from "@/features/identity/components/google-sign-in-button";
 
 type ContactMethod = "email" | "phone";
 
@@ -77,7 +78,7 @@ export function RegisterForm() {
         {busy ? "Creating account…" : "Create account"}
       </button>
       <p className="auth-helper">This creates your shared DIVS identity. Choose driver or client registration after verification.</p>
-      <p className="auth-inline-link">Already registered? <Link href="/sign-in">Sign in</Link></p>
     </form>
+    <GoogleSignInButton />
   );
 }
