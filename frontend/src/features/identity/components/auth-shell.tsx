@@ -21,25 +21,22 @@ export function AuthShell({
           <span className="brand-mark" aria-hidden="true">D</span>
           <span>DIVS</span>
         </Link>
-        <Link className="auth-header-link" href="/">Explore DIVS</Link>
       </header>
+
       <section className="auth-layout">
-        <div className="auth-intro">
-          <p className="eyebrow">{eyebrow}</p>
-          <h1>{title}</h1>
-          <p>{description}</p>
-          <div className="auth-trust-note">
-            Your account identifies you. Driver and client registration are separate steps.
+        <section className="auth-panel" aria-labelledby="auth-title">
+          <div className="auth-heading">
+            <p className="eyebrow">{eyebrow}</p>
+            <h1 id="auth-title">{title}</h1>
+            <p>{description}</p>
           </div>
-        </div>
-        <section className="auth-panel">
           {children}
           {footer ? <div className="auth-panel-footer">{footer}</div> : null}
         </section>
       </section>
+
       <footer className="auth-footer">
-        <span>DIVS · Driver Identification &amp; Verification System</span>
-        <span>Account and verification information is handled with care.</span>
+        <span>Protected sign-in. Your account information is handled securely by DIVS.</span>
       </footer>
     </main>
   );
