@@ -167,7 +167,7 @@ export default function DriverWorkspacePage() {
           <StatusPill value={profile.status === "active" ? verificationStatus : profile.status} sw={sw}/>
           <p className="driver-profile-meta">{[registration?.residential_area, registration?.district, registration?.region].filter(Boolean).join(" · ")}</p>
           <p className="driver-profile-experience">{experience}</p>
-          <Link href="/driver/onboarding" className="driver-edit-profile"><Icon name="edit"/>{sw ? "Hariri wasifu" : "Edit profile"}</Link>
+          <Link href="/driver/edit-profile" className="driver-edit-profile"><Icon name="edit"/>{sw ? "Hariri wasifu" : "Edit profile"}</Link>
         </section>
 
         <section className="driver-stat-row" aria-label={sw ? "Viashiria vya dereva" : "Driver indicators"}>
