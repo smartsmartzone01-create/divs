@@ -235,7 +235,8 @@ export async function getAccountMenuDetails(): Promise<AccountMenuDetails> {
       const person = driver.registration;
       displayName = [person.first_name, person.middle_name, person.last_name].filter(Boolean).join(" ");
       roleLabel = "Driver";
-      workspaceLabel = "My account";
+      workspaceHref = "/driver/onboarding";
+      workspaceLabel = "Open driver profile";
     } else {
       const client = await getProfile<{ registration?: { name?: string } }>("/api/backend/profiles/client/");
       if (client?.registration) {
