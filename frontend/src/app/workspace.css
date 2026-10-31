@@ -74,3 +74,9 @@ html[data-theme="dark"] .divs-account-menu {
   cursor: pointer;
 }
 .landing-account-nav-button:hover { text-decoration: underline; }
+
+.workspace-notice { border: 1px solid #a7f3d0; border-radius: .8rem; background: #ecfdf5; color: #065f46; padding: 1rem; font-size: .9rem; }
+html[data-theme="dark"] .workspace-notice { border-color: #145b45; background: #0d2b22; color: #bbf7d0; }
+.workspace-danger-button { border: 1px solid #e5a4a4; border-radius: .6rem; background: transparent; color: #b91c1c; padding: .5rem 1rem; font-size: .875rem; font-weight: 700; }
+html[data-theme="dark"] .workspace-danger-button { border-color: #713b3b; color: #fca5a5; }
+.workspace-menu-toggle:focus-visible, .divs-account-avatar:focus-visible, .workspace-navigation a:focus-visible, .workspace-navigation button:focus-visible { outline: 3px solid #60a5fa; outline-offset: 3px; }
