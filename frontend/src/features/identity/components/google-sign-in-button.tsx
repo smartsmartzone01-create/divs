@@ -2,7 +2,7 @@
 
 import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
-import { identityRequest } from "@/features/identity/api";
+import { getPostLoginPath, identityRequest } from "@/features/identity/api";
 
 type GoogleCredentialResponse = { credential?: string };
 type GoogleButtonOptions = {
@@ -50,7 +50,7 @@ export function GoogleSignInButton() {
             method: "POST",
             body: { credential },
           });
-          window.location.assign("/account");
+          window.location.assign(await getPostLoginPath());
         } catch (caught) {
           setError(caught instanceof Error ? caught.message : "Google sign-in failed.");
         } finally {
