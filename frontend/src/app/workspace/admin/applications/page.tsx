@@ -61,7 +61,7 @@ export default function OperationsApplicationsPage() {
           <p className="workspace-description">{sw ? "Kagua maombi ya kujiunga na timu ya uendeshaji ya DIVS." : "Review requests to join DIVS operations."}</p>
         </div>
         {error && <p role="alert" className="workspace-alert mt-5">{error}</p>}
-        {notice && <p role="status" className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{notice}</p>}
+        {notice && <p role="status" className="workspace-notice mt-5">{notice}</p>}
         {loading ? <p className="workspace-muted mt-8">{sw ? "Inapakia maombi…" : "Loading applications…"}</p> : items.length === 0 && !error ? (
           <div className="workspace-card mt-8 p-8 text-center"><h2 className="font-semibold">{sw ? "Hakuna maombi yanayosubiri" : "No pending applications"}</h2><p className="workspace-muted mt-1 text-sm">{sw ? "Hakuna maombi ya ruhusa za uendeshaji yanayosubiri ukaguzi." : "There are no operations access requests waiting for review."}</p></div>
         ) : (
@@ -73,7 +73,7 @@ export default function OperationsApplicationsPage() {
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 <button disabled={!!busyId} onClick={() => void decide(item, "approved")} className="rounded-lg bg-[#153b67] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{busyId === item.id ? (sw ? "Inachakata…" : "Processing…") : (sw ? "Idhinisha" : "Approve")}</button>
-                <button disabled={!!busyId} onClick={() => void decide(item, "rejected")} className="rounded-lg border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-700 disabled:opacity-50">{sw ? "Kataa" : "Reject"}</button>
+                <button disabled={!!busyId} onClick={() => void decide(item, "rejected")} className="workspace-danger-button disabled:opacity-50">{sw ? "Kataa" : "Reject"}</button>
               </div>
             </article>)}
           </div>
