@@ -1,0 +1,37 @@
+// Tanzania administrative divisions sourced from Open Admin Data (CC BY 4.0).
+// Keep API payload values as readable names until the backend adopts stable IDs.
+export const TANZANIA_DISTRICTS: Record<string, string[]> = {
+  "Dodoma": ["Kondoa", "Mpwapwa", "Kongwa", "Chamwino", "Dodoma Urban", "Bahi", "Chemba"],
+  "Arusha": ["Monduli", "Meru", "Arusha Urban", "Karatu", "Ngorongoro", "Arusha", "Longido"],
+  "Kilimanjaro": ["Rombo", "Mwanga", "Same", "Moshi", "Hai", "Moshi Urban", "Siha"],
+  "Tanga": ["Lushoto", "Korogwe", "Muheza", "Tanga Urban", "Pangani", "Handeni", "Kilindi", "Mkinga", "Korogwe Township Authority", "Handeni Mji"],
+  "Morogoro": ["Kilosa", "Morogoro", "Kilombero", "Ulanga", "Morogoro Urban", "Mvomero", "Gairo"],
+  "Pwani": ["Bagamoyo", "Kibaha", "Kisarawe", "Mkuranga", "Rufiji", "Mafia", "Kibaha Urban"],
+  "Dar es Salaam": ["Kinondoni", "Ilala", "Temeke"],
+  "Lindi": ["Kilwa", "Lindi", "Nachingwea", "Liwale", "Ruangwa", "Lindi Urban"],
+  "Mtwara": ["Mtwara", "Newala", "Masasi", "Tandahimba", "Mtwara Urban", "Nanyumbu", "Masasi Township Authority"],
+  "Ruvuma": ["Tunduru", "Songea", "Mbinga", "Songea Urban", "Namtumbo", "Nyasa"],
+  "Iringa": ["Iringa", "Mufindi", "Iringa Urban", "Kilolo", "Mafinga Township Authority"],
+  "Mbeya": ["Chunya", "Mbeya", "Kyela", "Rungwe", "Mbarali", "Mbeya Urban"],
+  "Songwe": ["Songwe", "Ileje", "Mbozi", "Momba", "Tunduma"],
+  "Singida": ["Iramba", "Singida", "Manyoni", "Singida Urban", "Ikungi", "Mkalama"],
+  "Tabora": ["Nzega", "Igunga", "Uyui", "Urambo", "Sikonge", "Tabora Urban", "Kaliua"],
+  "Rukwa": ["Kalambo", "Sumbawanga", "Nkasi", "Sumbawanga Urban"],
+  "Kigoma": ["Kibondo", "Kasulu", "Kigoma", "Kigoma Urban", "Uvinza", "Buhigwe", "Kakonko", "Kasulu Township Authority"],
+  "Shinyanga": ["Shinyanga Urban", "Kishapu", "Shinyanga", "Kahama", "Kahama Township Authority"],
+  "Kagera": ["Karagwe", "Bukoba", "Muleba", "Biharamulo", "Ngara", "Bukoba Urban", "Missenyi", "Kyerwa"],
+  "Mwanza": ["Ukerewe", "Magu", "Nyamagana", "Kwimba", "Sengerema", "Ilemela", "Misungwi"],
+  "Mara": ["Tarime", "Serengeti", "Musoma", "Bunda", "Rorya", "Butiama", "Musoma Urban"],
+  "Manyara": ["Babati", "Hanang", "Mbulu", "Simanjiro", "Kiteto", "Babati Urban"],
+  "Njombe": ["Njombe Urban", "Wanging'ombe", "Makete", "Njombe", "Ludewa", "Makambako Township Authority"],
+  "Katavi": ["Mpanda Urban", "Mpanda", "Mlele"],
+  "Simiyu": ["Bariadi", "Itilima", "Meatu", "Maswa", "Busega"],
+  "Geita": ["Geita", "Nyang'hwale", "Mbogwe", "Bukombe", "Chato"],
+  "Kaskazini Unguja": ["Kaskazini A", "Kaskazini B"],
+  "Kusini Unguja": ["Kati", "Kusini"],
+  "Mjini Magharibi": ["Magharibi", "Mjini"],
+  "Kaskazini Pemba": ["Wete", "Micheweni"],
+  "Kusini Pemba": ["Chake Chake", "Mkoani"],
+};
+
+export const TANZANIA_REGIONS = Object.keys(TANZANIA_DISTRICTS);
