@@ -5,19 +5,20 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GoogleSignInButton } from "@/features/identity/components/google-sign-in-button";
 import type { AuthAccount, AuthSession } from "@/features/identity/api";
-import { getCurrentAccount, getSessions, logout, revokeSession } from "@/features/identity/api";
+import { getCurrentAccount, getSessions, hasOperationsWorkspaceAccess, logout, revokeSession } from "@/features/identity/api";
 
 export function AccountPanel() {
   const router = useRouter();
   const [account, setAccount] = useState<AuthAccount | null>(null);
   const [sessions, setSessions] = useState<AuthSession[]>([]);
+  const [hasWorkspaceAccess, setHasWorkspaceAccess] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
 
-    Promise.allSettled([getCurrentAccount(), getSessions()]).then(([accountResult, sessionsResult]) => {
+    Promise.allSettled([getCurrentAccount(), getSessions(), hasOperationsWorkspaceAccess()]).then(([accountResult, sessionsResult, accessResult]) => {
       if (!active) return;
 
       if (accountResult.status === "fulfilled") {
@@ -38,6 +39,10 @@ export function AccountPanel() {
             ? `Sessions request failed: ${sessionsResult.reason.message}`
             : "Sessions request failed.";
         setError((currentError) => currentError ? `${currentError} ${sessionsMessage}` : sessionsMessage);
+      }
+
+      if (accessResult.status === "fulfilled") {
+        setHasWorkspaceAccess(accessResult.value);
       }
     });
 
@@ -95,6 +100,11 @@ export function AccountPanel() {
           </p>
         </div>
       </div>
+      {hasWorkspaceAccess ? (
+        <Link className="auth-primary-button inline-flex items-center justify-center" href="/workspace/admin">
+          Open admin workspace
+        </Link>
+      ) : null}
       <GoogleSignInButton />
       <div className="account-actions">
         <Link className="auth-secondary-link" href="/verify">Verify a contact method</Link>
