@@ -141,6 +141,22 @@ async function handler(request: NextRequest, context: RouteContext) {
     }
   }
 
+  const upstreamContentType = upstream.headers.get("content-type") ?? "";
+  let cloudflareChallenge = false;
+  if (upstreamContentType.toLowerCase().includes("text/html")) {
+    const diagnosticBody = await upstream.clone().text().catch(() => "");
+    cloudflareChallenge = /cf-chl|challenge-platform|just a moment/i.test(diagnosticBody);
+  }
+  console.info("[DIVS auth proxy]", {
+    route: routePath,
+    upstreamStatus: upstream.status,
+    upstreamContentType,
+    apiBaseUrlResolved: Boolean(
+      process.env.DIVS_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL
+    ),
+    cloudflareChallenge,
+  });
+
   const upstreamText = await upstream.text();
   let payload: unknown;
   try {
