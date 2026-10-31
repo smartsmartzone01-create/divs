@@ -240,3 +240,57 @@ export async function getAccountMenuDetails(): Promise<AccountMenuDetails> {
 
   return { displayName, initials, roleLabel, workspaceHref, workspaceLabel };
 }
+
+
+export type DriverRegistration = {
+  id: string;
+  first_name: string;
+  middle_name: string;
+  last_name: string;
+  nationality: string;
+  region: string;
+  district: string;
+  residential_area: string;
+  current_residential_address: string;
+  driving_experience: "none" | "under_1_year" | "1_to_3_years" | "4_to_7_years" | "8_plus_years";
+  contact_email: string | null;
+  contact_phone_number: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function getDriverRegistration(): Promise<DriverRegistration | null> {
+  const response = await fetch("/api/backend/registrations/driver/", {
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    throw new Error(payload?.detail || `Could not load driver registration (${response.status}).`);
+  }
+  return response.json() as Promise<DriverRegistration>;
+}
+
+export async function submitDriverRegistration(input: Omit<DriverRegistration, "id" | "contact_email" | "contact_phone_number" | "created_at" | "updated_at">): Promise<DriverRegistration> {
+  const response = await fetch("/api/backend/registrations/driver/", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    const first = payload && typeof payload === "object"
+      ? Object.entries(payload).find(([, value]) => value !== undefined)
+      : null;
+    const message = typeof payload?.detail === "string"
+      ? payload.detail
+      : first
+        ? `${first[0].replace(/_/g, " ")}: ${Array.isArray(first[1]) ? first[1].join(" ") : String(first[1])}`
+        : `Driver registration failed (${response.status}).`;
+    throw new Error(message);
+  }
+  return payload as DriverRegistration;
+}
