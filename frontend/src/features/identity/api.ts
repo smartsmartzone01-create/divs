@@ -108,19 +108,20 @@ export async function getPostLoginPath(): Promise<string> {
     return "/workspace/admin";
   }
 
-  // Existing driver registrations are authoritative; a generic account is not
-  // assumed to be a driver merely because it has signed in.
+  // Existing driver registrations go directly to the driver profile. Other
+  // ordinary accounts choose which DIVS experience to set up after sign-in.
   try {
-    const response = await fetch("/api/backend/registrations/driver/", {
+    const driverResponse = await fetch("/api/backend/registrations/driver/", {
       credentials: "same-origin",
       cache: "no-store",
       headers: { Accept: "application/json" },
     });
-    if (response.ok) return "/driver/onboarding";
+    if (driverResponse.ok) return "/driver/onboarding";
+    if (driverResponse.status !== 404) return "/account";
   } catch {
-    // Fall through to the ordinary account page if the profile check is unavailable.
+    return "/account";
   }
-  return "/account";
+  return "/choose-path";
 }
 
 export async function hasOperationsWorkspaceAccess(): Promise<boolean> {
@@ -308,4 +309,32 @@ export async function submitDriverRegistration(input: Omit<DriverRegistration, "
     throw new Error(message);
   }
   return payload as DriverRegistration;
+}
+
+
+export type ClientRegistration = {
+  id: string;
+  client_type: "individual" | "company";
+  name: string;
+  primary_contact: string;
+  email: string;
+  country: string;
+  region: string;
+  alternative_contacts: string[];
+  created_at: string;
+  updated_at: string;
+};
+
+export async function getClientRegistration(): Promise<ClientRegistration | null> {
+  const response = await fetch("/api/backend/registrations/client/", {
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    throw new Error(payload?.detail || `Could not load client registration (${response.status}).`);
+  }
+  return response.json() as Promise<ClientRegistration>;
 }
