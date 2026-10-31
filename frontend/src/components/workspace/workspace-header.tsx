@@ -7,7 +7,8 @@ import { useDIVSPreferences } from "@/components/preferences/preferences-provide
 
 export function WorkspaceHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { language, setLanguage, theme, toggleTheme } = useDIVSPreferences();\n  const sw = language === "sw";
+  const { language, setLanguage, theme, toggleTheme } = useDIVSPreferences();
+  const sw = language === "sw";
 
   return (
     <header className="workspace-header">
