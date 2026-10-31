@@ -12,18 +12,23 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         User = get_user_model()
         email = os.environ.get("DIVS_TEST_USER_EMAIL", "").strip().lower()
-        password = os.environ.get("DIVS_TEST_USER_PASSWORD", "")
 
-        if not email or not password:
-            raise CommandError(
-                "Set DIVS_TEST_USER_EMAIL and DIVS_TEST_USER_PASSWORD in the service environment."
-            )
+        if not email:
+            raise CommandError("Set DIVS_TEST_USER_EMAIL in the service environment.")
 
         existing = User.objects.filter(email__iexact=email).first()
         if existing:
-            raise CommandError(
-                "An account with this email already exists. No account or permissions were changed."
+            self.stdout.write(
+                self.style.WARNING(
+                    f"Account {existing.email} already exists. No account, password, "
+                    "verification status, or permissions were changed."
+                )
             )
+            return
+
+        password = os.environ.get("DIVS_TEST_USER_PASSWORD", "")
+        if not password:
+            raise CommandError("Set DIVS_TEST_USER_PASSWORD in the service environment.")
 
         try:
             validate_password(password)
