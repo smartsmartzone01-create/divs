@@ -177,3 +177,66 @@ export async function logout() {
 export async function revokeSession(sessionId: string) {
   return identityRequest<void>(`sessions/${sessionId}`, { method: "DELETE" });
 }
+
+export type AccountMenuDetails = {
+  displayName: string;
+  initials: string;
+  roleLabel: string;
+  workspaceHref: string;
+  workspaceLabel: string;
+};
+
+async function getProfile<T>(path: string): Promise<T | null> {
+  try {
+    const response = await fetch(path, {
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+/** Resolve the account menu from the signed-in user's own protected profile endpoints. */
+export async function getAccountMenuDetails(): Promise<AccountMenuDetails> {
+  const account = await getCurrentAccount();
+  let displayName = "";
+  let roleLabel = "DIVS account";
+  let workspaceHref = "/account";
+  let workspaceLabel = "My account";
+
+  const operationsAccess = await getOperationsAccess();
+  if (operationsAccess) {
+    const profile = await getProfile<{ full_name?: string }>("/api/backend/profiles/operations/");
+    displayName = profile?.full_name?.trim() ?? "";
+    roleLabel = operationsAccess.role === "admin" ? "Administrator" : "Operations operator";
+    workspaceHref = "/workspace/admin";
+    workspaceLabel = "Open admin workspace";
+  } else {
+    const driver = await getProfile<{ registration?: { first_name?: string; middle_name?: string; last_name?: string } }>("/api/backend/profiles/driver/");
+    if (driver?.registration) {
+      const person = driver.registration;
+      displayName = [person.first_name, person.middle_name, person.last_name].filter(Boolean).join(" ");
+      roleLabel = "Driver";
+      workspaceLabel = "My account";
+    } else {
+      const client = await getProfile<{ registration?: { name?: string } }>("/api/backend/profiles/client/");
+      if (client?.registration) {
+        displayName = client.registration.name?.trim() ?? "";
+        roleLabel = "Client";
+        workspaceLabel = "My account";
+      }
+    }
+  }
+
+  if (!displayName) displayName = account.email?.split("@")[0]?.replace(/[._-]+/g, " ").trim() || account.phone_number || "DIVS account";
+  const parts = displayName.split(/\s+/).filter(Boolean);
+  const initials = parts.length > 1
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : (parts[0]?.slice(0, 2) || "U").toUpperCase();
+
+  return { displayName, initials, roleLabel, workspaceHref, workspaceLabel };
+}
