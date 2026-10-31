@@ -7,7 +7,7 @@ export const TANZANIA_DISTRICTS: Record<string, string[]> = {
   "Tanga": ["Lushoto", "Korogwe", "Muheza", "Tanga Urban", "Pangani", "Handeni", "Kilindi", "Mkinga", "Korogwe Township Authority", "Handeni Mji"],
   "Morogoro": ["Kilosa", "Morogoro", "Kilombero", "Ulanga", "Morogoro Urban", "Mvomero", "Gairo"],
   "Pwani": ["Bagamoyo", "Kibaha", "Kisarawe", "Mkuranga", "Rufiji", "Mafia", "Kibaha Urban"],
-  "Dar es Salaam": ["Kinondoni", "Ilala", "Temeke"],
+  "Dar es Salaam": ["Kinondoni", "Ilala", "Temeke", "Ubungo", "Kigamboni"],
   "Lindi": ["Kilwa", "Lindi", "Nachingwea", "Liwale", "Ruangwa", "Lindi Urban"],
   "Mtwara": ["Mtwara", "Newala", "Masasi", "Tandahimba", "Mtwara Urban", "Nanyumbu", "Masasi Township Authority"],
   "Ruvuma": ["Tunduru", "Songea", "Mbinga", "Songea Urban", "Namtumbo", "Nyasa"],
