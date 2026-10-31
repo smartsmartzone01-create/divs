@@ -25,7 +25,7 @@ export function UserAccountMenu() {
       await logout();
       window.location.assign("/");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not sign out. Please try again.");
+      setError(caught instanceof Error ? caught.message : (sw ? "Imeshindikana kutoka. Tafadhali jaribu tena." : "Could not sign out. Please try again."));
       setBusy(false);
     }
   }
@@ -34,7 +34,7 @@ export function UserAccountMenu() {
 
   return (
     <details className="divs-account-menu landing-account-menu">
-      <summary className="divs-account-avatar" aria-label="Open account menu" title={details.displayName}>
+      <summary className="divs-account-avatar" aria-label={sw ? "Fungua menyu ya akaunti" : "Open account menu"} title={details.displayName}>
         {details.initials}
       </summary>
       <div className="divs-account-dropdown">
