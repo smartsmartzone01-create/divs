@@ -70,6 +70,7 @@ export default function HomePage() {
           <a href="#how-it-works" onClick={closeMenu}>{t.navHow}</a>
           <a href="#verification" onClick={closeMenu}>{t.navVerification}</a>
           <a href="#get-started" onClick={closeMenu}>{t.navGetStarted}</a>
+          <a href={signedInAccount ? "/choose-path" : "/register"} onClick={closeMenu}>{language === "sw" ? "Kwa madereva" : "For drivers"}</a>
           <div className="landing-preference-controls" aria-label={t.languageLabel}>
             <button className="landing-language-toggle" type="button" onClick={() => setLanguage(language === "en" ? "sw" : "en")} aria-label={t.languageLabel} title={t.languageLabel}>
               {language === "en" ? "SW" : "EN"}
@@ -215,7 +216,7 @@ export default function HomePage() {
             <p className="landing-audience-label">{t.driverLabel}</p>
             <h3>{t.driverTitle}</h3>
             <p>{t.driverCopy}</p>
-            <Link className="landing-text-link" href="/driver/onboarding">{t.joinDriver} <span aria-hidden="true">→</span></Link>
+            <Link className="landing-text-link" href={signedInAccount ? "/choose-path" : "/register"}>{t.joinDriver} <span aria-hidden="true">→</span></Link>
           </article>
           <article className="landing-audience-card landing-audience-card-featured">
             <div className="landing-audience-icon" aria-hidden="true">
@@ -224,7 +225,7 @@ export default function HomePage() {
             <p className="landing-audience-label">{t.clientLabel}</p>
             <h3>{t.clientTitle}</h3>
             <p>{t.clientCopy}</p>
-            <Link className="landing-text-link" href="#get-started">{t.findDriver} <span aria-hidden="true">→</span></Link>
+            <Link className="landing-text-link" href="/choose-path">{t.findDriver} <span aria-hidden="true">→</span></Link>
           </article>
         </div>
         <p className="landing-existing-account">{t.existingAccount} <Link href="/sign-in">{t.loginHere}</Link></p>
