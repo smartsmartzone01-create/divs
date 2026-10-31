@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AuthShell } from "@/features/identity/components/auth-shell";
@@ -17,11 +17,10 @@ export default function ChoosePathPage() {
   const [driverExists, setDriverExists] = useState(false);
   const [clientExists, setClientExists] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  async function loadProfiles() {
+  const loadProfiles = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -41,11 +40,11 @@ export default function ChoosePathPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [router, t.chooseLoadError]);
 
   useEffect(() => {
     void loadProfiles();
-  }, []);
+  }, [loadProfiles]);
 
   async function continueWithPurpose() {
     if (!selected) return;
@@ -100,7 +99,7 @@ export default function ChoosePathPage() {
             </div>
             {notice ? <p className="account-purpose-note" role="status">{notice}</p> : null}
             <div className="account-purpose-actions">
-              <button className="auth-primary-button" type="button" disabled={!selected || busy} onClick={() => void continueWithPurpose()}>
+              <button className="auth-primary-button" type="button" disabled={!selected} onClick={() => void continueWithPurpose()}>
                 {t.chooseContinue}
               </button>
               <Link className="account-purpose-back" href="/">{t.chooseBack}</Link>
