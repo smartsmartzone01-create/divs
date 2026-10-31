@@ -371,3 +371,52 @@ html[data-theme="dark"] .admin-error { border-color:#713b3b; background:#2a1111;
  .admin-feature-copy span { font-size:.68rem; }
  .admin-panel { padding:.9rem; }
 }
+
+/* Admin workspace readability pass — scoped typography overrides. */
+.admin-workspace .admin-eyebrow { font-size: .8rem; }
+.admin-workspace .admin-profile-hero h1 { font-size: clamp(1.75rem, 5vw, 2rem); line-height: 1.2; }
+.admin-workspace .admin-status-pill { font-size: .82rem; }
+.admin-workspace .admin-profile-meta,
+.admin-workspace .admin-profile-copy { font-size: .95rem; line-height: 1.6; }
+.admin-workspace .admin-stat-row strong { font-size: clamp(1.15rem, 3.6vw, 1.5rem); }
+.admin-workspace .admin-stat-row span { font-size: .82rem; line-height: 1.4; }
+.admin-workspace .admin-feature-copy strong { font-size: .98rem; line-height: 1.35; }
+.admin-workspace .admin-feature-copy span { font-size: .88rem; line-height: 1.5; }
+.admin-workspace .admin-feature-count { font-size: .85rem; }
+.admin-workspace .admin-link-section h2,
+.admin-workspace .admin-panel h2 { font-size: 1.2rem; line-height: 1.35; }
+.admin-workspace .admin-horizontal-links > a,
+.admin-workspace .admin-horizontal-links > span { font-size: .82rem; line-height: 1.35; }
+.admin-workspace .admin-horizontal-links small { font-size: .72rem; }
+.admin-workspace .admin-section-heading p { font-size: .9rem; line-height: 1.55; }
+.admin-workspace .admin-attention-card strong { font-size: .95rem; line-height: 1.35; }
+.admin-workspace .admin-attention-card small { font-size: .85rem; line-height: 1.5; }
+.admin-workspace .admin-notice-list strong { font-size: .95rem; line-height: 1.4; }
+.admin-workspace .admin-notice-list p { font-size: .88rem; line-height: 1.55; }
+.admin-workspace .admin-notice-list small { font-size: .78rem; line-height: 1.4; }
+.admin-workspace .admin-empty-state strong { font-size: .98rem; }
+.admin-workspace .admin-empty-state p { font-size: .88rem; line-height: 1.5; }
+.admin-workspace .admin-management-row strong { font-size: .95rem; line-height: 1.35; }
+.admin-workspace .admin-management-row small { font-size: .85rem; line-height: 1.5; }
+.admin-workspace .admin-management-row em,
+.admin-workspace .admin-management-account b { font-size: .8rem; }
+.admin-workspace .admin-error { font-size: .92rem; line-height: 1.55; }
+.admin-workspace .admin-link { font-size: .95rem; }
+.admin-workspace .admin-workspace-footer { font-size: .82rem; line-height: 1.5; }
+.admin-workspace .workspace-navigation > a,
+.admin-workspace .workspace-preferences button,
+.admin-workspace .divs-account-menu-link,
+.admin-workspace .divs-account-signout { font-size: .98rem; }
+
+@media (max-width: 520px) {
+  .admin-workspace .admin-profile-meta,
+  .admin-workspace .admin-profile-copy { font-size: .92rem; }
+  .admin-workspace .admin-stat-row span { font-size: .76rem; }
+  .admin-workspace .admin-feature-copy strong { font-size: .92rem; }
+  .admin-workspace .admin-feature-copy span { font-size: .82rem; }
+  .admin-workspace .admin-horizontal-links > a,
+  .admin-workspace .admin-horizontal-links > span { font-size: .78rem; }
+  .admin-workspace .admin-section-heading p { font-size: .86rem; }
+  .admin-workspace .admin-notice-list p,
+  .admin-workspace .admin-management-row small { font-size: .84rem; }
+}
