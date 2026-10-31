@@ -1055,3 +1055,52 @@ html[data-theme="dark"] .mobile-menu-toggle span {
     transition: none;
   }
 }
+
+
+/* Brand color correction: green is a highlight, never the default link color. */
+.landing-page {
+  --divs-green: #00c853;
+  --divs-link: #2563eb;
+}
+
+html[data-theme="dark"] .landing-page {
+  --divs-link: #60a5fa;
+}
+
+/* Navigation, account actions, inline links and footer links stay blue. */
+.landing-page .landing-navigation > a,
+.landing-page .landing-login-link,
+.landing-page .landing-text-link,
+.landing-page .landing-footer > a:not(.landing-footer-brand),
+.landing-page .landing-existing-account a,
+.landing-page .landing-integration-note a {
+  color: var(--divs-link);
+}
+
+.landing-page .landing-navigation > a:hover,
+.landing-page .landing-login-link:hover,
+.landing-page .landing-text-link:hover,
+.landing-page .landing-footer > a:not(.landing-footer-brand):hover,
+.landing-page .landing-existing-account a:hover,
+.landing-page .landing-integration-note a:hover {
+  color: var(--divs-blue-hover);
+}
+
+html[data-theme="dark"] .landing-page .landing-navigation > a,
+html[data-theme="dark"] .landing-page .landing-login-link,
+html[data-theme="dark"] .landing-page .landing-text-link,
+html[data-theme="dark"] .landing-page .landing-footer > a:not(.landing-footer-brand),
+html[data-theme="dark"] .landing-page .landing-existing-account a,
+html[data-theme="dark"] .landing-page .landing-integration-note a {
+  color: var(--divs-link);
+}
+
+/* Keep the primary action's white label and the secondary action's blue label. */
+.landing-page .landing-nav-cta,
+.landing-page .landing-button-primary {
+  color: #ffffff;
+}
+
+.landing-page .landing-button-secondary {
+  color: var(--divs-link);
+}
