@@ -116,7 +116,7 @@ export async function getPostLoginPath(): Promise<string> {
       cache: "no-store",
       headers: { Accept: "application/json" },
     });
-    if (driverResponse.ok) return "/driver/onboarding";
+    if (driverResponse.ok) return "/workspace/driver";
     if (driverResponse.status !== 404) return "/account";
   } catch {
     return "/account";
@@ -236,7 +236,7 @@ export async function getAccountMenuDetails(): Promise<AccountMenuDetails> {
       const person = driver.registration;
       displayName = [person.first_name, person.middle_name, person.last_name].filter(Boolean).join(" ");
       roleLabel = "Driver";
-      workspaceHref = "/driver/onboarding";
+      workspaceHref = "/workspace/driver";
       workspaceLabel = "Open driver profile";
     } else {
       const client = await getProfile<{ registration?: { name?: string } }>("/api/backend/profiles/client/");
