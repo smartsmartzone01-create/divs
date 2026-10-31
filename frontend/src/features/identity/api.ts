@@ -39,7 +39,7 @@ export async function identityRequest<T>(
   path: string,
   options: { method?: "GET" | "POST" | "PATCH" | "DELETE"; body?: unknown } = {},
 ): Promise<T> {
-  const response = await fetch(`/api/auth/${path.replace(/^\\/+|\\/+$/g, "")}/`, {
+  const response = await fetch(`/api/auth/${path.replace(/^\/+|\/+$/g, "")}/`, {
     method: options.method ?? "GET",
     headers: {
       Accept: "application/json",
