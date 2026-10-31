@@ -420,3 +420,125 @@ html[data-theme="dark"] .admin-error { border-color:#713b3b; background:#2a1111;
   .admin-workspace .admin-notice-list p,
   .admin-workspace .admin-management-row small { font-size: .84rem; }
 }
+
+
+/* DIVS Driver Workspace — readable typography and shared UI/UX rules. */
+.driver-workspace {
+  --driver-accent: #2563eb;
+  --driver-accent-hover: #1d4ed8;
+  --driver-accent-soft: #eff6ff;
+  --driver-success: #00c853;
+  --driver-success-soft: #e8f9ef;
+  --driver-warning: #b7791f;
+  --driver-warning-soft: #fff7e6;
+  --driver-danger: #b42318;
+  --driver-danger-soft: #fff0f0;
+  font-size: 1rem;
+}
+html[data-theme="dark"] .driver-workspace {
+  --driver-accent: #60a5fa;
+  --driver-accent-hover: #93c5fd;
+  --driver-accent-soft: #172b49;
+  --driver-success: #4ade80;
+  --driver-success-soft: #102b20;
+  --driver-warning: #f5d58a;
+  --driver-warning-soft: #332912;
+  --driver-danger: #fecaca;
+  --driver-danger-soft: #2a1111;
+}
+
+/* Headings and profile information */
+.driver-workspace .driver-profile-hero h1 { font-size: clamp(1.6rem, 5vw, 2rem); line-height: 1.2; }
+.driver-workspace .driver-profile-meta,
+.driver-workspace .driver-profile-experience { font-size: .95rem; line-height: 1.5; }
+.driver-workspace .driver-link-section h2,
+.driver-workspace .driver-panel h2 { font-size: 1.15rem; line-height: 1.35; }
+.driver-workspace .driver-section-heading p { font-size: .9rem; line-height: 1.55; }
+.driver-workspace .driver-stat-row span { font-size: .82rem; line-height: 1.4; }
+.driver-workspace .driver-feature-copy strong { font-size: 1rem; line-height: 1.35; }
+.driver-workspace .driver-feature-copy span { font-size: .88rem; line-height: 1.5; }
+.driver-workspace .driver-horizontal-links > a,
+.driver-workspace .driver-horizontal-links > span { font-size: .82rem; line-height: 1.35; }
+.driver-workspace .driver-settings-heading { font-size: .82rem; }
+.driver-workspace .driver-settings-menu > button,
+.driver-workspace .driver-settings-menu > a { font-size: .95rem; min-height: 2.9rem; }
+.driver-workspace .driver-settings-menu strong { font-size: .88rem; }
+.driver-workspace .driver-check-copy strong { font-size: .95rem; line-height: 1.4; }
+.driver-workspace .driver-check-copy small { font-size: .82rem; line-height: 1.4; }
+.driver-workspace .driver-panel-footnote,
+.driver-workspace .driver-empty-state { font-size: .9rem; line-height: 1.6; }
+.driver-workspace .driver-history-list > div { font-size: .9rem; line-height: 1.5; }
+.driver-workspace .driver-notice-list strong { font-size: .95rem; line-height: 1.4; }
+.driver-workspace .driver-notice-list p { font-size: .9rem; line-height: 1.55; }
+.driver-workspace .driver-notice-list small,
+.driver-workspace .driver-workspace-footer { font-size: .8rem; line-height: 1.45; }
+
+/* Consistent status, actions, links, highlights and feedback */
+.driver-workspace .driver-status-pill { padding: .35rem .7rem; font-size: .78rem; line-height: 1.25; }
+.driver-workspace .driver-status-pill.is-success { border-color: #9ae6b4; background: var(--driver-success-soft); color: #087b35; }
+.driver-workspace .driver-status-pill.is-pending { border-color: #f0d38a; background: var(--driver-warning-soft); color: #855d13; }
+.driver-workspace .driver-status-pill.is-danger { border-color: #f1b8b8; background: var(--driver-danger-soft); color: #b42318; }
+html[data-theme="dark"] .driver-workspace .driver-status-pill.is-success { border-color: #176b37; color: #86efac; }
+html[data-theme="dark"] .driver-workspace .driver-status-pill.is-pending { border-color: #70551c; color: #f5d58a; }
+html[data-theme="dark"] .driver-workspace .driver-status-pill.is-danger { border-color: #713b3b; color: #fecaca; }
+.driver-workspace a:not(.driver-brand):not(.driver-feature-card):not(.driver-horizontal-links a) { color: var(--workspace-link); }
+.driver-workspace .driver-edit-profile {
+  min-height: 2.9rem;
+  padding: .8rem 1.25rem;
+  background: #2563eb;
+  color: #fff !important;
+  font-size: .95rem;
+  transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+.driver-workspace .driver-edit-profile:hover { background: #1d4ed8; box-shadow: 0 4px 12px rgb(37 99 235 / 20%); }
+.driver-workspace .driver-feature-card:hover,
+.driver-workspace .driver-horizontal-links > a:hover {
+  border-color: #93b4f5;
+  background: var(--driver-accent-soft);
+}
+.driver-workspace .driver-feature-copy strong,
+.driver-workspace .driver-horizontal-links > a svg,
+.driver-workspace .driver-horizontal-links small { color: var(--workspace-link); }
+.driver-workspace .driver-restrictions,
+.driver-workspace .driver-data-warning {
+  border: 1px solid #f0d38a;
+  background: var(--driver-warning-soft);
+  color: #855d13;
+}
+.driver-workspace .driver-data-warning[role="alert"] {
+  border-color: #f1b8b8;
+  background: var(--driver-danger-soft);
+  color: #b42318;
+}
+html[data-theme="dark"] .driver-workspace .driver-restrictions,
+html[data-theme="dark"] .driver-workspace .driver-data-warning { border-color: #70551c; color: #f5d58a; }
+html[data-theme="dark"] .driver-workspace .driver-data-warning[role="alert"] { border-color: #713b3b; color: #fecaca; }
+.driver-workspace button:disabled { cursor: not-allowed; opacity: .6; }
+.driver-workspace button:focus-visible,
+.driver-workspace a:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 3px;
+}
+html[data-theme="dark"] .driver-workspace button:focus-visible,
+html[data-theme="dark"] .driver-workspace a:focus-visible { outline-color: #93c5fd; }
+
+/* Keep larger text from forcing cards or rows beyond the viewport. */
+.driver-workspace .driver-stat-row > div { padding-inline: .55rem; }
+.driver-workspace .driver-feature-card,
+.driver-workspace .driver-check-row,
+.driver-workspace .driver-history-list > div,
+.driver-workspace .driver-notice-list article { min-width: 0; }
+.driver-workspace .driver-feature-copy,
+.driver-workspace .driver-check-copy { overflow-wrap: anywhere; }
+.driver-workspace .driver-feature-card > .driver-status-pill { flex: 0 0 auto; }
+@media (max-width: 520px) {
+  .driver-workspace .driver-stat-row span { font-size: .76rem; }
+  .driver-workspace .driver-feature-copy span { font-size: .82rem; }
+  .driver-workspace .driver-check-copy strong { font-size: .88rem; }
+  .driver-workspace .driver-check-row .driver-status-pill { font-size: .72rem; }
+  .driver-workspace .driver-panel { padding: 1rem; }
+}
+@media (max-width: 360px) {
+  .driver-workspace .driver-feature-grid { grid-template-columns: 1fr; }
+  .driver-workspace .driver-feature-card { min-height: 5.5rem; flex-wrap: nowrap; }
+}
