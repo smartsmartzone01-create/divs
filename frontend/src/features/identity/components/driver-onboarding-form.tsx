@@ -137,6 +137,7 @@ export function DriverOnboardingForm() {
     try {
       const saved = await submitDriverRegistration(form);
       setExisting(saved);
+      router.push("/workspace/driver");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : (sw ? "Usajili haukufanikiwa. Jaribu tena." : "Registration failed. Please try again."));
     } finally {
