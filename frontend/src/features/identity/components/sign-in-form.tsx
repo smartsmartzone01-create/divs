@@ -19,7 +19,9 @@ export function SignInForm() {
     setBusy(true);
     try {
       await signIn(identifier.trim(), password);
-      router.replace(await getPostLoginPath());
+      const requestedNext = new URLSearchParams(window.location.search).get("next");
+      const safeNext = requestedNext?.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : null;
+      router.replace(safeNext || await getPostLoginPath());
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Sign-in failed. Please try again.");
