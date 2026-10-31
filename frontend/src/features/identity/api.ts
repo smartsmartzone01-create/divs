@@ -19,6 +19,11 @@ export type AuthSession = {
   current: boolean;
 };
 
+type OperationsAccess = {
+  role: "admin" | "operator";
+  capabilities: string[];
+};
+
 export class IdentityApiError extends Error {
   constructor(
     message: string,
@@ -34,7 +39,7 @@ export async function identityRequest<T>(
   path: string,
   options: { method?: "GET" | "POST" | "PATCH" | "DELETE"; body?: unknown } = {},
 ): Promise<T> {
-  const response = await fetch(`/api/auth/${path.replace(/^\/+|\/+$/g, "")}/`, {
+  const response = await fetch(`/api/auth/${path.replace(/^\\/+|\\/+$/g, "")}/`, {
     method: options.method ?? "GET",
     headers: {
       Accept: "application/json",
@@ -76,6 +81,36 @@ export async function identityRequest<T>(
 
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+async function getOperationsAccess(): Promise<OperationsAccess | null> {
+  try {
+    const response = await fetch("/api/backend/operations/me/", {
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as OperationsAccess;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve the landing page from backend-authorized operations access.
+ * A client-side role hint is never used to grant access; the workspace
+ * independently checks the same protected backend endpoint.
+ */
+export async function getPostLoginPath(): Promise<string> {
+  const access = await getOperationsAccess();
+  return access && (access.role === "admin" || access.role === "operator")
+    ? "/workspace/admin"
+    : "/account";
+}
+
+export async function hasOperationsWorkspaceAccess(): Promise<boolean> {
+  return (await getOperationsAccess()) !== null;
 }
 
 export async function signIn(identifier: string, password: string) {
