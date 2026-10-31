@@ -131,3 +131,42 @@ html[data-theme="dark"] .account-purpose-selected { color: #93c5fd; }
 @media (max-width: 620px) { .account-purpose-options { grid-template-columns: 1fr; } .account-purpose-option { min-height: auto; } }
 
 html[data-theme="dark"] .account-purpose-option { --workspace-surface: #111821; --workspace-surface-muted: #182330; --workspace-border: #293543; --workspace-text: #edf2f7; --workspace-muted: #a5b2c1; }
+
+
+/* Multi-step driver registration */
+.driver-step-progress { display: grid; gap: .8rem; margin: .2rem 0 .6rem; }
+.driver-step-progress-labels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .35rem; }
+.driver-step-label { display: grid; justify-items: center; gap: .35rem; color: var(--workspace-muted, #64748b); font-size: .7rem; font-weight: 650; text-align: center; }
+.driver-step-label-dot { display: grid; width: 1.75rem; height: 1.75rem; place-items: center; border: 1.5px solid var(--workspace-border, #dbe3ec); border-radius: 50%; background: var(--workspace-surface, #fff); color: var(--workspace-muted, #64748b); font-size: .72rem; font-weight: 800; }
+.driver-step-label.is-current { color: #2563eb; }
+.driver-step-label.is-current .driver-step-label-dot { border-color: #2563eb; background: #2563eb; color: #fff; box-shadow: 0 0 0 3px rgb(37 99 235 / 12%); }
+.driver-step-label.is-complete { color: #2563eb; }
+.driver-step-label.is-complete .driver-step-label-dot { border-color: #2563eb; background: #2563eb; color: #fff; }
+.driver-step-track { height: 5px; overflow: hidden; border-radius: 999px; background: var(--workspace-border, #dbe3ec); }
+.driver-step-track span { display: block; height: 100%; border-radius: inherit; background: #2563eb; transition: width 220ms ease; }
+.driver-step-kicker { margin: 0 0 .3rem; color: #2563eb !important; font-size: .68rem !important; font-weight: 800; letter-spacing: .12em; }
+.driver-step-actions { display: flex; align-items: center; justify-content: space-between; gap: .8rem; margin-top: .3rem; }
+.driver-step-actions > button { width: auto; min-width: 8rem; }
+.driver-step-actions .auth-primary-button { margin-left: auto; }
+.driver-experience-options { display: grid; gap: .65rem; }
+.driver-experience-option { display: flex; align-items: center; gap: .8rem; min-height: 3.5rem; padding: .85rem 1rem; border: 1px solid var(--workspace-border, #dbe3ec); border-radius: .85rem; background: var(--workspace-surface, #fff); color: var(--workspace-text, #10233f); cursor: pointer; transition: border-color 160ms ease, background 160ms ease; }
+.driver-experience-option input { position: absolute; opacity: 0; pointer-events: none; }
+.driver-experience-radio { width: 1.05rem; height: 1.05rem; flex: 0 0 auto; border: 1.5px solid #94a3b8; border-radius: 50%; box-shadow: inset 0 0 0 3px var(--workspace-surface, #fff); }
+.driver-experience-option.is-selected { border-color: #2563eb; background: #eff6ff; }
+.driver-experience-option.is-selected .driver-experience-radio { border-color: #2563eb; background: #2563eb; }
+.driver-review-list { display: grid; gap: .8rem; }
+.driver-review-list > section { border: 1px solid var(--workspace-border, #dbe3ec); border-radius: .85rem; background: var(--workspace-surface, #fff); padding: 1rem; }
+.driver-review-list > section > div { display: flex; align-items: center; justify-content: space-between; gap: .8rem; }
+.driver-review-list h3 { color: var(--workspace-text, #10233f); font-size: .9rem; font-weight: 750; }
+.driver-review-list button { border: 0; background: transparent; color: #2563eb; font: inherit; font-size: .8rem; font-weight: 750; cursor: pointer; }
+.driver-review-list dl { display: grid; grid-template-columns: minmax(6rem, .65fr) minmax(0, 1.35fr); gap: .45rem .8rem; margin-top: .8rem; font-size: .84rem; }
+.driver-review-list dt { color: var(--workspace-muted, #64748b); }
+.driver-review-list dd { color: var(--workspace-text, #10233f); font-weight: 600; overflow-wrap: anywhere; }
+.driver-review-list section > p { margin-top: .65rem; color: var(--workspace-text, #10233f); font-size: .86rem; }
+html[data-theme="dark"] .driver-experience-option.is-selected { border-color: #60a5fa; background: #10233d; }
+@media (max-width: 480px) {
+  .driver-step-label { font-size: .62rem; }
+  .driver-step-label-dot { width: 1.55rem; height: 1.55rem; }
+  .driver-step-actions > button { min-width: 7rem; }
+  .driver-review-list dl { grid-template-columns: minmax(5.5rem, .7fr) minmax(0, 1.3fr); }
+}
