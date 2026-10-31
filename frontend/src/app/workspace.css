@@ -110,3 +110,22 @@ html[data-theme="dark"] .workspace-danger-button { border-color: #713b3b; color:
   .driver-onboarding-field-grid { grid-template-columns: 1fr; }
   .driver-onboarding-full { grid-column: auto; }
 }
+
+
+/* Post-sign-in account-purpose selection */
+.account-purpose-page { width: min(100% - 2rem, 54rem); margin: 0 auto; padding: 2rem 0 3rem; }
+.account-purpose-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.account-purpose-option { display: grid; min-height: 12rem; gap: .65rem; align-content: start; padding: 1.25rem; border: 1.5px solid var(--workspace-border); border-radius: 1rem; background: var(--workspace-surface); color: var(--workspace-text); text-align: left; cursor: pointer; transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease; }
+.account-purpose-option:hover { border-color: #3b82f6; }
+.account-purpose-option[aria-pressed="true"] { border: 2px solid #2563eb; background: #eff6ff; box-shadow: 0 0 0 3px rgb(37 99 235 / 10%); }
+.account-purpose-option strong { font-size: 1.08rem; }
+.account-purpose-option p { margin: 0; color: var(--workspace-muted); font-size: .88rem; line-height: 1.55; }
+.account-purpose-option-icon { display: grid; width: 2.6rem; height: 2.6rem; place-items: center; border-radius: .75rem; background: var(--workspace-surface-muted); color: #2563eb; }
+.account-purpose-option-icon svg { width: 1.35rem; height: 1.35rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.account-purpose-selected { display: flex; align-items: center; gap: .5rem; color: #1d4ed8; font-size: .78rem; font-weight: 750; }
+.account-purpose-note { margin: .8rem 0; border: 1px solid var(--workspace-border); border-radius: .8rem; padding: .85rem 1rem; color: var(--workspace-muted); font-size: .86rem; line-height: 1.55; }
+.account-purpose-actions { display: grid; gap: .75rem; }
+.account-purpose-back { color: var(--workspace-muted); font-size: .88rem; text-align: center; text-decoration: underline; }
+html[data-theme="dark"] .account-purpose-option[aria-pressed="true"] { border-color: #60a5fa; background: #10233d; box-shadow: 0 0 0 3px rgb(96 165 250 / 12%); }
+html[data-theme="dark"] .account-purpose-selected { color: #93c5fd; }
+@media (max-width: 620px) { .account-purpose-options { grid-template-columns: 1fr; } .account-purpose-option { min-height: auto; } }
