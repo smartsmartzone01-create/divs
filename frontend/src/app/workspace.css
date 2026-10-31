@@ -50,3 +50,27 @@ html[data-theme="dark"] .workspace-status { border-color: #145b45; background: #
 html[data-theme="dark"] .workspace-alert { border-color: #713b3b; background: #2a1111; color: #fecaca; }
 html[data-theme="dark"] .divs-account-avatar { border-color: #34465b; background: #1b2d47; color: #bfdbfe; }
 @media (max-width: 760px) { .workspace-header-inner { min-height: 4.1rem; } .workspace-grid { grid-template-columns: minmax(0, 1fr); } .workspace-content { padding-top: 1.5rem; } .workspace-card { padding: 1rem; } .workspace-list-item { align-items: flex-start; } }
+
+/* Account menu is shared by the public header and authenticated workspaces. */
+.divs-account-menu {
+  --workspace-surface: var(--landing-card-bg, #ffffff);
+  --workspace-surface-muted: var(--landing-soft, #f5f8ff);
+  --workspace-border: var(--landing-border, #e2e8f0);
+  --workspace-text: var(--landing-ink, #17212b);
+  --workspace-muted: var(--landing-muted, #64748b);
+}
+html[data-theme="dark"] .divs-account-menu {
+  --workspace-surface: #111821;
+  --workspace-surface-muted: #182330;
+  --workspace-border: #293543;
+  --workspace-text: #edf2f7;
+  --workspace-muted: #a5b2c1;
+}
+.landing-account-nav-button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.landing-account-nav-button:hover { text-decoration: underline; }
