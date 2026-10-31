@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 import { logout, getAccountMenuDetails, type AccountMenuDetails } from "@/features/identity/api";
 import { useDIVSPreferences } from "@/components/preferences/preferences-provider";
 
-export function UserAccountMenu() {\n  const { language } = useDIVSPreferences();\n  const sw = language === "sw";
+export function UserAccountMenu() {
+  const { language } = useDIVSPreferences();
+  const sw = language === "sw";
   const [details, setDetails] = useState<AccountMenuDetails | null>({ displayName: "My account", initials: "U", roleLabel: "DIVS account", workspaceHref: "/account", workspaceLabel: "My account" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
