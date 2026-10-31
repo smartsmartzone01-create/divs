@@ -104,9 +104,23 @@ async function getOperationsAccess(): Promise<OperationsAccess | null> {
  */
 export async function getPostLoginPath(): Promise<string> {
   const access = await getOperationsAccess();
-  return access && (access.role === "admin" || access.role === "operator")
-    ? "/workspace/admin"
-    : "/account";
+  if (access && (access.role === "admin" || access.role === "operator")) {
+    return "/workspace/admin";
+  }
+
+  // Existing driver registrations are authoritative; a generic account is not
+  // assumed to be a driver merely because it has signed in.
+  try {
+    const response = await fetch("/api/backend/registrations/driver/", {
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (response.ok) return "/driver/onboarding";
+  } catch {
+    // Fall through to the ordinary account page if the profile check is unavailable.
+  }
+  return "/account";
 }
 
 export async function hasOperationsWorkspaceAccess(): Promise<boolean> {
