@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { WorkspaceHeader } from "@/components/workspace/workspace-header";
+import { useDIVSPreferences } from "@/components/preferences/preferences-provider";
 
 type Account = { id: string; email: string | null; phone_number: string | null };
 type Access = { role: "admin" | "operator"; capabilities: string[] };
@@ -15,6 +17,8 @@ async function getJson<T>(url: string): Promise<T> {
 }
 
 export default function AdminWorkspacePage() {
+  const { language } = useDIVSPreferences();
+  const sw = language === "sw";
   const [account, setAccount] = useState<Account | null>(null);
   const [access, setAccess] = useState<Access | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -37,122 +41,108 @@ export default function AdminWorkspacePage() {
         setAccess(accessResult);
         setNotifications(notificationResult.results ?? []);
 
-        // Only the initial system superuser can review operations applications.
-        // A 403 for an ordinary Admin is expected and is not shown as an error.
         if (accessResult.role === "admin") {
           try {
             const pending = await getJson<Application[]>("/api/backend/operations/applications/pending/");
             if (active) { setApplications(pending); setCanReviewApplications(true); }
           } catch (caught) {
             if ((caught as { status?: number }).status !== 403 && active) {
-              setError("Could not load pending operations applications.");
+              setError(sw ? "Imeshindikana kupakia maombi ya uanachama wa uendeshaji." : "Could not load pending operations applications.");
             }
           }
         }
       } catch (caught) {
-        if (active) setError((caught as Error).message || "Could not load your workspace.");
+        if (active) setError((caught as Error).message || (sw ? "Imeshindikana kufungua nafasi yako ya kazi." : "Could not load your workspace."));
       } finally {
         if (active) setLoading(false);
       }
     }
     void load();
     return () => { active = false; };
-  }, []);
+  }, [sw]);
+
+  const unread = notifications.filter((item) => !item.read_at).length;
+  const roleLabel = access?.role === "admin" ? (sw ? "Msimamizi" : "Administrator") : (sw ? "Mwendeshaji" : "Operations operator");
 
   if (loading) {
-    return <main className="min-h-screen bg-slate-50 px-5 py-12 text-slate-600"><div className="mx-auto max-w-5xl">Loading your DIVS workspace…</div></main>;
+    return <main className="workspace-shell"><WorkspaceHeader /><div className="workspace-content"><p className="workspace-muted">{sw ? "Inapakia nafasi yako ya DIVS…" : "Loading your DIVS workspace…"}</p></div></main>;
   }
 
   if (error && !access) {
-    return <main className="min-h-screen bg-slate-50 px-5 py-12"><div className="mx-auto max-w-xl rounded-2xl border border-rose-200 bg-white p-6"><h1 className="text-xl font-semibold text-slate-900">Workspace unavailable</h1><p className="mt-2 text-sm text-rose-700">{error}</p><Link className="mt-4 inline-block font-semibold text-blue-800 underline" href="/sign-in">Return to sign in</Link></div></main>;
+    return <main className="workspace-shell"><WorkspaceHeader /><div className="workspace-content"><section className="workspace-card"><h1 className="workspace-title">{sw ? "Nafasi ya kazi haipatikani" : "Workspace unavailable"}</h1><p className="workspace-alert" role="alert">{error}</p><Link className="workspace-link" href="/sign-in">{sw ? "Rudi kuingia" : "Return to sign in"}</Link></section></div></main>;
   }
 
-  const roleLabel = access?.role === "admin" ? "Administrator" : "Operations operator";
-  const unread = notifications.filter((item) => !item.read_at).length;
-
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-5">
-          <Link href="/" className="text-xl font-extrabold tracking-[0.16em] text-[#153b67]">DIVS</Link>
-          <div className="flex items-center gap-3 text-sm">
-            <span className="hidden text-slate-500 sm:inline">{account?.email || account?.phone_number}</span>
-            <Link href="/account" className="rounded-lg border border-slate-200 px-3 py-2 font-semibold hover:bg-slate-50">Account</Link>
-          </div>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-6xl px-5 py-9">
-        <div className="mb-8">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Operations</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Admin workspace</h1>
-          <p className="mt-2 max-w-2xl text-slate-600">Your access status, outstanding work and shortcuts to the areas you manage.</p>
+    <main className="workspace-shell">
+      <WorkspaceHeader />
+      <div className="workspace-content">
+        <div className="mb-7">
+          <p className="workspace-eyebrow">{sw ? "Uendeshaji" : "Operations"}</p>
+          <h1 className="workspace-title">{sw ? "Nafasi ya msimamizi" : "Admin workspace"}</h1>
+          <p className="workspace-description">{sw ? "Hali yako ya ruhusa, kazi zinazohitaji uangalizi na njia za mkato za maeneo unayosimamia." : "Your access status, outstanding work and shortcuts to the areas you manage."}</p>
         </div>
 
-        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="workspace-card mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-sm text-slate-500">Your operations status</p>
-              <div className="mt-1 flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                <h2 className="text-xl font-semibold">Active</h2>
-              </div>
-              <p className="mt-1 text-sm text-slate-600">{roleLabel} · {account?.email || account?.phone_number}</p>
+              <p className="workspace-muted text-sm">{sw ? "Hali yako ya uendeshaji" : "Your operations status"}</p>
+              <div className="mt-1 flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /><h2 className="text-xl font-semibold">{sw ? "Inatumika" : "Active"}</h2></div>
+              <p className="workspace-muted mt-1 text-sm">{roleLabel} · {account?.email || account?.phone_number}</p>
             </div>
-            <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-800">Access approved</span>
+            <span className="workspace-status">{sw ? "Ruhusa imethibitishwa" : "Access approved"}</span>
           </div>
         </section>
 
-        <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="workspace-grid">
+          <section className="workspace-card">
             <div className="flex items-center justify-between gap-3">
-              <div><h2 className="text-lg font-semibold">Needs your attention</h2><p className="mt-1 text-sm text-slate-500">Items requiring follow-up in your workspace.</p></div>
-              {unread > 0 && <span className="rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-800">{unread} unread</span>}
+              <div><h2 className="text-lg font-semibold">{sw ? "Yanayohitaji uangalizi wako" : "Needs your attention"}</h2><p className="workspace-muted mt-1 text-sm">{sw ? "Masuala yanayohitaji kufuatiliwa katika nafasi yako ya kazi." : "Items requiring follow-up in your workspace."}</p></div>
+              {unread > 0 && <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-900">{unread} {sw ? "hayajasomwa" : "unread"}</span>}
             </div>
 
             {applications.length > 0 && (
-              <Link href="/workspace/admin/applications" className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-4 hover:border-amber-300">
-                <div><p className="font-semibold">Operations access applications</p><p className="mt-1 text-sm text-slate-600">Review applicants requesting an Admin or Operator role.</p></div>
+              <Link href="/workspace/admin/applications" className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-slate-900 hover:border-amber-300">
+                <div><p className="font-semibold">{sw ? "Maombi ya kujiunga na uendeshaji" : "Operations access applications"}</p><p className="mt-1 text-sm text-slate-600">{sw ? "Kagua waombaji wa nafasi za Msimamizi au Mwendeshaji." : "Review applicants requesting an Admin or Operator role."}</p></div>
                 <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-amber-900">{applications.length}</span>
               </Link>
             )}
 
             {notifications.length > 0 ? (
-              <div className="mt-4 divide-y divide-slate-100">
+              <div className="mt-4 divide-y" style={{ borderColor: "var(--workspace-border)" }}>
                 {notifications.slice(0, 5).map((item) => (
                   <article key={item.id} className="py-3">
                     <div className="flex items-start gap-2">
                       {!item.read_at && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-teal-600" />}
-                      <div className="min-w-0"><h3 className="font-medium">{item.title}</h3><p className="mt-1 text-sm text-slate-600">{item.message}</p><p className="mt-1 text-xs text-slate-400">{new Date(item.created_at).toLocaleString()}</p></div>
+                      <div className="min-w-0"><h3 className="font-medium">{item.title}</h3><p className="workspace-muted mt-1 text-sm">{item.message}</p><p className="workspace-muted mt-1 text-xs">{new Date(item.created_at).toLocaleString(language === "sw" ? "sw-TZ" : "en-US")}</p></div>
                     </div>
                   </article>
                 ))}
               </div>
             ) : applications.length === 0 ? (
-              <div className="mt-5 rounded-xl bg-slate-50 px-4 py-8 text-center">
-                <p className="font-semibold text-slate-800">You're all caught up</p>
-                <p className="mt-1 text-sm text-slate-500">There are no new operations notifications.</p>
+              <div className="workspace-card-muted mt-5 rounded-xl px-4 py-8 text-center">
+                <p className="font-semibold">{sw ? "Umemaliza kazi za sasa" : "You're all caught up"}</p>
+                <p className="workspace-muted mt-1 text-sm">{sw ? "Hakuna arifa mpya za uendeshaji." : "There are no new operations notifications."}</p>
               </div>
             ) : null}
             {error && <p className="mt-3 text-sm text-rose-700">{error}</p>}
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold">Workspace sections</h2>
-            <p className="mt-1 text-sm text-slate-500">Go directly to a management area.</p>
-            <div className="mt-4 space-y-2">
+          <section className="workspace-card">
+            <h2 className="text-lg font-semibold">{sw ? "Sehemu za nafasi ya kazi" : "Workspace sections"}</h2>
+            <p className="workspace-muted mt-1 text-sm">{sw ? "Nenda moja kwa moja kwenye eneo la usimamizi." : "Go directly to a management area."}</p>
+            <div className="workspace-list">
               {[
-                { title: "Driver verification", description: "Review identity and licence checks", href: "/workspace/admin/verification", available: false },
-                { title: "Driver management", description: "Review driver records and profiles", href: "/workspace/admin/drivers", available: false },
-                { title: "Performance & appeals", description: "Review performance events and appeals", href: "/workspace/admin/performance", available: false },
-                { title: "Operations access", description: "Review access applications", href: "/workspace/admin/applications", available: canReviewApplications },
-              ].filter((item) => item.title !== "Operations access" || canReviewApplications).map((item) => (
-                <div key={item.title} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-4 py-3">
-                  <div><p className="font-semibold">{item.title}</p><p className="mt-0.5 text-xs text-slate-500">{item.description}</p></div>
-                  {item.available ? <Link href={item.href} className="shrink-0 text-sm font-semibold text-blue-800 hover:underline">Open</Link> : <span className="shrink-0 text-xs text-slate-400">Coming next</span>}
+                { title: sw ? "Uhakiki wa madereva" : "Driver verification", description: sw ? "Kagua utambulisho na leseni" : "Review identity and licence checks", href: "/workspace/admin/verification", available: false },
+                { title: sw ? "Usimamizi wa madereva" : "Driver management", description: sw ? "Kagua taarifa na wasifu wa madereva" : "Review driver records and profiles", href: "/workspace/admin/drivers", available: false },
+                { title: sw ? "Utendaji na rufaa" : "Performance & appeals", description: sw ? "Kagua matukio ya utendaji na rufaa" : "Review performance events and appeals", href: "/workspace/admin/performance", available: false },
+                { title: sw ? "Maombi ya uendeshaji" : "Operations access", description: sw ? "Kagua maombi ya ruhusa" : "Review access applications", href: "/workspace/admin/applications", available: canReviewApplications },
+              ].filter((item) => item.title !== (sw ? "Maombi ya uendeshaji" : "Operations access") || canReviewApplications).map((item) => (
+                <div key={item.title} className="workspace-list-item">
+                  <div className="min-w-0"><p className="font-semibold">{item.title}</p><p className="workspace-muted mt-0.5 text-xs">{item.description}</p></div>
+                  {item.available ? <Link href={item.href} className="workspace-link shrink-0 text-sm">{sw ? "Fungua" : "Open"}</Link> : <span className="workspace-muted shrink-0 text-xs">{sw ? "Inakuja" : "Coming next"}</span>}
                 </div>
               ))}
-              <Link href="/account" className="flex items-center justify-between rounded-xl border border-slate-100 px-4 py-3 hover:bg-slate-50"><div><p className="font-semibold">Account & sessions</p><p className="mt-0.5 text-xs text-slate-500">Manage your sign-in and devices</p></div><span className="text-sm font-semibold text-blue-800">Open</span></Link>
+              <Link href="/account" className="workspace-list-item workspace-link"><span><strong>{sw ? "Akaunti na vipindi" : "Account & sessions"}</strong><span className="workspace-muted mt-0.5 block text-xs font-normal">{sw ? "Simamia kuingia na vifaa vyako" : "Manage your sign-in and devices"}</span></span><span className="shrink-0 text-sm">{sw ? "Fungua" : "Open"}</span></Link>
             </div>
           </section>
         </div>
