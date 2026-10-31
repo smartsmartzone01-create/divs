@@ -14,9 +14,7 @@ export default defineConfig({
     env: {
       ASSETS: bindings.assets(),
       IMAGES: bindings.images(),
-    },
-    vars: {
-      DIVS_API_BASE_URL: "https://divs-development-api.onrender.com/api/v1",
+      DIVS_API_BASE_URL: bindings.text("https://divs-development-api.onrender.com/api/v1"),
     },
     observability: {
       enabled: true,
