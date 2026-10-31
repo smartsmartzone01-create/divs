@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getCurrentAccount, type AuthAccount } from "@/features/identity/api";
+import { getCurrentAccount, getPostLoginPath, type AuthAccount } from "@/features/identity/api";
+import { UserAccountMenu } from "@/features/identity/components/user-account-menu";
 import { useDIVSPreferences } from "@/components/preferences/preferences-provider";
 
 
@@ -44,12 +45,7 @@ export default function HomePage() {
 
         <div className="landing-header-tools">
           {signedInAccount ? (
-            <Link className="landing-account-icon" href="/account" aria-label="Open your account" onClick={closeMenu}>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="12" cy="8" r="3.5" />
-                <path d="M4.5 20c.7-3.6 3.3-5.5 7.5-5.5s6.8 1.9 7.5 5.5" />
-              </svg>
-            </Link>
+            <UserAccountMenu />
           ) : null}
 
           <button
@@ -88,7 +84,7 @@ export default function HomePage() {
           </div>
           <div className="landing-nav-actions">
             {signedInAccount ? (
-              <Link className="landing-login-link" href="/account" onClick={closeMenu}>My account</Link>
+              <button className="landing-login-link landing-account-nav-button" type="button" onClick={async () => { closeMenu(); window.location.assign(await getPostLoginPath()); }}>My account</button>
             ) : (
               <Link className="landing-login-link" href="/sign-in" onClick={closeMenu}>{t.login}</Link>
             )}
