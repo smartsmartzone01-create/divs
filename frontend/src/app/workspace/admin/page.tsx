@@ -124,7 +124,7 @@ export default function AdminWorkspacePage() {
                 <p className="workspace-muted mt-1 text-sm">{sw ? "Hakuna arifa mpya za uendeshaji." : "There are no new operations notifications."}</p>
               </div>
             ) : null}
-            {error && <p className="mt-3 text-sm text-rose-700">{error}</p>}
+            {error && <p className="workspace-alert mt-3 text-sm">{error}</p>}
           </section>
 
           <section className="workspace-card">
