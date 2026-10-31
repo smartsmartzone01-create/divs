@@ -37,7 +37,7 @@ const initialForm: FormState = {
   first_name: "",
   middle_name: "",
   last_name: "",
-  nationality: "Tanzanian",
+  nationality: "",
   region: "",
   district: "",
   residential_area: "",
@@ -200,7 +200,7 @@ export function DriverOnboardingForm() {
           <div className="auth-field"><label htmlFor="driver-first-name">{sw ? "Jina la kwanza *" : "First name *"}</label><input id="driver-first-name" required maxLength={100} value={form.first_name} onChange={(e) => update("first_name", e.target.value)} autoComplete="given-name" /></div>
           <div className="auth-field"><label htmlFor="driver-middle-name">{sw ? "Jina la kati (hiari)" : "Middle name (optional)"}</label><input id="driver-middle-name" maxLength={100} value={form.middle_name} onChange={(e) => update("middle_name", e.target.value)} autoComplete="additional-name" /></div>
           <div className="auth-field"><label htmlFor="driver-last-name">{sw ? "Jina la mwisho *" : "Last name *"}</label><input id="driver-last-name" required maxLength={100} value={form.last_name} onChange={(e) => update("last_name", e.target.value)} autoComplete="family-name" /></div>
-          <div className="auth-field"><label htmlFor="driver-nationality">{sw ? "Uraia *" : "Nationality *"}</label><input id="driver-nationality" required maxLength={100} value={form.nationality} onChange={(e) => update("nationality", e.target.value)} /></div>
+          <div className="auth-field"><label htmlFor="driver-nationality">{sw ? "Uraia *" : "Nationality *"}</label><input id="driver-nationality" required maxLength={100} value={form.nationality} onChange={(e) => update("nationality", e.target.value)} placeholder={sw ? "Andika uraia wako" : "Enter your nationality"} /></div>
         </div>
       ) : null}
 
