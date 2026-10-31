@@ -39,22 +39,27 @@ export function DriverOnboardingForm() {
     async function load() {
       try {
         const current = await getCurrentAccount();
-        const registration = await getDriverRegistration();
         if (!active) return;
         setAccount(current);
-        if (registration) {
-          setExisting(registration);
-          setForm({
-            first_name: registration.first_name,
-            middle_name: registration.middle_name,
-            last_name: registration.last_name,
-            nationality: registration.nationality,
-            region: registration.region,
-            district: registration.district,
-            residential_area: registration.residential_area,
-            current_residential_address: registration.current_residential_address,
-            driving_experience: registration.driving_experience,
-          });
+        try {
+          const registration = await getDriverRegistration();
+          if (!active) return;
+          if (registration) {
+            setExisting(registration);
+            setForm({
+              first_name: registration.first_name,
+              middle_name: registration.middle_name,
+              last_name: registration.last_name,
+              nationality: registration.nationality,
+              region: registration.region,
+              district: registration.district,
+              residential_area: registration.residential_area,
+              current_residential_address: registration.current_residential_address,
+              driving_experience: registration.driving_experience,
+            });
+          }
+        } catch (caught) {
+          if (active) setError(caught instanceof Error ? caught.message : "Could not load your driver registration.");
         }
       } catch {
         if (active) router.replace("/sign-in?next=%2Fdriver%2Fonboarding");
