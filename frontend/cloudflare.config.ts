@@ -17,7 +17,6 @@ export default defineConfig({
       DIVS_API_BASE_URL: bindings.text("https://divs-development-api.onrender.com/api/v1"),
     },
     observability: {
-      enabled: true,
       logs: { enabled: true },
       issues: { enabled: true },
     },
