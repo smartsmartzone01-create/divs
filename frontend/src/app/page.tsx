@@ -84,7 +84,7 @@ export default function HomePage() {
           </div>
           <div className="landing-nav-actions">
             {signedInAccount ? (
-              <button className="landing-login-link landing-account-nav-button" type="button" onClick={async () => { closeMenu(); window.location.assign(await getPostLoginPath()); }}>My account</button>
+              <button className="landing-login-link landing-account-nav-button" type="button" onClick={async () => { closeMenu(); window.location.assign(await getPostLoginPath()); }}>{language === "sw" ? "Akaunti yangu" : "My account"}</button>
             ) : (
               <Link className="landing-login-link" href="/sign-in" onClick={closeMenu}>{t.login}</Link>
             )}
