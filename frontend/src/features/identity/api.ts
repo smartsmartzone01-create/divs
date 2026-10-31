@@ -289,6 +289,18 @@ export async function getDriverRegistration(): Promise<DriverRegistration | null
   return response.json() as Promise<DriverRegistration>;
 }
 
+export async function updateDriverRegistration(input: Omit<DriverRegistration, "id" | "contact_email" | "contact_phone_number" | "created_at" | "updated_at">): Promise<DriverRegistration> {
+  const response = await fetch("/api/backend/registrations/driver/", {
+    method: "PATCH",
+    credentials: "same-origin",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(payload?.detail || `Driver profile update failed (${response.status}).`);
+  return payload as DriverRegistration;
+}
+
 export async function submitDriverRegistration(input: Omit<DriverRegistration, "id" | "contact_email" | "contact_phone_number" | "created_at" | "updated_at">): Promise<DriverRegistration> {
   const response = await fetch("/api/backend/registrations/driver/", {
     method: "POST",
