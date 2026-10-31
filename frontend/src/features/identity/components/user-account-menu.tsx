@@ -42,7 +42,7 @@ export function UserAccountMenu() {
           <strong>{details.displayName}</strong>
           <span>{sw ? (details.roleLabel === "Administrator" ? "Msimamizi" : details.roleLabel === "Operations operator" ? "Mwendeshaji" : details.roleLabel === "Driver" ? "Dereva" : details.roleLabel === "Client" ? "Mteja" : "Akaunti ya DIVS") : details.roleLabel}</span>
         </div>
-        <Link href={details.workspaceHref} className="divs-account-menu-link">{sw ? (details.workspaceHref === "/workspace/admin" ? "Fungua nafasi ya msimamizi" : "Akaunti yangu") : details.workspaceLabel}</Link>
+        <Link href={details.workspaceHref} className="divs-account-menu-link">{sw ? (details.workspaceHref === "/workspace/admin" ? "Fungua nafasi ya msimamizi" : details.workspaceHref === "/driver/onboarding" ? "Fungua wasifu wa dereva" : "Akaunti yangu") : details.workspaceLabel}</Link>
         <Link href="/account" className="divs-account-menu-link">{sw ? "Akaunti na vipindi" : "Account & sessions"}</Link>
         {error ? <p className="divs-account-menu-error" role="alert">{error}</p> : null}
         <button type="button" className="divs-account-signout" onClick={() => void handleSignOut()} disabled={busy}>
