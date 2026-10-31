@@ -225,7 +225,7 @@ export default function HomePage() {
             <p className="landing-audience-label">{t.clientLabel}</p>
             <h3>{t.clientTitle}</h3>
             <p>{t.clientCopy}</p>
-            <Link className="landing-text-link" href="/choose-path">{t.findDriver} <span aria-hidden="true">→</span></Link>
+            <Link className="landing-text-link" href="#get-started">{t.findDriver} <span aria-hidden="true">→</span></Link>
           </article>
         </div>
         <p className="landing-existing-account">{t.existingAccount} <Link href="/sign-in">{t.loginHere}</Link></p>
