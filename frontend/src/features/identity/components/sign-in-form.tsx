@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signIn } from "@/features/identity/api";
+import { getPostLoginPath, signIn } from "@/features/identity/api";
 import { GoogleSignInButton } from "@/features/identity/components/google-sign-in-button";
 
 export function SignInForm() {
@@ -19,7 +19,7 @@ export function SignInForm() {
     setBusy(true);
     try {
       await signIn(identifier.trim(), password);
-      router.replace("/account");
+      router.replace(await getPostLoginPath());
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Sign-in failed. Please try again.");
