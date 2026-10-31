@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { logout, getAccountMenuDetails, type AccountMenuDetails } from "@/features/identity/api";
 
 export function UserAccountMenu() {
-  const [details, setDetails] = useState<AccountMenuDetails | null>(null);
+  const [details, setDetails] = useState<AccountMenuDetails | null>({ displayName: "My account", initials: "U", roleLabel: "DIVS account", workspaceHref: "/account", workspaceLabel: "My account" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
