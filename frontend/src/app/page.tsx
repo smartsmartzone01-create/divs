@@ -215,7 +215,7 @@ export default function HomePage() {
             <p className="landing-audience-label">{t.driverLabel}</p>
             <h3>{t.driverTitle}</h3>
             <p>{t.driverCopy}</p>
-            <Link className="landing-text-link" href="/register">{t.joinDriver} <span aria-hidden="true">→</span></Link>
+            <Link className="landing-text-link" href="/driver/onboarding">{t.joinDriver} <span aria-hidden="true">→</span></Link>
           </article>
           <article className="landing-audience-card landing-audience-card-featured">
             <div className="landing-audience-icon" aria-hidden="true">
