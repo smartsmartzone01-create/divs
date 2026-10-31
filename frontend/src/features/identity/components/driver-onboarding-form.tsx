@@ -2,7 +2,7 @@
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getCurrentAccount, getDriverRegistration, submitDriverRegistration, type AuthAccount, type DriverRegistration } from "@/features/identity/api";
+import { getCurrentAccount, getDriverRegistration, submitDriverRegistration, updateDriverRegistration, type AuthAccount, type DriverRegistration } from "@/features/identity/api";
 import { useDIVSPreferences } from "@/components/preferences/preferences-provider";
 import { TANZANIA_DISTRICTS, TANZANIA_REGIONS } from "@/features/identity/data/tanzania-administrative-divisions";
 
@@ -45,7 +45,7 @@ const initialForm: FormState = {
   driving_experience: "none",
 };
 
-export function DriverOnboardingForm() {
+export function DriverOnboardingForm({ allowEdit = false }: { allowEdit?: boolean }) {
   const router = useRouter();
   const { language } = useDIVSPreferences();
   const sw = language === "sw";
@@ -135,7 +135,7 @@ export function DriverOnboardingForm() {
     setError("");
     setBusy(true);
     try {
-      const saved = await submitDriverRegistration(form);
+      const saved = existing && allowEdit ? await updateDriverRegistration(form) : await submitDriverRegistration(form);
       setExisting(saved);
       router.push("/workspace/driver");
     } catch (caught) {
@@ -147,7 +147,7 @@ export function DriverOnboardingForm() {
 
   if (loading) return <p className="auth-helper">{sw ? "Inapakia taarifa za akaunti…" : "Loading your account…"}</p>;
 
-  if (existing) {
+  if (existing && !allowEdit) {
     return (
       <section className="driver-onboarding-success" aria-live="polite">
         <div className="driver-onboarding-success-icon" aria-hidden="true">✓</div>
@@ -243,7 +243,7 @@ export function DriverOnboardingForm() {
         {step < steps.length - 1 ? (
           <button className="auth-primary-button" type="button" onClick={continueStep}>{sw ? "Endelea" : "Continue"} <span aria-hidden="true">→</span></button>
         ) : (
-          <button className="auth-primary-button" type="submit" disabled={busy}>{busy ? (sw ? "Inatuma…" : "Submitting…") : (sw ? "Tuma usajili" : "Submit registration")}</button>
+          <button className="auth-primary-button" type="submit" disabled={busy}>{busy ? (sw ? "Inatuma…" : "Submitting…") : (existing && allowEdit ? (sw ? "Hifadhi mabadiliko" : "Save changes") : (sw ? "Tuma usajili" : "Submit registration"))}</button>
         )}
       </div>
     </form>
