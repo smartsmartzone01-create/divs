@@ -19,6 +19,7 @@ export default defineConfig({
     observability: {
       enabled: true,
       logs: { enabled: true },
+      issues: { enabled: true },
     },
   }),
 });
