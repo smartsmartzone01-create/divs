@@ -498,6 +498,50 @@ html[data-theme="dark"] .driver-workspace .driver-status-pill.is-danger { border
 }
 .driver-workspace .driver-feature-copy strong,
 .driver-workspace .driver-horizontal-links > a svg,
+.driver-workspace .driver-horizontal-links small { color: var(--workspace-link); }
+.driver-workspace .driver-restrictions,
+.driver-workspace .driver-data-warning {
+  border: 1px solid #f0d38a;
+  background: var(--driver-warning-soft);
+  color: #855d13;
+}
+.driver-workspace .driver-data-warning[role="alert"] {
+  border-color: #f1b8b8;
+  background: var(--driver-danger-soft);
+  color: #b42318;
+}
+html[data-theme="dark"] .driver-workspace .driver-restrictions,
+html[data-theme="dark"] .driver-workspace .driver-data-warning { border-color: #70551c; color: #f5d58a; }
+html[data-theme="dark"] .driver-workspace .driver-data-warning[role="alert"] { border-color: #713b3b; color: #fecaca; }
+.driver-workspace button:disabled { cursor: not-allowed; opacity: .6; }
+.driver-workspace button:focus-visible,
+.driver-workspace a:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 3px;
+}
+html[data-theme="dark"] .driver-workspace button:focus-visible,
+html[data-theme="dark"] .driver-workspace a:focus-visible { outline-color: #93c5fd; }
+
+/* Keep larger text from forcing cards or rows beyond the viewport. */
+.driver-workspace .driver-stat-row > div { padding-inline: .55rem; }
+.driver-workspace .driver-feature-card,
+.driver-workspace .driver-check-row,
+.driver-workspace .driver-history-list > div,
+.driver-workspace .driver-notice-list article { min-width: 0; }
+.driver-workspace .driver-feature-copy,
+.driver-workspace .driver-check-copy { overflow-wrap: anywhere; }
+.driver-workspace .driver-feature-card > .driver-status-pill { flex: 0 0 auto; }
+@media (max-width: 520px) {
+  .driver-workspace .driver-stat-row span { font-size: .76rem; }
+  .driver-workspace .driver-feature-copy span { font-size: .82rem; }
+  .driver-workspace .driver-check-copy strong { font-size: .88rem; }
+  .driver-workspace .driver-check-row .driver-status-pill { font-size: .72rem; }
+  .driver-workspace .driver-panel { padding: 1rem; }
+}
+@media (max-width: 360px) {
+  .driver-workspace .driver-feature-grid { grid-template-columns: 1fr; }
+  .driver-workspace .driver-feature-card { min-height: 5.5rem; flex-wrap: nowrap; }
+}
 
 /* Driver Workspace mobile card fit and horizontal-scroll affordance. */
 .driver-workspace .driver-feature-grid {
@@ -542,7 +586,6 @@ html[data-theme="dark"] .driver-workspace .driver-status-pill.is-danger { border
 }
 
 @media (max-width: 620px) {
-  /* A single column gives verification/performance cards enough room for labels and status. */
   .driver-workspace .driver-feature-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: .75rem;
@@ -564,7 +607,6 @@ html[data-theme="dark"] .driver-workspace .driver-status-pill.is-danger { border
     line-height: 1.5;
   }
 
-  /* Persistent edge cue makes the horizontally scrollable quick links discoverable. */
   .driver-workspace .driver-link-section::after {
     content: "›";
     position: absolute;
