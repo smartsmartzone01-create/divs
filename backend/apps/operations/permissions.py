@@ -4,24 +4,31 @@ from apps.operations.models import OperationsMembership
 from apps.profiles.models import OperationsProfile
 
 
-# This is the authorization policy for operations actions. Do not grant a
-# capability merely because an account is authenticated.
+# Authorization policy for operations actions. Keep routine work separate
+# from decisions reserved for an operations Admin.
 ROLE_CAPABILITIES = {
-    OperationsMembership.Role.ADMIN: frozenset(
-        {
-            "view_operations_workspace",
-            "manage_driver_registrations",
-            "review_driver_verification",
-            "manage_driver_performance",
-            "manage_invitations",
-        }
-    ),
     OperationsMembership.Role.OPERATOR: frozenset(
         {
             "view_operations_workspace",
             "manage_driver_registrations",
             "review_driver_verification",
+            "approve_driver_verification",
             "manage_driver_performance",
+        }
+    ),
+    OperationsMembership.Role.ADMIN: frozenset(
+        {
+            "view_operations_workspace",
+            "manage_driver_registrations",
+            "review_driver_verification",
+            "approve_driver_verification",
+            "manage_driver_performance",
+            "manage_invitations",
+            "reject_driver_verification",
+            "activate_driver_availability",
+            "manage_driver_restrictions",
+            "remove_drivers",
+            "approve_driver_appeals",
         }
     ),
 }
