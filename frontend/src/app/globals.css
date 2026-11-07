@@ -2656,3 +2656,55 @@ html[data-theme="dark"] .auth-success {
   color: #bbf7d0;
 }
 
+
+
+/* Desktop landing header: balanced brand, centered navigation and account actions. */
+@media (min-width: 721px) {
+  .landing-header {
+    display: grid;
+    grid-template-columns: minmax(12rem, 1fr) minmax(0, auto) minmax(12rem, 1fr);
+    column-gap: clamp(1.25rem, 2.5vw, 2.5rem);
+    align-items: center;
+  }
+
+  .landing-brand { grid-column: 1; justify-self: start; }
+  .landing-navigation {
+    grid-column: 2;
+    justify-self: center;
+    gap: clamp(1rem, 2vw, 1.8rem);
+    white-space: nowrap;
+  }
+  .landing-preference-controls { gap: .45rem; }
+  .landing-nav-actions {
+    position: absolute;
+    top: 50%;
+    right: 5.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0;
+    transform: translateY(-50%);
+  }
+  .landing-header-tools {
+    grid-column: 3;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    min-width: 2.8rem;
+  }
+  .landing-header-tools .mobile-menu-toggle { display: none; }
+  .landing-header-tools .divs-account-menu { margin-left: auto; }
+  .landing-nav-cta { white-space: nowrap; }
+}
+
+@media (min-width: 721px) and (max-width: 1040px) {
+  .landing-header {
+    grid-template-columns: minmax(9rem, .8fr) minmax(0, auto) minmax(9rem, .8fr);
+    column-gap: 1rem;
+  }
+  .landing-navigation { gap: .85rem; }
+  .landing-navigation > a,
+  .landing-login-link { font-size: .8rem; }
+  .landing-nav-actions { right: 4.6rem; gap: .65rem; }
+  .landing-nav-cta { padding-inline: .75rem; font-size: .8rem; }
+}
