@@ -641,3 +641,117 @@ html[data-theme="dark"] .driver-workspace a:focus-visible { outline-color: #93c5
   }
 }
 
+
+
+/* Desktop workspace layouts. Mobile rules above remain the source of truth below 900px. */
+@media (min-width: 900px) {
+  .workspace-header-inner {
+    display: grid;
+    grid-template-columns: minmax(12rem, 1fr) minmax(0, 2fr) minmax(12rem, 1fr);
+    min-height: 5rem;
+    gap: 2rem;
+  }
+  .workspace-brand { grid-column: 1; justify-self: start; }
+  .workspace-header-actions { grid-column: 3; justify-self: end; }
+  .workspace-menu-toggle { display: none; }
+  .workspace-navigation {
+    position: static;
+    grid-column: 2;
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(.75rem, 1.8vw, 1.5rem);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    white-space: nowrap;
+  }
+  .workspace-navigation > a,
+  .workspace-preferences button { padding: .6rem .55rem; }
+  .workspace-preferences { padding: 0 0 0 .75rem; border-top: 0; border-left: 1px solid var(--workspace-border); }
+  .admin-workspace-content {
+    display: grid;
+    width: min(100% - 4rem, 76rem);
+    grid-template-columns: minmax(17rem, .72fr) minmax(0, 1.55fr);
+    align-items: start;
+    column-gap: 2rem;
+    row-gap: 1rem;
+    padding-top: 2.25rem;
+  }
+  .admin-profile-hero {
+    grid-column: 1;
+    grid-row: 1;
+    align-content: start;
+    min-height: 17rem;
+    padding: 1.5rem;
+    border: 1px solid var(--workspace-border);
+    border-radius: 1.1rem;
+    background: var(--workspace-surface);
+    box-shadow: 0 5px 18px rgb(15 23 42 / 4%);
+  }
+  .admin-stat-row { grid-column: 1; grid-row: 2; align-self: start; margin: 0; }
+  .admin-workspace-content > .admin-error { grid-column: 1 / -1; }
+  .admin-feature-grid { grid-column: 2; grid-row: 1; margin: 0; }
+  .admin-link-section { grid-column: 2; grid-row: 2; margin: 0; }
+  .admin-workspace-content > .admin-panel { grid-column: 2; margin-top: 0; }
+  .admin-workspace-content > .admin-panel:nth-of-type(1) { grid-row: 3; }
+  .admin-workspace-content > .admin-panel:nth-of-type(2) { grid-row: 4; }
+  .admin-workspace-footer { grid-column: 1 / -1; }
+  .admin-feature-card { min-height: 6.8rem; }
+  .driver-workspace-header { padding-inline: max(2rem, calc((100% - 76rem) / 2)); }
+  .driver-settings-menu { right: max(2rem, calc((100% - 76rem) / 2)); }
+  .driver-workspace-content {
+    display: grid;
+    width: min(100% - 4rem, 76rem);
+    grid-template-columns: minmax(18rem, .72fr) minmax(0, 1.55fr);
+    align-items: start;
+    column-gap: 2rem;
+    row-gap: 1rem;
+    padding-top: 2.25rem;
+  }
+  .driver-profile-hero {
+    grid-column: 1;
+    grid-row: 1;
+    align-content: start;
+    min-height: 19rem;
+    padding: 1.5rem;
+    border: 1px solid var(--workspace-border);
+    border-radius: 1.1rem;
+    background: var(--workspace-surface);
+    box-shadow: 0 5px 18px rgb(15 23 42 / 4%);
+  }
+  .driver-avatar { width: 8rem; height: 8rem; }
+  .driver-stat-row { grid-column: 1; grid-row: 2; align-self: start; margin: 0; }
+  .driver-workspace-content > .driver-data-warning { grid-column: 1 / -1; }
+  .driver-feature-grid { grid-column: 2; grid-row: 1; margin: 0; }
+  .driver-link-section { grid-column: 2; grid-row: 2; margin: 0; }
+  .driver-workspace-content > .driver-panel { grid-column: 2; margin-top: 0; }
+  .driver-workspace-content > .driver-panel:nth-of-type(1) { grid-row: 3; }
+  .driver-workspace-content > .driver-panel:nth-of-type(2) { grid-row: 4; }
+  .driver-workspace-content > .driver-panel:nth-of-type(3) { grid-row: 5; }
+  .driver-workspace-content > .driver-panel:nth-of-type(4) { grid-row: 6; }
+  .driver-workspace-footer { grid-column: 1 / -1; }
+  .driver-horizontal-links { flex-wrap: wrap; overflow: visible; }
+  .driver-horizontal-links > a,
+  .driver-horizontal-links > span { min-width: 6.2rem; }
+  .admin-horizontal-links { flex-wrap: wrap; overflow: visible; }
+  .admin-horizontal-links > a,
+  .admin-horizontal-links > span { min-width: 6.2rem; }
+}
+
+@media (min-width: 900px) and (max-width: 1100px) {
+  .admin-workspace-content,
+  .driver-workspace-content { column-gap: 1.25rem; }
+  .admin-workspace-content { grid-template-columns: minmax(15rem, .7fr) minmax(0, 1.4fr); }
+  .driver-workspace-content { grid-template-columns: minmax(16rem, .7fr) minmax(0, 1.4fr); }
+}
+
+@media (max-width: 899px) {
+  .workspace-header-inner { display: flex; }
+  .workspace-menu-toggle { display: inline-flex; }
+  .workspace-navigation { position: absolute; }
+  .admin-workspace-content,
+  .driver-workspace-content { display: block; }
+}
