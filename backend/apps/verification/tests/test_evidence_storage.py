@@ -56,7 +56,7 @@ class EvidenceFileValidationTests(SimpleTestCase):
     def test_rejects_malformed_pdf(self):
         uploaded = SimpleUploadedFile(
             "identity.pdf",
-            b"%PDF-1.7\\nthis is not a valid PDF",
+            b"%PDF-1.7\nthis is not a valid PDF",
             content_type="application/pdf",
         )
 
