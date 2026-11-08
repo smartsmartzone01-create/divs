@@ -9,6 +9,8 @@ from apps.verification.models import (
     DriverVerificationCheck,
     DriverVerificationEvent,
     VerifiedDriverLicenceClass,
+    DriverVerificationEvidence,
+    DriverVerificationEvidenceEvent,
 )
 
 
@@ -45,8 +47,10 @@ def review_driver_check(*, check_id, reviewer, status, method=DriverVerification
     }
     if status not in allowed_statuses:
         raise VerificationReviewError("Unsupported verification outcome.")
-    if method not in DriverVerificationCheck.Method.values:
-        raise VerificationReviewError("Unsupported verification method.")
+    # Government API outcomes must use a dedicated trusted integration path;
+    # this human review service must never accept a caller-selected API method.
+    if method != DriverVerificationCheck.Method.MANUAL:
+        raise VerificationReviewError("Government API results cannot be recorded through manual review.")
     if result_code and result_code not in DriverVerificationCheck.ResultCode.values:
         raise VerificationReviewError("Unsupported result code.")
 
@@ -89,6 +93,18 @@ def review_driver_check(*, check_id, reviewer, status, method=DriverVerification
     }:
         raise VerificationReviewError("An inconclusive result requires further review.")
 
+    if status == DriverVerificationCheck.Status.PASSED:
+        accepted_evidence = DriverVerificationEvidence.objects.filter(
+            verification_check=check,
+            evidence_type=check.check_type,
+            status=DriverVerificationEvidence.Status.ACCEPTED,
+            storage_deleted_at__isnull=True,
+        ).exists()
+        if not accepted_evidence:
+            raise VerificationReviewError(
+                "A manual check can pass only after matching evidence has been accepted."
+            )
+
     verification = DriverVerification.objects.select_for_update().get(pk=check.verification_id)
     if verification.status in {DriverVerification.Status.APPROVED, DriverVerification.Status.REJECTED}:
         raise VerificationReviewError("A final verification decision has been recorded; check findings are locked.")
@@ -120,6 +136,67 @@ def review_driver_check(*, check_id, reviewer, status, method=DriverVerification
             "Verification in review", "Your driver verification is being reviewed.",
         )
     return check
+
+
+
+@transaction.atomic
+def review_verification_evidence(*, evidence_id, reviewer, decision, review_notes=""):
+    """Accept or reject submitted evidence without changing its security scan state."""
+    allowed_decisions = {
+        DriverVerificationEvidence.Status.ACCEPTED,
+        DriverVerificationEvidence.Status.REJECTED,
+    }
+    if decision not in allowed_decisions:
+        raise VerificationReviewError("Unsupported evidence review decision.")
+    if decision == DriverVerificationEvidence.Status.REJECTED and not review_notes.strip():
+        raise VerificationReviewError("A reason is required when rejecting evidence.")
+
+    evidence = (
+        DriverVerificationEvidence.objects.select_for_update()
+        .select_related("verification_check__verification")
+        .filter(pk=evidence_id)
+        .first()
+    )
+    if evidence is None:
+        raise VerificationReviewError("Verification evidence not found.")
+    verification = DriverVerification.objects.select_for_update().get(
+        pk=evidence.verification_check.verification_id
+    )
+    if verification.status in {
+        DriverVerification.Status.APPROVED,
+        DriverVerification.Status.REJECTED,
+    }:
+        raise VerificationReviewError("Evidence is locked after a final verification decision.")
+    if evidence.status in {
+        DriverVerificationEvidence.Status.EXPIRED,
+        DriverVerificationEvidence.Status.SUPERSEDED,
+    } or evidence.storage_deleted_at is not None:
+        raise VerificationReviewError("Expired or deleted evidence cannot be reviewed.")
+    if evidence.evidence_type != evidence.verification_check.check_type:
+        raise VerificationReviewError("Evidence type does not match its verification check.")
+    if evidence.scan_status in {
+        DriverVerificationEvidence.ScanStatus.INFECTED,
+        DriverVerificationEvidence.ScanStatus.ERROR,
+    }:
+        raise VerificationReviewError("Evidence blocked by security scanning cannot be accepted.")
+
+    previous_status = evidence.status
+    evidence.status = decision
+    evidence.reviewed_by = reviewer
+    evidence.reviewed_at = timezone.now()
+    evidence.review_notes = review_notes.strip()
+    evidence.save(update_fields=[
+        "status", "reviewed_by", "reviewed_at", "review_notes", "updated_at",
+    ])
+    DriverVerificationEvidenceEvent.objects.create(
+        evidence=evidence,
+        actor=reviewer,
+        event_type="reviewed",
+        previous_status=previous_status,
+        new_status=decision,
+        notes=evidence.review_notes,
+    )
+    return evidence
 
 
 @transaction.atomic
