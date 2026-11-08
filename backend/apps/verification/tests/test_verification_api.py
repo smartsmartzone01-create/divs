@@ -618,6 +618,15 @@ class VerificationReviewServiceTests(APITestCase):
             DriverVerificationEvent.objects.filter(
                 verification=self.verification,
                 actor=self.admin,
+                event_type=DriverVerificationEvent.EventType.VERIFICATION_REOPENED,
+                previous_status=DriverVerification.Status.APPROVED,
+                new_status=DriverVerification.Status.IN_REVIEW,
+            ).exists()
+        )
+        self.assertTrue(
+            DriverVerificationEvent.objects.filter(
+                verification=self.verification,
+                actor=self.admin,
                 event_type=DriverVerificationEvent.EventType.AVAILABILITY_DEACTIVATED,
             ).exists()
         )
