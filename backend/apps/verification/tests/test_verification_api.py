@@ -1104,20 +1104,123 @@ class VerificationReviewServiceTests(APITestCase):
                 result_code=DriverVerificationCheck.ResultCode.INCONCLUSIVE,
             )
 
-    def test_failed_check_rejects_verification(self):
-        review_driver_check(
-            check_id=self.checks[0].id,
-            reviewer=self.reviewer,
-            status=DriverVerificationCheck.Status.FAILED,
-            result_code=DriverVerificationCheck.ResultCode.RECORD_FOUND,
+    def test_manual_adverse_finding_moves_check_to_review_without_final_rejection(self):
+        self._pass_all_checks()
+        check = next(
+            item for item in self.checks
+            if item.check_type == DriverVerificationCheck.CheckType.TRAFFIC_RECORDS
         )
+
+        updated = review_driver_check(
+            check_id=check.id,
+            reviewer=self.reviewer,
+            status=DriverVerificationCheck.Status.NEEDS_REVIEW,
+            result_code=DriverVerificationCheck.ResultCode.RECORD_FOUND,
+            review_notes="A reviewed traffic record requires an Admin decision.",
+        )
+
+        updated.refresh_from_db()
         self.verification.refresh_from_db()
-        self.assertEqual(self.verification.status, DriverVerification.Status.REJECTED)
+        self.assertEqual(updated.status, DriverVerificationCheck.Status.NEEDS_REVIEW)
+        self.assertEqual(self.verification.status, DriverVerification.Status.IN_REVIEW)
+        self.assertIsNone(self.verification.decided_by)
         self.assertFalse(self.verification.is_discoverable)
         self.assertTrue(
             Notification.objects.filter(
                 recipient=self.verification.profile.registration.account,
-                recipient_role=Notification.RecipientRole.DRIVER,
+                event_type="driver.verification.adverse_finding",
+            ).exists()
+        )
+        self.assertFalse(
+            Notification.objects.filter(
+                recipient=self.verification.profile.registration.account,
                 event_type="driver.verification.rejected",
             ).exists()
         )
+
+    def test_manual_adverse_finding_revokes_approved_driver_and_preserves_evidence(self):
+        self._approve_and_activate_driver()
+        check = next(
+            item for item in self.checks
+            if item.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
+        )
+        evidence = check.evidence.get(status=DriverVerificationEvidence.Status.ACCEPTED)
+        licence_classes = list(check.verified_licence_classes.filter(is_current=True))
+
+        updated = review_driver_check(
+            check_id=check.id,
+            reviewer=self.reviewer,
+            status=DriverVerificationCheck.Status.NEEDS_REVIEW,
+            result_code=DriverVerificationCheck.ResultCode.INVALID,
+            review_notes="Manual inspection identified a licence validity concern.",
+        )
+
+        updated.refresh_from_db()
+        evidence.refresh_from_db()
+        self.verification.refresh_from_db()
+        self.verification.profile.refresh_from_db()
+        self.assertEqual(updated.status, DriverVerificationCheck.Status.NEEDS_REVIEW)
+        self.assertEqual(updated.result_code, DriverVerificationCheck.ResultCode.INVALID)
+        self.assertEqual(self.verification.status, DriverVerification.Status.IN_REVIEW)
+        self.assertEqual(self.verification.profile.status, DriverProfile.Status.PENDING_ACTIVATION)
+        self.assertFalse(self.verification.is_discoverable)
+        self.assertEqual(evidence.status, DriverVerificationEvidence.Status.ACCEPTED)
+        self.assertTrue(licence_classes)
+        for licence_class in licence_classes:
+            licence_class.refresh_from_db()
+            self.assertFalse(licence_class.is_current)
+            self.assertFalse(licence_class.qualifies_for_discovery)
+        self.assertTrue(
+            DriverVerificationEvent.objects.filter(
+                verification=self.verification,
+                verification_check=check,
+                actor=self.reviewer,
+                event_type=DriverVerificationEvent.EventType.CHECK_INVALIDATED,
+                new_status=DriverVerificationCheck.Status.NEEDS_REVIEW,
+            ).exists()
+        )
+        self.assertTrue(
+            DriverVerificationEvent.objects.filter(
+                verification=self.verification,
+                actor=self.reviewer,
+                event_type=DriverVerificationEvent.EventType.VERIFICATION_REOPENED,
+            ).exists()
+        )
+        self.assertTrue(
+            DriverVerificationEvent.objects.filter(
+                verification=self.verification,
+                actor=self.reviewer,
+                event_type=DriverVerificationEvent.EventType.AVAILABILITY_DEACTIVATED,
+            ).exists()
+        )
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.verification.profile.registration.account,
+                event_type="driver.verification.revoked",
+            ).exists()
+        )
+
+    def test_manual_adverse_finding_requires_accepted_supporting_evidence(self):
+        check = next(
+            item for item in self.checks
+            if item.check_type == DriverVerificationCheck.CheckType.NATIONAL_IDENTITY
+        )
+        with self.assertRaisesMessage(Exception, "requires matching accepted, current and clean"):
+            review_driver_check(
+                check_id=check.id,
+                reviewer=self.reviewer,
+                status=DriverVerificationCheck.Status.NEEDS_REVIEW,
+                result_code=DriverVerificationCheck.ResultCode.MISMATCH,
+                review_notes="A possible identity mismatch was reported.",
+            )
+
+    def test_manual_reviewer_cannot_submit_a_final_failed_check_status(self):
+        check = self.checks[0]
+        with self.assertRaisesMessage(Exception, "failed check is not a final manual-review action"):
+            review_driver_check(
+                check_id=check.id,
+                reviewer=self.reviewer,
+                status=DriverVerificationCheck.Status.FAILED,
+                result_code=DriverVerificationCheck.ResultCode.RECORD_FOUND,
+                review_notes="Attempted final decision.",
+            )
