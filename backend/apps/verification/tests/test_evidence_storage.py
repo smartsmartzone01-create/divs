@@ -1,10 +1,23 @@
 import io
+from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import SimpleTestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from PIL import Image
 
-from apps.verification.storage import EvidenceStorageError, _read_and_validate
+from apps.identity.models import Account
+from apps.registrations.models import DriverRegistration
+from apps.profiles.models import DriverProfile
+from apps.verification.models import (
+    DriverVerificationEvidence,
+    DriverVerificationEvidenceEvent,
+)
+from apps.verification.storage import (
+    EvidenceStorageError,
+    _read_and_validate,
+    retrieve_verification_evidence,
+    store_verification_evidence,
+)
 
 
 class EvidenceFileValidationTests(SimpleTestCase):
@@ -43,9 +56,116 @@ class EvidenceFileValidationTests(SimpleTestCase):
     def test_rejects_malformed_pdf(self):
         uploaded = SimpleUploadedFile(
             "identity.pdf",
-            b"%PDF-1.7\nthis is not a valid PDF",
+            b"%PDF-1.7\\nthis is not a valid PDF",
             content_type="application/pdf",
         )
 
         with self.assertRaises(EvidenceStorageError):
             _read_and_validate(uploaded)
+
+
+@override_settings(
+    R2_EVIDENCE_STORAGE_ENABLED=True,
+    R2_BUCKET_NAME="divs-private-evidence",
+    R2_MAX_UPLOAD_BYTES=10 * 1024 * 1024,
+)
+class EvidenceR2StorageTests(TestCase):
+    def setUp(self):
+        self.actor = Account.objects.create_user(
+            email="evidence-driver@example.com",
+            password="StrongPassword123!",
+        )
+        registration = DriverRegistration.objects.create(
+            account=self.actor,
+            first_name="Amani",
+            middle_name="",
+            last_name="Juma",
+            nationality="Tanzanian",
+            region="Dar es Salaam",
+            district="Kinondoni",
+            current_residential_address="Mikocheni",
+            driving_experience="1_to_3_years",
+        )
+        self.profile = DriverProfile.objects.create(registration=registration)
+        self.check = self.profile.verification.checks.first()
+
+    def _jpeg_upload(self, name="identity.jpg"):
+        output = io.BytesIO()
+        Image.new("RGB", (32, 32), color="white").save(output, format="JPEG")
+        return SimpleUploadedFile(name, output.getvalue(), content_type="image/jpeg")
+
+    @patch("apps.verification.storage._s3_client")
+    def test_upload_writes_private_object_and_records_metadata_and_event(self, get_client):
+        client = get_client.return_value
+
+        evidence = store_verification_evidence(
+            check=self.check,
+            uploaded_file=self._jpeg_upload("folder\\\\identity.jpg"),
+            actor=self.actor,
+            source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
+        )
+
+        client.put_object.assert_called_once()
+        upload_args = client.put_object.call_args.kwargs
+        self.assertEqual(upload_args["Bucket"], "divs-private-evidence")
+        self.assertTrue(upload_args["Key"].startswith("verification-evidence/"))
+        self.assertEqual(upload_args["ContentType"], "image/jpeg")
+        self.assertEqual(len(upload_args["Metadata"]["sha256"]), 64)
+        self.assertEqual(evidence.storage_key, upload_args["Key"])
+        self.assertEqual(evidence.original_filename, "identity.jpg")
+        self.assertEqual(evidence.status, DriverVerificationEvidence.Status.SUBMITTED)
+        self.assertTrue(
+            DriverVerificationEvidenceEvent.objects.filter(
+                evidence=evidence,
+                event_type="uploaded",
+                new_status=DriverVerificationEvidence.Status.SUBMITTED,
+            ).exists()
+        )
+
+    @patch("apps.verification.storage._s3_client")
+    def test_retrieval_reads_object_using_private_storage_key(self, get_client):
+        body = io.BytesIO(b"private evidence bytes")
+        get_client.return_value.get_object.return_value = {"Body": body}
+        evidence = type(
+            "EvidenceStub",
+            (),
+            {
+                "storage_key": "verification-evidence/private-object",
+                "content_type": "image/jpeg",
+                "original_filename": "identity.jpg",
+            },
+        )()
+
+        returned_body, content_type, filename = retrieve_verification_evidence(evidence)
+
+        self.assertEqual(returned_body.read(), b"private evidence bytes")
+        self.assertEqual(content_type, "image/jpeg")
+        self.assertEqual(filename, "identity.jpg")
+        get_client.return_value.get_object.assert_called_once_with(
+            Bucket="divs-private-evidence",
+            Key="verification-evidence/private-object",
+        )
+
+    @patch(
+        "apps.verification.models.DriverVerificationEvidenceEvent.objects.create",
+        side_effect=RuntimeError("simulated database write failure"),
+    )
+    @patch("apps.verification.storage._s3_client")
+    def test_database_failure_removes_uploaded_r2_object(self, get_client, _event_create):
+        client = get_client.return_value
+
+        with self.assertRaisesRegex(RuntimeError, "simulated database write failure"):
+            store_verification_evidence(
+                check=self.check,
+                uploaded_file=self._jpeg_upload(),
+                actor=self.actor,
+                source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
+            )
+
+        client.put_object.assert_called_once()
+        client.delete_object.assert_called_once()
+        self.assertFalse(
+            DriverVerificationEvidence.objects.filter(
+                verification_check=self.check,
+            ).exists()
+        )
