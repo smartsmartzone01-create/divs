@@ -24,6 +24,7 @@ from apps.verification.services import (
     record_verified_licence_classes,
     review_driver_check,
     review_verification_evidence,
+    reopen_driver_verification_check,
 )
 from apps.verification.storage import (
     EvidenceStorageError,
@@ -187,6 +188,25 @@ class OperationsDriverVerificationApproveView(_OperationsFinalDecisionView):
 class OperationsDriverVerificationRejectView(_OperationsFinalDecisionView):
     required_operations_capability = "reject_driver_verification"
     decision = DriverVerification.Status.REJECTED
+
+
+class OperationsDriverVerificationReopenView(RoleProtectedAPIView):
+    required_profile_type = "operations"
+    required_operations_capability = "reopen_driver_verification"
+    permission_classes = [IsAuthenticated, HasRequiredProfile, HasOperationsCapability]
+
+    def post(self, request, check_id):
+        serializer = VerificationDecisionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            verification = reopen_driver_verification_check(
+                check_id=check_id,
+                actor=request.user,
+                reason=serializer.validated_data.get("reason", ""),
+            )
+        except VerificationReviewError as exc:
+            return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
+        return Response(OperationsDriverVerificationSerializer(verification).data)
 
 
 class OperationsDriverAvailabilityActivateView(RoleProtectedAPIView):
