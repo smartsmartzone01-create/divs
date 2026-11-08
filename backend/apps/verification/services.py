@@ -105,7 +105,7 @@ def review_driver_check(*, check_id, reviewer, status, method=DriverVerification
         "reviewed_by", "updated_at",
     ])
     DriverVerificationEvent.objects.create(
-        verification=verification, check=check, actor=reviewer,
+        verification=verification, verification_check=check, actor=reviewer,
         event_type=DriverVerificationEvent.EventType.CHECK_REVIEWED,
         previous_status=previous_check_status, new_status=status,
         notes=check.review_notes,
