@@ -91,13 +91,13 @@ def review_driver_check(*, check_id, reviewer, status, method=DriverVerification
     if verification.status == DriverVerification.Status.REJECTED:
         raise VerificationReviewError("A rejected verification cannot be changed.")
     now = timezone.now()
+    previous_check_status = check.status
     check.status = status
     check.method = method
     check.result_code = result_code
     check.review_notes = review_notes.strip()
     check.checked_at = now
     check.reviewed_by = reviewer
-    previous_check_status = check.status
     check.save(update_fields=[
         "status", "method", "result_code", "review_notes", "checked_at",
         "reviewed_by", "updated_at",
@@ -182,8 +182,15 @@ def activate_driver_availability(*, verification_id, actor):
         raise VerificationReviewError("Driver verification not found.")
     if verification.status != DriverVerification.Status.APPROVED:
         raise VerificationReviewError("Only an approved driver can be activated.")
-    if not verification.checks_are_complete or not verification.is_discoverable and verification.profile.status == DriverProfile.Status.ACTIVE:
-        raise VerificationReviewError("Verification requirements are not satisfied.")
+    if not verification.checks_are_complete:
+        raise VerificationReviewError("All required verification checks must still be passed.")
+    licence_check = verification.checks.filter(
+        check_type=DriverVerificationCheck.CheckType.DRIVING_LICENCE,
+        status=DriverVerificationCheck.Status.PASSED,
+        result_code=DriverVerificationCheck.ResultCode.VALID,
+    ).first()
+    if licence_check is None or not licence_check.verified_licence_classes.filter(is_current=True).exists():
+        raise VerificationReviewError("A current verified licence class is required before activation.")
     if verification.profile.status == DriverProfile.Status.CLOSED:
         raise VerificationReviewError("A closed driver profile cannot be activated.")
     if verification.profile.status == DriverProfile.Status.SUSPENDED:
@@ -197,7 +204,7 @@ def activate_driver_availability(*, verification_id, actor):
     DriverVerificationEvent.objects.create(
         verification=verification, actor=actor,
         event_type=DriverVerificationEvent.EventType.AVAILABILITY_ACTIVATED,
-        previous_status=DriverProfile.Status.PENDING_ACTIVATION,
+        previous_status=verification.profile.status,
         new_status=DriverProfile.Status.ACTIVE,
     )
     _notify_driver(
