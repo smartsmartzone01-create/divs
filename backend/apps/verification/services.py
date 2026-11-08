@@ -59,7 +59,7 @@ def reopen_driver_verification_check(*, check_id, actor, reason):
     if check is None:
         raise VerificationReviewError("Verification check not found.")
 
-    verification = DriverVerification.objects.select_for_update().get(pk=check.verification_id)
+    verification = DriverVerification.objects.select_for_update().select_related("profile").get(pk=check.verification_id)
     if verification.status not in {
         DriverVerification.Status.APPROVED,
         DriverVerification.Status.REJECTED,
@@ -124,6 +124,14 @@ def reopen_driver_verification_check(*, check_id, actor, reason):
         "status", "decided_by", "decided_at", "decision_reason", "updated_at",
     ])
 
+    DriverVerificationEvent.objects.create(
+        verification=verification,
+        actor=actor,
+        event_type=DriverVerificationEvent.EventType.VERIFICATION_REOPENED,
+        previous_status=previous_verification_status,
+        new_status=DriverVerification.Status.IN_REVIEW,
+        notes=reason,
+    )
     audit_notes = reason
     if availability_was_active:
         audit_notes += " Public availability was deactivated and requires fresh Admin activation."
