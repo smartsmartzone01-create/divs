@@ -303,7 +303,22 @@ class VerificationReviewServiceTests(APITestCase):
         )
         self.assertEqual(updated.method, DriverVerificationCheck.Method.GOVERNMENT_API)
         self.assertEqual(updated.status, DriverVerificationCheck.Status.PASSED)
+        replayed = record_government_api_result(
+            check_id=check.id,
+            provider="authorized-test-provider",
+            provider_reference="request-123",
+            outcome=GovernmentVerificationAttempt.Outcome.MATCHED,
+            result_code=expected_result,
+        )
+        self.assertEqual(replayed.id, updated.id)
         attempt = GovernmentVerificationAttempt.objects.get(verification_check=check)
+        self.assertEqual(
+            GovernmentVerificationAttempt.objects.filter(
+                provider="authorized-test-provider",
+                provider_reference="request-123",
+            ).count(),
+            1,
+        )
         self.assertEqual(attempt.provider_reference, "request-123")
         self.assertFalse(hasattr(attempt, "response_payload"))
 
