@@ -24,6 +24,11 @@ class DriverProfile(models.Model):
         choices=Status.choices,
         default=Status.PENDING_ACTIVATION,
     )
+    availability_activated_at = models.DateTimeField(null=True, blank=True)
+    availability_activated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="activated_driver_profiles",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
