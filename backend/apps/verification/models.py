@@ -29,9 +29,19 @@ class DriverVerification(models.Model):
     def checks_are_complete(self):
         required_types = {value for value, _label in DriverVerificationCheck.CheckType.choices}
         checks = list(self.checks.all())
+        expected_results = {
+            DriverVerificationCheck.CheckType.NATIONAL_IDENTITY: DriverVerificationCheck.ResultCode.MATCH,
+            DriverVerificationCheck.CheckType.DRIVING_LICENCE: DriverVerificationCheck.ResultCode.VALID,
+            DriverVerificationCheck.CheckType.TRAFFIC_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
+            DriverVerificationCheck.CheckType.ACCIDENT_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
+        }
         return (
             {check.check_type for check in checks} == required_types
-            and all(check.status == DriverVerificationCheck.Status.PASSED for check in checks)
+            and all(
+                check.status == DriverVerificationCheck.Status.PASSED
+                and check.result_code == expected_results.get(check.check_type)
+                for check in checks
+            )
         )
 
     @property
