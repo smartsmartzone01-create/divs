@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.registrations.serializers import DriverRegistrationSerializer
 from apps.verification.models import (
     DriverVerification,
     DriverVerificationCheck,
@@ -21,7 +22,8 @@ class DriverVerificationCheckSerializer(serializers.ModelSerializer):
         model = DriverVerificationCheck
         fields = [
             "id", "check_type", "status", "method", "result_code",
-            "checked_at", "verified_licence_classes", "created_at", "updated_at",
+            "review_notes", "checked_at", "reviewed_by",
+            "verified_licence_classes", "created_at", "updated_at",
         ]
         read_only_fields = fields
 
@@ -29,14 +31,23 @@ class DriverVerificationCheckSerializer(serializers.ModelSerializer):
 class DriverVerificationSerializer(serializers.ModelSerializer):
     checks = DriverVerificationCheckSerializer(many=True, read_only=True)
     is_discoverable = serializers.BooleanField(read_only=True)
+    profile_status = serializers.CharField(source="profile.status", read_only=True)
 
     class Meta:
         model = DriverVerification
         fields = [
-            "id", "status", "checks", "is_discoverable",
-            "decided_at", "created_at", "updated_at",
+            "id", "status", "checks", "is_discoverable", "profile_status",
+            "decision_reason", "decided_by", "decided_at", "created_at", "updated_at",
         ]
         read_only_fields = fields
+
+
+class OperationsDriverVerificationSerializer(DriverVerificationSerializer):
+    registration = DriverRegistrationSerializer(source="profile.registration", read_only=True)
+    driver_account_id = serializers.UUIDField(source="profile.registration.account_id", read_only=True)
+
+    class Meta(DriverVerificationSerializer.Meta):
+        fields = DriverVerificationSerializer.Meta.fields + ["registration", "driver_account_id"]
 
 
 class ManualCheckReviewSerializer(serializers.Serializer):
@@ -53,6 +64,11 @@ class ManualCheckReviewSerializer(serializers.Serializer):
         required=False,
         allow_blank=True,
     )
+    review_notes = serializers.CharField(required=False, allow_blank=True, max_length=5000)
+
+
+class VerificationDecisionSerializer(serializers.Serializer):
+    reason = serializers.CharField(required=False, allow_blank=True, max_length=5000)
 
 
 class VerifiedLicenceClassesInputSerializer(serializers.Serializer):
