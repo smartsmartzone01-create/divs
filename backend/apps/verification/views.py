@@ -186,11 +186,28 @@ class OperationsDriverAvailabilityActivateView(RoleProtectedAPIView):
 
 
 
-def _evidence_file_response(evidence):
+def _evidence_file_response(evidence, actor):
     try:
         body, content_type, _filename = retrieve_verification_evidence(evidence)
     except EvidenceStorageError as exc:
         return Response({"detail": str(exc)}, status=http_status.SERVICE_UNAVAILABLE)
+
+    # Evidence access is sensitive and must be auditable. Do not serve the
+    # object if the access event cannot be persisted.
+    from apps.verification.models import DriverVerificationEvidenceEvent
+
+    try:
+        DriverVerificationEvidenceEvent.objects.create(
+            evidence=evidence,
+            actor=actor,
+            event_type="file_accessed",
+        )
+    except Exception:
+        body.close()
+        return Response(
+            {"detail": "Evidence access could not be recorded."},
+            status=http_status.SERVICE_UNAVAILABLE,
+        )
 
     def file_chunks():
         try:
@@ -272,7 +289,7 @@ class DriverVerificationEvidenceFileView(RoleProtectedAPIView):
             pk=evidence_id,
             verification_check__verification__profile__registration__account=request.user,
         )
-        return _evidence_file_response(evidence)
+        return _evidence_file_response(evidence, request.user)
 
 
 class OperationsVerificationEvidenceFileView(RoleProtectedAPIView):
@@ -285,4 +302,4 @@ class OperationsVerificationEvidenceFileView(RoleProtectedAPIView):
             DriverVerificationEvidence.objects.select_related("verification_check__verification__profile"),
             pk=evidence_id,
         )
-        return _evidence_file_response(evidence)
+        return _evidence_file_response(evidence, request.user)
