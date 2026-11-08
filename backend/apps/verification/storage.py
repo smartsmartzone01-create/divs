@@ -1,5 +1,6 @@
 import hashlib
 import io
+import logging
 import uuid
 
 import boto3
@@ -10,6 +11,9 @@ from PIL import Image, UnidentifiedImageError
 from pypdf import PdfReader
 
 from apps.verification.models import DriverVerificationEvidence
+
+
+logger = logging.getLogger(__name__)
 
 
 class EvidenceStorageError(Exception):
@@ -69,7 +73,6 @@ def _read_and_validate(uploaded_file):
     return content, detected_type, hashlib.sha256(content).hexdigest()
 
 
-@transaction.atomic
 def store_verification_evidence(*, check, uploaded_file, actor, source):
     if source not in {
         DriverVerificationEvidence.Source.DRIVER_UPLOAD,
@@ -95,36 +98,43 @@ def store_verification_evidence(*, check, uploaded_file, actor, source):
     except Exception as exc:
         raise EvidenceStorageError("The private evidence file could not be stored.") from exc
 
-    safe_filename = (uploaded_file.name or "evidence").replace("\\", "/").rsplit("/", 1)[-1]
-    safe_filename = "".join(char for char in safe_filename if char.isprintable() and char not in "\r\n")[:255]
+    safe_filename = (uploaded_file.name or "evidence").replace("\\\\", "/").rsplit("/", 1)[-1]
+    safe_filename = "".join(char for char in safe_filename if char.isprintable() and char not in "\\r\\n")[:255]
 
+    # Keep the database transaction inside this try block. This also catches a
+    # failure raised while the transaction commits, not only row-creation errors.
     try:
-        evidence = DriverVerificationEvidence.objects.create(
-            verification_check=check,
-            evidence_type=check.check_type,
-            source=source,
-            status=DriverVerificationEvidence.Status.SUBMITTED,
-            original_filename=safe_filename or "evidence",
-            content_type=content_type,
-            file_size=len(content),
-            sha256=digest,
-            storage_key=object_key,
-            uploaded_by=actor,
-        )
+        with transaction.atomic():
+            evidence = DriverVerificationEvidence.objects.create(
+                verification_check=check,
+                evidence_type=check.check_type,
+                source=source,
+                status=DriverVerificationEvidence.Status.SUBMITTED,
+                original_filename=safe_filename or "evidence",
+                content_type=content_type,
+                file_size=len(content),
+                sha256=digest,
+                storage_key=object_key,
+                uploaded_by=actor,
+            )
 
-        from apps.verification.models import DriverVerificationEvidenceEvent
+            from apps.verification.models import DriverVerificationEvidenceEvent
 
-        DriverVerificationEvidenceEvent.objects.create(
-            evidence=evidence,
-            actor=actor,
-            event_type="uploaded",
-            new_status=DriverVerificationEvidence.Status.SUBMITTED,
-        )
+            DriverVerificationEvidenceEvent.objects.create(
+                evidence=evidence,
+                actor=actor,
+                event_type="uploaded",
+                new_status=DriverVerificationEvidence.Status.SUBMITTED,
+            )
     except Exception:
         try:
             client.delete_object(Bucket=settings.R2_BUCKET_NAME, Key=object_key)
-        finally:
-            raise
+        except Exception:
+            # Do not hide the database failure, but leave an operational signal
+            # so an orphaned private object can be reconciled.
+            logger.exception("Could not clean up R2 evidence object after database failure: %s", object_key)
+        raise
+
     return evidence
 
 
