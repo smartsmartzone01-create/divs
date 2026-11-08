@@ -1,3 +1,6 @@
+import io
+from unittest.mock import patch
+
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -7,7 +10,12 @@ from apps.notifications.models import Notification
 from apps.operations.models import OperationsMembership
 from apps.profiles.models import DriverProfile, OperationsProfile
 from apps.registrations.models import DriverRegistration
-from apps.verification.models import DriverVerification, DriverVerificationCheck
+from apps.verification.models import (
+    DriverVerification,
+    DriverVerificationCheck,
+    DriverVerificationEvidence,
+    DriverVerificationEvidenceEvent,
+)
 from apps.verification.services import record_verified_licence_classes, review_driver_check
 
 
@@ -53,6 +61,71 @@ class DriverVerificationAPITests(APITestCase):
         self.client.force_authenticate(user=client_account)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+    @patch("apps.verification.views.retrieve_verification_evidence")
+    def test_driver_file_access_is_recorded_in_evidence_history(self, retrieve):
+        check = self.verification.checks.first()
+        evidence = DriverVerificationEvidence.objects.create(
+            verification_check=check,
+            evidence_type=check.check_type,
+            source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
+            original_filename="identity.jpg",
+            content_type="image/jpeg",
+            file_size=4,
+            sha256="a" * 64,
+            storage_key="verification-evidence/test-object",
+            uploaded_by=self.driver,
+        )
+        retrieve.return_value = (io.BytesIO(b"test"), "image/jpeg", "identity.jpg")
+        self.client.force_authenticate(user=self.driver)
+
+        response = self.client.get(
+            reverse("verification:driver-evidence-file", kwargs={"evidence_id": evidence.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(
+            DriverVerificationEvidenceEvent.objects.filter(
+                evidence=evidence,
+                actor=self.driver,
+                event_type="file_accessed",
+            ).exists()
+        )
+        response.close()
+
+    @patch("apps.verification.views.retrieve_verification_evidence")
+    def test_another_driver_cannot_access_evidence_or_create_access_event(self, retrieve):
+        check = self.verification.checks.first()
+        evidence = DriverVerificationEvidence.objects.create(
+            verification_check=check,
+            evidence_type=check.check_type,
+            source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
+            original_filename="identity.jpg",
+            content_type="image/jpeg",
+            file_size=4,
+            sha256="a" * 64,
+            storage_key="verification-evidence/test-object",
+            uploaded_by=self.driver,
+        )
+        other_driver = Account.objects.create_user(
+            email="unrelated-driver@example.com",
+            password="StrongPassword123!",
+        )
+        self.client.force_authenticate(user=other_driver)
+
+        response = self.client.get(
+            reverse("verification:driver-evidence-file", kwargs={"evidence_id": evidence.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        retrieve.assert_not_called()
+        self.assertFalse(
+            DriverVerificationEvidenceEvent.objects.filter(
+                evidence=evidence,
+                event_type="file_accessed",
+            ).exists()
+        )
 
 
 class VerificationReviewServiceTests(APITestCase):
