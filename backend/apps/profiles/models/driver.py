@@ -7,6 +7,7 @@ class DriverProfile(models.Model):
     """Driver's working-system profile, separate from registration and verification."""
 
     class Status(models.TextChoices):
+        PENDING_ACTIVATION = "pending_activation", "Pending activation"
         ACTIVE = "active", "Active"
         SUSPENDED = "suspended", "Suspended"
         CLOSED = "closed", "Closed"
@@ -17,7 +18,11 @@ class DriverProfile(models.Model):
         on_delete=models.CASCADE,
         related_name="profile",
     )
-    status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
+    status = models.CharField(
+        max_length=24,
+        choices=Status.choices,
+        default=Status.PENDING_ACTIVATION,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
