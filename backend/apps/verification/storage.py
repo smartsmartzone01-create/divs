@@ -110,6 +110,7 @@ def store_verification_evidence(*, check, uploaded_file, actor, source):
                 evidence_type=check.check_type,
                 source=source,
                 status=DriverVerificationEvidence.Status.SUBMITTED,
+                scan_status=DriverVerificationEvidence.ScanStatus.PENDING,
                 original_filename=safe_filename or "evidence",
                 content_type=content_type,
                 file_size=len(content),
@@ -154,6 +155,8 @@ def _validate_evidence_storage_key(storage_key):
 
 
 def retrieve_verification_evidence(evidence):
+    if evidence.scan_status != DriverVerificationEvidence.ScanStatus.CLEAN:
+        raise EvidenceStorageError("The evidence file is quarantined until a successful security scan is recorded.")
     _validate_evidence_storage_key(evidence.storage_key)
     client = _s3_client()
     try:
