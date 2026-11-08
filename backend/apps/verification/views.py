@@ -10,6 +10,7 @@ from apps.verification.models import DriverVerification, DriverVerificationCheck
 from apps.verification.serializers import (
     DriverVerificationSerializer,
     ManualCheckReviewSerializer,
+    EvidenceReviewSerializer,
     OperationsDriverVerificationSerializer,
     VerificationDecisionSerializer,
     VerifiedLicenceClassesInputSerializer,
@@ -22,6 +23,7 @@ from apps.verification.services import (
     decide_driver_verification,
     record_verified_licence_classes,
     review_driver_check,
+    review_verification_evidence,
 )
 from apps.verification.storage import (
     EvidenceStorageError,
@@ -109,6 +111,27 @@ class OperationsDriverCheckReviewView(RoleProtectedAPIView):
             "result_code": check.result_code, "review_notes": check.review_notes,
             "checked_at": check.checked_at,
         })
+
+
+
+class OperationsVerificationEvidenceReviewView(RoleProtectedAPIView):
+    required_profile_type = "operations"
+    required_operations_capability = "review_driver_verification"
+    permission_classes = [IsAuthenticated, HasRequiredProfile, HasOperationsCapability]
+
+    def post(self, request, evidence_id):
+        serializer = EvidenceReviewSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            evidence = review_verification_evidence(
+                evidence_id=evidence_id,
+                reviewer=request.user,
+                decision=serializer.validated_data["decision"],
+                review_notes=serializer.validated_data.get("review_notes", ""),
+            )
+        except VerificationReviewError as exc:
+            return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
+        return Response(DriverVerificationEvidenceSerializer(evidence).data)
 
 
 class OperationsVerifiedLicenceClassesView(RoleProtectedAPIView):
