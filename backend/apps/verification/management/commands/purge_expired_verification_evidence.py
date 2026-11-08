@@ -6,7 +6,7 @@ from apps.verification.models import (
     DriverVerificationEvidence,
     DriverVerificationEvidenceEvent,
 )
-from apps.verification.storage import EvidenceStorageError, _s3_client
+from apps.verification.storage import _s3_client
 from django.conf import settings
 
 
