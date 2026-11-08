@@ -7,9 +7,13 @@ import { WorkspaceHeader } from "@/components/workspace/workspace-header";
 import { useDIVSPreferences } from "@/components/preferences/preferences-provider";
 import { apiRequest, ApiError } from "@/lib/api/client";
 
+type Evidence = {
+  id: string; original_filename: string; status: string; scan_status: string;
+  file_size: number | null; submitted_at: string; expires_at: string | null; review_notes: string;
+};
 type Check = {
   id: string; check_type: string; status: string; method: string; result_code: string;
-  review_notes: string; checked_at: string | null;
+  review_notes: string; checked_at: string | null; evidence: Evidence[];
   verified_licence_classes: { id: string; licence_class: string; is_current: boolean; verified_at: string }[];
 };
 type Event = { id: string; event_type: string; previous_status: string; new_status: string; notes: string; created_at: string; };
@@ -64,6 +68,7 @@ export default function DriverVerificationDetailPage() {
   const [licenceInput, setLicenceInput] = useState("");
   const [draftResults, setDraftResults] = useState<Record<string, string>>({});
   const [draftNotes, setDraftNotes] = useState<Record<string, string>>({});
+  const [evidenceNotes, setEvidenceNotes] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     const [detail, permissions] = await Promise.all([
@@ -103,8 +108,33 @@ export default function DriverVerificationDetailPage() {
     catch (caught) { setError(explainError(caught, sw)); }
     finally { setBusy(""); }
   }
+  async function saveEvidenceReview(evidence: Evidence, decision: "accepted" | "rejected") {
+    const notes = evidenceNotes[evidence.id] ?? evidence.review_notes ?? "";
+    if (decision === "rejected" && !notes.trim()) {
+      setError(sw ? "Andika sababu ya kukataa ushahidi." : "Enter a reason before rejecting evidence.");
+      return;
+    }
+    await runAction(`verification/operations/evidence/${evidence.id}/review/`, "evidence-" + evidence.id,
+      decision === "accepted" ? (sw ? "Ushahidi umekubaliwa." : "Evidence accepted.") : (sw ? "Ushahidi umekataliwa." : "Evidence rejected."),
+      { decision, review_notes: notes });
+  }
+
   async function saveCheck(check: Check, resultCode: string, notes: string) {
-    const status = resultCode === passResult[check.check_type] ? "passed" : resultCode === "inconclusive" ? "needs_review" : "failed";
+    const adverseResults: Record<string, string> = {
+      national_identity: "mismatch", driving_licence: "invalid",
+      traffic_records: "record_found", accident_records: "record_found",
+    };
+    const isAdverse = resultCode === adverseResults[check.check_type];
+    const hasAcceptedEvidence = (check.evidence ?? []).some((evidence) => evidence.status === "accepted");
+    if (isAdverse && !notes.trim()) {
+      setError(sw ? "Andika maelezo yanayoeleza tatizo lililobainika." : "Add notes explaining the concern before recording an adverse finding.");
+      return;
+    }
+    if (isAdverse && !hasAcceptedEvidence) {
+      setError(sw ? "Ushahidi unaolingana lazima ukubaliwe kwanza." : "Matching evidence must be accepted before recording an adverse finding.");
+      return;
+    }
+    const status = resultCode === passResult[check.check_type] ? "passed" : "needs_review";
     await runAction(`verification/operations/checks/${check.id}/review/`, "check-" + check.id,
       sw ? "Matokeo ya ukaguzi yamehifadhiwa." : "Review finding saved.",
       { status, result_code: resultCode, review_notes: notes });
@@ -160,9 +190,33 @@ export default function DriverVerificationDetailPage() {
                   const isPassed = check.status === "passed" && check.result_code === passResult[check.check_type];
                   return <article className="verification-check-card" key={check.id}>
                     <div className="verification-check-title"><div><h3>{meta ? (sw ? meta.sw : meta.en) : check.check_type}</h3><p>{sw ? "Mbinu" : "Method"}: {check.method || (sw ? "Haijawekwa" : "Not recorded")}</p></div><span className={"verification-status status-" + check.status}>{check.status.replaceAll("_", " ")}</span></div>
+                    <div className="verification-evidence-list">
+                      <h4>{sw ? "Ushahidi uliowasilishwa" : "Submitted evidence"}</h4>
+                      {(check.evidence ?? []).length ? check.evidence.map((evidence) => {
+                        const evidenceNote = evidenceNotes[evidence.id] ?? evidence.review_notes ?? "";
+                        const reviewable = ["submitted", "under_review"].includes(evidence.status);
+                        return <article className="verification-evidence-card" key={evidence.id}>
+                          <div className="verification-evidence-heading">
+                            <div><strong>{evidence.original_filename || (sw ? "Faili ya ushahidi" : "Evidence file")}</strong><small>{sw ? "Imewasilishwa" : "Submitted"}: {new Date(evidence.submitted_at).toLocaleString(sw ? "sw-TZ" : "en-GB")}</small></div>
+                            <span className={"verification-status status-" + evidence.status}>{evidence.status.replaceAll("_", " ")}</span>
+                          </div>
+                          <div className="verification-evidence-meta"><span>{sw ? "Ukaguzi wa usalama" : "Security scan"}: <strong>{evidence.scan_status.replaceAll("_", " ")}</strong></span><span>{evidence.file_size ? `${Math.ceil(evidence.file_size / 1024)} KB` : "—"}</span>{evidence.expires_at ? <span>{sw ? "Inaisha" : "Expires"}: {new Date(evidence.expires_at).toLocaleDateString(sw ? "sw-TZ" : "en-GB")}</span> : null}</div>
+                          <a className="verification-evidence-open" href={`/api/backend/verification/operations/evidence/${evidence.id}/file/`} target="_blank" rel="noreferrer">{sw ? "Fungua ushahidi kabla ya kuamua" : "Open evidence before reviewing"} ↗</a>
+                          {evidence.review_notes ? <p className="verification-evidence-notes">{evidence.review_notes}</p> : null}
+                          {canReview && !finalDecisionMade && reviewable ? <>
+                            <label className="verification-field"><span>{sw ? "Maelezo ya uamuzi wa ushahidi" : "Evidence review notes"}</span><textarea value={evidenceNote} onChange={(event) => setEvidenceNotes((current) => ({ ...current, [evidence.id]: event.target.value }))} rows={2} placeholder={sw ? "Sababu inahitajika ukikataa ushahidi." : "A reason is required if you reject this evidence."} /></label>
+                            <div className="verification-actions">
+                              <button type="button" disabled={!!busy || ["infected", "error"].includes(evidence.scan_status)} onClick={() => void saveEvidenceReview(evidence, "accepted")}>{busy === "evidence-" + evidence.id ? (sw ? "Inahifadhi…" : "Saving…") : (sw ? "Kubali ushahidi" : "Accept evidence")}</button>
+                              <button type="button" className="is-danger" disabled={!!busy || !evidenceNote.trim()} onClick={() => void saveEvidenceReview(evidence, "rejected")}>{sw ? "Kataa ushahidi" : "Reject evidence"}</button>
+                            </div>
+                          </> : null}
+                        </article>;
+                      }) : <p className="verification-muted">{sw ? "Dereva bado hajawasilisha ushahidi kwa ukaguzi huu." : "The driver has not submitted evidence for this check yet."}</p>}
+                    </div>
                     {canReview && !finalDecisionMade ? <>
                       <label className="verification-field"><span>{sw ? "Matokeo ya chanzo" : "Source finding"}</span><select value={resultValue} onChange={(event) => setDraftResults((current) => ({ ...current, [check.id]: event.target.value }))}><option value="">{sw ? "Chagua matokeo" : "Select a result"}</option>{(meta?.results ?? []).map((option) => <option key={option.value} value={option.value}>{sw ? option.sw : option.en}</option>)}</select></label>
                       <label className="verification-field"><span>{sw ? "Maelezo ya ukaguzi" : "Review notes"}</span><textarea value={notesValue} onChange={(event) => setDraftNotes((current) => ({ ...current, [check.id]: event.target.value }))} rows={3} placeholder={sw ? "Andika maelezo ya ushahidi uliokagua…" : "Record concise notes about the evidence reviewed…"} /></label>
+                      {resultValue === ({ national_identity: "mismatch", driving_licence: "invalid", traffic_records: "record_found", accident_records: "record_found" } as Record<string, string>)[check.check_type] ? <p className="verification-requirements">{sw ? "Matokeo haya yatahitaji ukaguzi zaidi, si kukataliwa moja kwa moja. Ushahidi unaolingana lazima ukubaliwe na maelezo yawepo." : "This is a preliminary finding, not a final rejection. Matching evidence must be accepted and reviewer notes are required."}</p> : null}
                       <div className="verification-actions"><button type="button" disabled={!!busy || !resultValue} onClick={() => void saveCheck(check, resultValue, notesValue)}>{busy === "check-" + check.id ? (sw ? "Inahifadhi…" : "Saving…") : (sw ? "Hifadhi matokeo" : "Save finding")}</button></div>
                     </> : <div className="verification-readonly"><p>{check.result_code || (sw ? "Hakuna matokeo" : "No result recorded")}</p>{check.review_notes ? <small>{check.review_notes}</small> : null}</div>}
                     {check.check_type === "driving_licence" ? <div className="verification-licence-box"><strong>{sw ? "Madarasa ya leseni yaliyothibitishwa" : "Verified licence classes"}</strong><div className="verification-tags">{check.verified_licence_classes.filter((entry) => entry.is_current).map((entry) => <span key={entry.id}>{entry.licence_class}</span>)}</div>{canReview && !finalDecisionMade && isPassed ? <div className="verification-licence-entry"><input value={licenceInput} onChange={(event) => setLicenceInput(event.target.value)} placeholder={sw ? "Mfano: A, B, C1" : "Example: A, B, C1"} aria-label={sw ? "Madarasa ya leseni" : "Licence classes"} /><button type="button" disabled={!!busy} onClick={() => void saveLicenceClasses(check)}>{sw ? "Hifadhi madarasa" : "Save classes"}</button></div> : null}</div> : null}
