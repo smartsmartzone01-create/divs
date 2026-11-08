@@ -329,7 +329,8 @@ class VerificationReviewServiceTests(APITestCase):
                 method=DriverVerificationCheck.Method.GOVERNMENT_API,
             )
 
-    def test_operator_can_accept_matching_submitted_evidence(self):
+    @patch("apps.verification.views.retrieve_verification_evidence")
+    def test_operator_can_accept_matching_submitted_evidence(self, retrieve):
         check = self.checks[0]
         evidence = DriverVerificationEvidence.objects.create(
             verification_check=check,
@@ -339,7 +340,13 @@ class VerificationReviewServiceTests(APITestCase):
             storage_key="verification-evidence/reviewable-object",
             uploaded_by=check.verification.profile.registration.account,
         )
+        retrieve.return_value = (io.BytesIO(b"reviewable evidence"), "image/jpeg", "evidence.jpg")
         self.client.force_authenticate(user=self.reviewer)
+        file_response = self.client.get(
+            reverse("verification:operations-evidence-file", kwargs={"evidence_id": evidence.id})
+        )
+        self.assertEqual(file_response.status_code, status.HTTP_200_OK)
+        file_response.close()
         response = self.client.post(
             reverse("verification:operations-evidence-review", kwargs={"evidence_id": evidence.id}),
             {"decision": "accepted", "review_notes": "Evidence reviewed."},
