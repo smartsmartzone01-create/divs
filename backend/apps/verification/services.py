@@ -40,6 +40,122 @@ def _notify_driver(verification, event, title, message):
 
 
 @transaction.atomic
+def reopen_driver_verification_check(*, check_id, actor, reason):
+    """Reopen one check after a final decision and invalidate its prior support."""
+    from apps.operations.permissions import capabilities_for
+
+    if "reopen_driver_verification" not in capabilities_for(actor):
+        raise VerificationReviewError("Only an operations Admin can reopen a verification check.")
+    reason = str(reason or "").strip()
+    if not reason:
+        raise VerificationReviewError("A reason is required when reopening a verification check.")
+
+    check = (
+        DriverVerificationCheck.objects.select_for_update()
+        .select_related("verification", "verification__profile")
+        .filter(pk=check_id)
+        .first()
+    )
+    if check is None:
+        raise VerificationReviewError("Verification check not found.")
+
+    verification = DriverVerification.objects.select_for_update().get(pk=check.verification_id)
+    if verification.status not in {
+        DriverVerification.Status.APPROVED,
+        DriverVerification.Status.REJECTED,
+    }:
+        raise VerificationReviewError("Only a finalised verification can be reopened.")
+
+    previous_verification_status = verification.status
+    previous_check_status = check.status
+    now = timezone.now()
+
+    # Previously accepted evidence must be re-submitted and reviewed; old
+    # government attempts remain immutable but no longer support this reset check.
+    accepted_evidence = list(
+        check.evidence.select_for_update().filter(
+            status=DriverVerificationEvidence.Status.ACCEPTED
+        )
+    )
+    for evidence in accepted_evidence:
+        evidence.status = DriverVerificationEvidence.Status.SUPERSEDED
+        evidence.save(update_fields=["status", "updated_at"])
+        DriverVerificationEvidenceEvent.objects.create(
+            evidence=evidence,
+            actor=actor,
+            event_type="superseded",
+            previous_status=DriverVerificationEvidence.Status.ACCEPTED,
+            new_status=DriverVerificationEvidence.Status.SUPERSEDED,
+            notes="Evidence superseded because its verification check was reopened.",
+        )
+
+    if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE:
+        VerifiedDriverLicenceClass.objects.filter(
+            licence_check=check, is_current=True
+        ).update(is_current=False, updated_at=now)
+
+    check.status = DriverVerificationCheck.Status.PENDING
+    check.method = ""
+    check.result_code = ""
+    check.review_notes = ""
+    check.checked_at = None
+    check.reviewed_by = None
+    check.save(update_fields=[
+        "status", "method", "result_code", "review_notes",
+        "checked_at", "reviewed_by", "updated_at",
+    ])
+
+    profile = verification.profile
+    availability_was_active = profile.status == DriverProfile.Status.ACTIVE
+    if availability_was_active:
+        profile.status = DriverProfile.Status.PENDING_ACTIVATION
+        profile.availability_activated_at = None
+        profile.availability_activated_by = None
+        profile.save(update_fields=[
+            "status", "availability_activated_at",
+            "availability_activated_by", "updated_at",
+        ])
+
+    verification.status = DriverVerification.Status.IN_REVIEW
+    verification.decided_by = None
+    verification.decided_at = None
+    verification.decision_reason = ""
+    verification.save(update_fields=[
+        "status", "decided_by", "decided_at", "decision_reason", "updated_at",
+    ])
+
+    audit_notes = reason
+    if availability_was_active:
+        audit_notes += " Public availability was deactivated and requires fresh Admin activation."
+    DriverVerificationEvent.objects.create(
+        verification=verification,
+        verification_check=check,
+        actor=actor,
+        event_type=DriverVerificationEvent.EventType.CHECK_REOPENED,
+        previous_status=previous_check_status,
+        new_status=DriverVerificationCheck.Status.PENDING,
+        notes=audit_notes,
+    )
+    if availability_was_active:
+        DriverVerificationEvent.objects.create(
+            verification=verification,
+            actor=actor,
+            event_type=DriverVerificationEvent.EventType.AVAILABILITY_DEACTIVATED,
+            previous_status=DriverProfile.Status.ACTIVE,
+            new_status=DriverProfile.Status.PENDING_ACTIVATION,
+            notes="Availability deactivated because verification was reopened.",
+        )
+
+    _notify_driver(
+        verification,
+        "driver.verification.reopened",
+        "Verification reopened",
+        "An Admin has reopened part of your verification. Please review the updated requirements and submit current evidence.",
+    )
+    return verification
+
+
+@transaction.atomic
 def review_driver_check(*, check_id, reviewer, status, method=DriverVerificationCheck.Method.MANUAL, result_code="", review_notes=""):
     allowed_statuses = {
         DriverVerificationCheck.Status.PASSED,
