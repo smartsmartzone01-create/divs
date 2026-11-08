@@ -30,7 +30,7 @@ A commit is not proof that a feature deploys, passes tests, or is production-rea
 | **1A — Evidence data foundation** | Evidence metadata model, evidence event history, migration, serializers and initial tests | Implemented; tests not confirmed as run |
 | **1B — Private evidence storage** | Cloudflare R2 integration, private upload/retrieval endpoints, file validation, upload throttling and storage configuration | In progress; code committed, audit/deployment/live R2 test outstanding |
 | **1C — Evidence security hardening** | Authorization tests, quarantine/malware-scanning strategy, access audit, retention/deletion policy, orphan cleanup and safe file delivery | In progress; access audit, R2 orphan reconciliation, explicit-expiry deletion/legal hold and missing-object handling are coded. Malware scanning is deferred for development; a DEBUG-gated pending-file retrieval option is implemented for the development service only. CI test workflow currently fails before exposing any test steps; full test execution remains unverified. |
-| **1D — Verification workflow integration** | Connect evidence to identity, driving-licence, traffic/police and accident checks; evidence review states, trusted API result records and reviewer actions | In progress; manual evidence review, accepted-evidence gating and a separate server-side government-result audit path are coded. Provider integration and acceptance verification remain outstanding |
+| **1D — Verification workflow integration** | Connect evidence to identity, driving-licence, traffic/police and accident checks; evidence review states, trusted API result records and reviewer actions | In progress; manual evidence review, expiry-aware accepted-evidence gating, trusted server-side government-result audit records, licence-class audit events and Admin-only approval/activation gates are coded. Provider integration and acceptance verification remain outstanding |
 | **1E — Verification API and permission acceptance tests** | Driver ownership, operator capabilities, Admin-only decisions, approval/rejection, reopening and activation rules | Planned / needs verification |
 
 ### Phase 1 acceptance criteria
@@ -53,7 +53,7 @@ A commit is not proof that a feature deploys, passes tests, or is production-rea
 3. Complete recovery validation for missing objects, orphan reconciliation and restore procedures.
 4. Resolve GitHub Actions runner/workflow startup failure and execute the full backend suite.
 5. Confirm the latest Render deployment is live and verify all expected migrations.
-6. Complete Stage 1D by validating evidence-to-check binding, accepted-evidence gating, trusted API result recording and the manual fallback path.
+6. Complete Stage 1D by validating evidence-to-check binding, accepted-evidence expiry and scan-state gating, trusted API result recording, licence-class audit history and the manual fallback path.
 
 ### Stage 1B — immediate work sequence
 
