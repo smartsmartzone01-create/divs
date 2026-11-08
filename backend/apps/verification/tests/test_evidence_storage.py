@@ -139,8 +139,6 @@ class EvidenceR2StorageTests(TestCase):
                     "content_type": "image/jpeg",
                     "original_filename": "identity.jpg",
                     "scan_status": DriverVerificationEvidence.ScanStatus.CLEAN,
-                "storage_deleted_at": None,
-                "status": DriverVerificationEvidence.Status.SUBMITTED,
                     "storage_deleted_at": None,
                     "status": DriverVerificationEvidence.Status.SUBMITTED,
                 },
@@ -167,6 +165,8 @@ class EvidenceR2StorageTests(TestCase):
                     "content_type": "image/jpeg",
                     "original_filename": "identity.jpg",
                     "scan_status": scan_status,
+                    "storage_deleted_at": None,
+                    "status": DriverVerificationEvidence.Status.SUBMITTED,
                 },
             )()
             with self.subTest(scan_status=scan_status):
@@ -187,6 +187,8 @@ class EvidenceR2StorageTests(TestCase):
                 "content_type": "image/jpeg",
                 "original_filename": "identity.jpg",
                 "scan_status": DriverVerificationEvidence.ScanStatus.CLEAN,
+                "storage_deleted_at": None,
+                "status": DriverVerificationEvidence.Status.SUBMITTED,
             },
         )()
 
