@@ -17,6 +17,7 @@ from apps.verification.models import (
     DriverVerificationCheck,
     DriverVerificationEvidence,
     DriverVerificationEvidenceEvent,
+    DriverVerificationEvent,
     GovernmentVerificationAttempt,
     VerifiedDriverLicenceClass,
 )
@@ -547,6 +548,17 @@ class VerificationReviewServiceTests(APITestCase):
         self.verification.profile.refresh_from_db()
         self.assertTrue(self.verification.is_discoverable)
 
+    def test_expired_evidence_invalidates_verification_completion(self):
+        self._pass_all_checks()
+        identity_check = next(
+            check for check in self.checks
+            if check.check_type == DriverVerificationCheck.CheckType.NATIONAL_IDENTITY
+        )
+        evidence = identity_check.evidence.get(status=DriverVerificationEvidence.Status.ACCEPTED)
+        evidence.expires_at = timezone.now() - timedelta(seconds=1)
+        evidence.save(update_fields=["expires_at", "updated_at"])
+        self.assertFalse(self.verification.checks_are_complete)
+
     def test_discovery_rechecks_result_codes_even_if_status_says_passed(self):
         self._pass_all_checks()
         licence_check = next(
@@ -596,6 +608,14 @@ class VerificationReviewServiceTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             [item["licence_class"] for item in response.data], ["C", "CE"]
+        )
+        self.assertTrue(
+            DriverVerificationEvent.objects.filter(
+                verification=self.verification,
+                verification_check=licence_check,
+                actor=self.reviewer,
+                event_type=DriverVerificationEvent.EventType.LICENCE_CLASSES_RECORDED,
+            ).exists()
         )
 
     def test_invalid_licence_cannot_be_marked_passed(self):
