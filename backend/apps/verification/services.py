@@ -95,22 +95,10 @@ def review_driver_check(*, check_id, reviewer, status, method=DriverVerification
     }:
         raise VerificationReviewError("An inconclusive result requires further review.")
 
-    if status == DriverVerificationCheck.Status.PASSED:
-        allowed_scan_statuses = [DriverVerificationEvidence.ScanStatus.CLEAN]
-        if settings.DEBUG and settings.DIVS_ALLOW_UNSCANNED_EVIDENCE_ACCESS:
-            allowed_scan_statuses.append(DriverVerificationEvidence.ScanStatus.PENDING)
-        accepted_evidence = DriverVerificationEvidence.objects.filter(
-            verification_check=check,
-            evidence_type=check.check_type,
-            status=DriverVerificationEvidence.Status.ACCEPTED,
-            scan_status__in=allowed_scan_statuses,
-            storage_deleted_at__isnull=True,
-            storage_key__gt="",
-        ).exists()
-        if not accepted_evidence:
-            raise VerificationReviewError(
-                "A manual check can pass only after matching evidence has been accepted."
-            )
+    if status == DriverVerificationCheck.Status.PASSED and not check.has_trusted_supporting_record():
+        raise VerificationReviewError(
+            "A manual check can pass only while matching accepted evidence is valid and available."
+        )
 
     verification = DriverVerification.objects.select_for_update().get(pk=check.verification_id)
     if verification.status in {DriverVerification.Status.APPROVED, DriverVerification.Status.REJECTED}:
