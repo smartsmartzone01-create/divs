@@ -100,6 +100,17 @@ class ManualCheckReviewSerializer(serializers.Serializer):
     review_notes = serializers.CharField(required=False, allow_blank=True, max_length=5000)
 
 
+
+class EvidenceReviewSerializer(serializers.Serializer):
+    decision = serializers.ChoiceField(
+        choices=[
+            DriverVerificationEvidence.Status.ACCEPTED,
+            DriverVerificationEvidence.Status.REJECTED,
+        ]
+    )
+    review_notes = serializers.CharField(required=False, allow_blank=True, max_length=5000)
+
+
 class VerificationDecisionSerializer(serializers.Serializer):
     reason = serializers.CharField(required=False, allow_blank=True, max_length=5000)
 
