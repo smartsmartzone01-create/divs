@@ -63,7 +63,7 @@ def _read_and_validate(uploaded_file):
         except Exception as exc:
             raise EvidenceStorageError("The PDF file is invalid or damaged.") from exc
         detected_type = "application/pdf"
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, Image.DecompressionBombError) as exc:
         raise EvidenceStorageError("The image file is invalid or damaged.") from exc
 
     return content, detected_type, hashlib.sha256(content).hexdigest()
@@ -95,13 +95,16 @@ def store_verification_evidence(*, check, uploaded_file, actor, source):
     except Exception as exc:
         raise EvidenceStorageError("The private evidence file could not be stored.") from exc
 
+    safe_filename = (uploaded_file.name or "evidence").replace("\\", "/").rsplit("/", 1)[-1]
+    safe_filename = "".join(char for char in safe_filename if char.isprintable() and char not in "\r\n")[:255]
+
     try:
         evidence = DriverVerificationEvidence.objects.create(
             verification_check=check,
             evidence_type=check.check_type,
             source=source,
             status=DriverVerificationEvidence.Status.SUBMITTED,
-            original_filename=(uploaded_file.name or "evidence")[:255],
+            original_filename=safe_filename or "evidence",
             content_type=content_type,
             file_size=len(content),
             sha256=digest,
