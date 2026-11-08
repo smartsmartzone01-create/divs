@@ -304,6 +304,8 @@ def review_verification_evidence(*, evidence_id, reviewer, decision, review_note
         raise VerificationReviewError("Only newly submitted evidence can be reviewed.")
     if evidence.storage_deleted_at is not None:
         raise VerificationReviewError("Deleted evidence cannot be reviewed.")
+    if evidence.expires_at is not None and evidence.expires_at <= timezone.now():
+        raise VerificationReviewError("Expired evidence cannot be accepted or rejected.")
     if evidence.evidence_type != evidence.verification_check.check_type:
         raise VerificationReviewError("Evidence type does not match its verification check.")
     if not evidence.events.filter(actor=reviewer, event_type="file_accessed").exists():
