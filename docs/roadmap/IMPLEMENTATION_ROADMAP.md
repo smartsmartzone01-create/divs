@@ -29,7 +29,7 @@ A commit is not proof that a feature deploys, passes tests, or is production-rea
 |---|---|---|
 | **1A — Evidence data foundation** | Evidence metadata model, evidence event history, migration, serializers and initial tests | Implemented; tests not confirmed as run |
 | **1B — Private evidence storage** | Cloudflare R2 integration, private upload/retrieval endpoints, file validation, upload throttling and storage configuration | In progress; code committed, audit/deployment/live R2 test outstanding |
-| **1C — Evidence security hardening** | Authorization tests, quarantine/malware-scanning strategy, access audit, retention/deletion policy, orphan cleanup and safe file delivery | In progress; access auditing, quarantine gate, provider-neutral scanner adapter boundary, scan-result audit, orphan cleanup, explicit-expiry deletion and legal hold are coded; no scanner provider is configured, recovery validation and test execution remain outstanding |
+| **1C — Evidence security hardening** | Authorization tests, quarantine/malware-scanning strategy, access audit, retention/deletion policy, orphan cleanup and safe file delivery | In progress; access audit, R2 orphan reconciliation, explicit-expiry deletion/legal hold and missing-object handling are coded. Malware scanning is deferred for development; a DEBUG-gated pending-file retrieval option is implemented for the development service only. CI test workflow currently fails before exposing any test steps; full test execution remains unverified. |
 | **1D — Verification workflow integration** | Connect evidence to identity, driving-licence, traffic/police and accident checks; evidence review states and reviewer actions | Planned / needs verification |
 | **1E — Verification API and permission acceptance tests** | Driver ownership, operator capabilities, Admin-only decisions, approval/rejection, reopening and activation rules | Planned / needs verification |
 
@@ -41,18 +41,18 @@ A commit is not proof that a feature deploys, passes tests, or is production-rea
 - Evidence objects remain private; there are no public object URLs.
 - File type is determined from content, not trusted from the submitted filename or MIME header.
 - Access and review actions are auditable.
-- Evidence remains quarantined until a trusted scanner records a clean result; the scanner provider is not connected yet.
+- Production must remain fail-closed until a trusted scanner records a clean result. Development may explicitly allow pending evidence retrieval only when both `DEBUG=True` and `DIVS_ALLOW_UNSCANNED_EVIDENCE_ACCESS=true`; infected/error states remain blocked.
 - Retention deletion requires an explicit expiry timestamp, an expired evidence status and no legal hold; evidence metadata and audit history remain.
 - No statutory retention duration has been assumed. Recovery behavior and operational restore tests remain outstanding.
 - A driver becomes publicly discoverable only after verification approval and separate Admin activation.
 
 ### Stage 1C — current work sequence
 
-1. Complete the provider-neutral scan-result boundary and ensure unscanned, infected and failed-scan files cannot be retrieved.
-2. Connect a trusted malware-scanning provider or worker; until then, keep all uploads quarantined.
-3. Validate retention cleanup with explicit expiry and legal-hold safeguards; do not invent a retention duration.
-4. Define and verify recovery behavior for deleted, missing and orphaned R2 objects.
-5. Execute the backend tests in an environment where they can actually run and resolve failures before acceptance.
+1. Malware scanning is deferred for development. Keep the scanner adapter provider-neutral and production retrieval fail-closed.
+2. Validate retention cleanup with explicit expiry and legal-hold safeguards; do not invent a retention duration.
+3. Complete recovery validation for missing objects, orphan reconciliation and restore procedures.
+4. Resolve GitHub Actions runner/workflow startup failure and execute the full backend suite.
+5. Confirm the latest Render deployment is live and verify all expected migrations.
 6. Complete Stage 1D by binding evidence acceptance to the four verification check types and manual/API review paths.
 
 ### Stage 1B — immediate work sequence
@@ -304,10 +304,10 @@ Use the stage identifiers in conversations and GitHub issues:
 
 - `Continue 1B` — audit and finish the private R2 evidence-storage foundation.
 - `Review 1B` — inspect current code and deployment before changing anything.
-- `Continue 1C` — complete scanner integration, recovery validation and security acceptance tests.
+- `Continue 1C` — complete recovery validation and security acceptance tests; malware scanning remains deferred for development.
 - `Start 1D` — connect evidence acceptance to the four verification checks and review workflow.
 - `Continue 2A` — review or continue driver onboarding.
 - `Review Phase 4` — inspect Operations/Admin workflow and permission boundaries.
 - `Revise Phase 6` — revisit public discovery requirements.
 
-**Recommended next step:** Finish Stage 1C security and recovery validation, then complete Stage 1D and 1E backend workflow/permission acceptance before frontend integration.
+**Recommended next step:** Resolve the GitHub Actions runner startup failure, run the backend suite, verify the latest Render deployment and complete Stage 1C recovery acceptance before moving to Stage 1D.
