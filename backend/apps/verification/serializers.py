@@ -111,3 +111,8 @@ class VerifiedLicenceClassesInputSerializer(serializers.Serializer):
         min_length=1,
         max_length=20,
     )
+
+
+
+class VerificationEvidenceUploadSerializer(serializers.Serializer):
+    file = serializers.FileField()
