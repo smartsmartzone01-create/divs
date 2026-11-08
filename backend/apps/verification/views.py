@@ -34,7 +34,8 @@ from common.views import RoleProtectedAPIView
 
 
 class MyDriverVerificationView(RoleProtectedAPIView):
-    required_profile_type = "driver"
+    # Verification must remain accessible while the driver profile is pending activation.
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         profile = get_object_or_404(
@@ -210,7 +211,8 @@ def _evidence_file_response(evidence):
 
 
 class DriverVerificationEvidenceUploadView(RoleProtectedAPIView):
-    required_profile_type = "driver"
+    # Ownership is enforced by the check queryset; pending drivers must be able to upload.
+    permission_classes = [IsAuthenticated]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "verification_evidence_upload"
 
@@ -261,7 +263,8 @@ class OperationsVerificationEvidenceUploadView(RoleProtectedAPIView):
 
 
 class DriverVerificationEvidenceFileView(RoleProtectedAPIView):
-    required_profile_type = "driver"
+    # Ownership is enforced by the evidence queryset; pending drivers may review their submission.
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, evidence_id):
         evidence = get_object_or_404(
