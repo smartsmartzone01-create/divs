@@ -760,6 +760,30 @@ class VerificationReviewServiceTests(APITestCase):
             )
         )
 
+    def test_expired_licence_evidence_invalidates_current_licence_classes(self):
+        self._pass_all_checks()
+        licence_check = next(
+            check for check in self.checks
+            if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
+        )
+        records = record_verified_licence_classes(
+            check_id=licence_check.id,
+            reviewer=self.reviewer,
+            licence_classes=["C", "CE"],
+        )
+        evidence = licence_check.evidence.get(status=DriverVerificationEvidence.Status.ACCEPTED)
+        evidence.expires_at = timezone.now() - timedelta(seconds=1)
+        evidence.save(update_fields=["expires_at", "updated_at"])
+
+        process_expired_verification_evidence(now=timezone.now())
+
+        licence_check.refresh_from_db()
+        for record in records:
+            record.refresh_from_db()
+            self.assertFalse(record.is_current)
+            self.assertFalse(record.qualifies_for_discovery)
+        self.assertEqual(licence_check.status, DriverVerificationCheck.Status.NEEDS_REVIEW)
+
     def test_expiry_processing_dry_run_makes_no_changes(self):
         self._pass_all_checks()
         identity_check = next(
