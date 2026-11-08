@@ -191,6 +191,7 @@ class DriverVerificationEvent(models.Model):
     class EventType(models.TextChoices):
         CHECK_REVIEWED = "check_reviewed", "Check reviewed"
         GOVERNMENT_API_RESULT = "government_api_result", "Government API result recorded"
+        LICENCE_CLASSES_RECORDED = "licence_classes_recorded", "Verified licence classes recorded"
         APPROVED = "approved", "Verification approved"
         REJECTED = "rejected", "Verification rejected"
         AVAILABILITY_ACTIVATED = "availability_activated", "Availability activated"
