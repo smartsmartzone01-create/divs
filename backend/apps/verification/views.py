@@ -8,10 +8,14 @@ from apps.verification.models import DriverVerification, DriverVerificationCheck
 from apps.verification.serializers import (
     DriverVerificationSerializer,
     ManualCheckReviewSerializer,
+    OperationsDriverVerificationSerializer,
+    VerificationDecisionSerializer,
     VerifiedLicenceClassesInputSerializer,
 )
 from apps.verification.services import (
     VerificationReviewError,
+    activate_driver_availability,
+    decide_driver_verification,
     record_verified_licence_classes,
     review_driver_check,
 )
@@ -21,8 +25,6 @@ from common.views import RoleProtectedAPIView
 
 
 class MyDriverVerificationView(RoleProtectedAPIView):
-    """Return the signed-in driver's own verification progress."""
-
     required_profile_type = "driver"
 
     def get(self, request):
@@ -38,9 +40,42 @@ class MyDriverVerificationView(RoleProtectedAPIView):
         return Response(DriverVerificationSerializer(verification).data)
 
 
-class OperationsDriverCheckReviewView(RoleProtectedAPIView):
-    """Allow authorized operations members to record a minimal manual check outcome."""
+class OperationsVerificationQueueView(RoleProtectedAPIView):
+    required_profile_type = "operations"
+    required_operations_capability = "view_operations_workspace"
+    permission_classes = [IsAuthenticated, HasRequiredProfile, HasOperationsCapability]
 
+    def get(self, request):
+        items = (
+            DriverVerification.objects.filter(
+                status__in=[DriverVerification.Status.PENDING, DriverVerification.Status.IN_REVIEW]
+            )
+            .select_related("profile", "profile__registration", "profile__registration__account")
+            .prefetch_related("checks__verified_licence_classes")
+            .order_by("created_at")
+        )
+        return Response({
+            "count": items.count(),
+            "results": OperationsDriverVerificationSerializer(items, many=True).data,
+        })
+
+
+class OperationsVerificationDetailView(RoleProtectedAPIView):
+    required_profile_type = "operations"
+    required_operations_capability = "view_operations_workspace"
+    permission_classes = [IsAuthenticated, HasRequiredProfile, HasOperationsCapability]
+
+    def get(self, request, verification_id):
+        verification = get_object_or_404(
+            DriverVerification.objects.select_related(
+                "profile", "profile__registration", "profile__registration__account"
+            ).prefetch_related("checks__verified_licence_classes"),
+            pk=verification_id,
+        )
+        return Response(OperationsDriverVerificationSerializer(verification).data)
+
+
+class OperationsDriverCheckReviewView(RoleProtectedAPIView):
     required_profile_type = "operations"
     required_operations_capability = "review_driver_verification"
     permission_classes = [IsAuthenticated, HasRequiredProfile, HasOperationsCapability]
@@ -54,25 +89,19 @@ class OperationsDriverCheckReviewView(RoleProtectedAPIView):
                 reviewer=request.user,
                 status=serializer.validated_data["status"],
                 result_code=serializer.validated_data.get("result_code", ""),
+                review_notes=serializer.validated_data.get("review_notes", ""),
             )
         except VerificationReviewError as exc:
             return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
-        return Response(
-            {
-                "id": str(check.id),
-                "check_type": check.check_type,
-                "status": check.status,
-                "method": check.method,
-                "result_code": check.result_code,
-                "checked_at": check.checked_at,
-            },
-            status=http_status.OK,
-        )
+        return Response({
+            "id": str(check.id), "check_type": check.check_type,
+            "status": check.status, "method": check.method,
+            "result_code": check.result_code, "review_notes": check.review_notes,
+            "checked_at": check.checked_at,
+        })
 
 
 class OperationsVerifiedLicenceClassesView(RoleProtectedAPIView):
-    """Record licence classes only after the existing licence check passed validation."""
-
     required_profile_type = "operations"
     required_operations_capability = "review_driver_verification"
     permission_classes = [IsAuthenticated, HasRequiredProfile, HasOperationsCapability]
@@ -88,15 +117,59 @@ class OperationsVerifiedLicenceClassesView(RoleProtectedAPIView):
             )
         except VerificationReviewError as exc:
             return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
-        return Response(
-            [
-                {
-                    "id": str(record.id),
-                    "licence_class": record.licence_class,
-                    "is_current": record.is_current,
-                    "verified_at": record.verified_at,
-                }
-                for record in records
-            ],
-            status=http_status.OK,
-        )
+        return Response([
+            {
+                "id": str(record.id), "licence_class": record.licence_class,
+                "is_current": record.is_current, "verified_at": record.verified_at,
+            }
+            for record in records
+        ])
+
+
+class _OperationsFinalDecisionView(RoleProtectedAPIView):
+    required_profile_type = "operations"
+    permission_classes = [IsAuthenticated, HasRequiredProfile, HasOperationsCapability]
+    decision = None
+
+    def post(self, request, verification_id):
+        serializer = VerificationDecisionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            verification = decide_driver_verification(
+                verification_id=verification_id,
+                actor=request.user,
+                decision=self.decision,
+                reason=serializer.validated_data.get("reason", ""),
+            )
+        except VerificationReviewError as exc:
+            return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
+        return Response(OperationsDriverVerificationSerializer(verification).data)
+
+
+class OperationsDriverVerificationApproveView(_OperationsFinalDecisionView):
+    required_operations_capability = "approve_driver_verification"
+    decision = DriverVerification.Status.APPROVED
+
+
+class OperationsDriverVerificationRejectView(_OperationsFinalDecisionView):
+    required_operations_capability = "reject_driver_verification"
+    decision = DriverVerification.Status.REJECTED
+
+
+class OperationsDriverAvailabilityActivateView(RoleProtectedAPIView):
+    required_profile_type = "operations"
+    required_operations_capability = "activate_driver_availability"
+    permission_classes = [IsAuthenticated, HasRequiredProfile, HasOperationsCapability]
+
+    def post(self, request, verification_id):
+        try:
+            profile = activate_driver_availability(
+                verification_id=verification_id,
+                actor=request.user,
+            )
+        except VerificationReviewError as exc:
+            return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
+        return Response({
+            "driver_profile_id": str(profile.id),
+            "status": profile.status,
+        }, status=http_status.OK)
