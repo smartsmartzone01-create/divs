@@ -1,5 +1,6 @@
 from datetime import timedelta
-from io import BytesIO
+from io import StringIO
+from uuid import uuid4
 from unittest.mock import patch
 
 from django.core.management import call_command
@@ -60,7 +61,7 @@ class EvidenceRetentionCommandTests(TestCase):
 
     @patch("apps.verification.management.commands.purge_expired_verification_evidence._s3_client")
     def test_dry_run_does_not_delete_objects_or_change_metadata(self, get_client):
-        output = BytesIO()
+        output = StringIO()
         call_command("purge_expired_verification_evidence", stdout=output)
 
         get_client.assert_not_called()
@@ -96,5 +97,3 @@ class EvidenceRetentionCommandTests(TestCase):
         with self.assertRaises(CommandError):
             call_command("purge_expired_verification_evidence", "--execute")
 
-
-from uuid import uuid4
