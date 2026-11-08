@@ -303,6 +303,8 @@ def review_verification_evidence(*, evidence_id, reviewer, decision, review_note
         raise VerificationReviewError("Deleted evidence cannot be reviewed.")
     if evidence.evidence_type != evidence.verification_check.check_type:
         raise VerificationReviewError("Evidence type does not match its verification check.")
+    if not evidence.events.filter(actor=reviewer, event_type="file_accessed").exists():
+        raise VerificationReviewError("Open the evidence file before recording a review decision.")
     if evidence.scan_status in {
         DriverVerificationEvidence.ScanStatus.INFECTED,
         DriverVerificationEvidence.ScanStatus.ERROR,
