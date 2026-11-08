@@ -62,6 +62,33 @@ class DriverVerificationAPITests(APITestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    @patch("apps.verification.views.retrieve_verification_evidence")
+    @patch("apps.verification.models.DriverVerificationEvidenceEvent.objects.create", side_effect=RuntimeError("audit unavailable"))
+    def test_file_is_not_served_when_access_audit_cannot_be_written(self, _audit_create, retrieve):
+        check = self.verification.checks.first()
+        evidence = DriverVerificationEvidence.objects.create(
+            verification_check=check,
+            evidence_type=check.check_type,
+            source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
+            original_filename="identity.jpg",
+            content_type="image/jpeg",
+            file_size=4,
+            sha256="a" * 64,
+            storage_key="verification-evidence/test-object",
+            uploaded_by=self.driver,
+        )
+        body = io.BytesIO(b"private bytes")
+        retrieve.return_value = (body, "image/jpeg", "identity.jpg")
+        self.client.force_authenticate(user=self.driver)
+
+        response = self.client.get(
+            reverse("verification:driver-evidence-file", kwargs={"evidence_id": evidence.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertTrue(body.closed)
+
+
     def test_non_operations_user_cannot_access_operations_evidence_file(self):
         check = self.verification.checks.first()
         evidence = DriverVerificationEvidence.objects.create(
