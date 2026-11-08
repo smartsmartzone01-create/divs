@@ -227,6 +227,21 @@ def record_government_api_result(
         result_code = ""
         check_status = DriverVerificationCheck.Status.UNAVAILABLE
 
+    existing_attempt = GovernmentVerificationAttempt.objects.filter(
+        provider=provider,
+        provider_reference=provider_reference,
+    ).first()
+    if existing_attempt is not None:
+        if (
+            existing_attempt.verification_check_id == check.id
+            and existing_attempt.outcome == outcome
+            and existing_attempt.result_code == result_code
+            and check.method == DriverVerificationCheck.Method.GOVERNMENT_API
+            and check.result_code == result_code
+        ):
+            return check
+        raise VerificationReviewError("This government provider reference has already been used.")
+
     now = timezone.now()
     GovernmentVerificationAttempt.objects.create(
         verification_check=check,
