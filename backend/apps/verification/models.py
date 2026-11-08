@@ -189,6 +189,7 @@ class DriverVerificationEvent(models.Model):
 
     class EventType(models.TextChoices):
         CHECK_REVIEWED = "check_reviewed", "Check reviewed"
+        GOVERNMENT_API_RESULT = "government_api_result", "Government API result recorded"
         APPROVED = "approved", "Verification approved"
         REJECTED = "rejected", "Verification rejected"
         AVAILABILITY_ACTIVATED = "availability_activated", "Availability activated"
@@ -205,6 +206,40 @@ class DriverVerificationEvent(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+
+
+class GovernmentVerificationAttempt(models.Model):
+    """Minimal audit metadata for a trusted government verification request.
+
+    Government source payloads and identity/licence/police records are never stored.
+    """
+    class Outcome(models.TextChoices):
+        MATCHED = "matched", "Matched / valid / clear"
+        NOT_MATCHED = "not_matched", "Mismatch / invalid / record found"
+        INCONCLUSIVE = "inconclusive", "Inconclusive"
+        UNAVAILABLE = "unavailable", "Source unavailable"
+        ERROR = "error", "Integration error"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    verification_check = models.ForeignKey(
+        DriverVerificationCheck,
+        on_delete=models.PROTECT,
+        related_name="government_attempts",
+    )
+    provider = models.CharField(max_length=80)
+    provider_reference = models.CharField(max_length=255)
+    outcome = models.CharField(max_length=16, choices=Outcome.choices)
+    result_code = models.CharField(max_length=24, blank=True)
+    response_fingerprint = models.CharField(max_length=64, blank=True)
+    completed_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-completed_at"]
+        indexes = [
+            models.Index(fields=["verification_check", "completed_at"], name="gov_attempt_check_time_idx"),
+        ]
 
 
 class DriverVerificationEvidence(models.Model):
