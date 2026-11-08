@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status as http_status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 
 from apps.profiles.models import DriverProfile
 from apps.verification.models import DriverVerification, DriverVerificationCheck, DriverVerificationEvidence
@@ -210,6 +211,8 @@ def _evidence_file_response(evidence):
 
 class DriverVerificationEvidenceUploadView(RoleProtectedAPIView):
     required_profile_type = "driver"
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "verification_evidence_upload"
 
     def post(self, request, check_id):
         check = get_object_or_404(
@@ -233,6 +236,8 @@ class DriverVerificationEvidenceUploadView(RoleProtectedAPIView):
 
 class OperationsVerificationEvidenceUploadView(RoleProtectedAPIView):
     required_profile_type = "operations"
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "verification_evidence_upload"
     required_operations_capability = "review_driver_verification"
     permission_classes = [IsAuthenticated, HasRequiredProfile, HasOperationsCapability]
 
