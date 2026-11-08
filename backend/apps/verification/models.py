@@ -244,7 +244,6 @@ class GovernmentVerificationAttempt(models.Model):
     provider_reference = models.CharField(max_length=255)
     outcome = models.CharField(max_length=16, choices=Outcome.choices)
     result_code = models.CharField(max_length=24, blank=True)
-    response_fingerprint = models.CharField(max_length=64, blank=True)
     completed_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
 
