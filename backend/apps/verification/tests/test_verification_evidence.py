@@ -51,7 +51,8 @@ class DriverVerificationEvidenceTests(TestCase):
         )
 
         data = DriverVerificationSerializer(verification).data
-        evidence_data = data["checks"][0]["evidence"][0]
+        identity_check = next(item for item in data["checks"] if item["check_type"] == "national_identity")
+        evidence_data = identity_check["evidence"][0]
 
         self.assertEqual(evidence_data["source"], "physical_inspection")
         self.assertEqual(evidence_data["status"], "under_review")
