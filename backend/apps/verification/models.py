@@ -167,7 +167,7 @@ class DriverVerificationEvent(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     verification = models.ForeignKey(DriverVerification, on_delete=models.CASCADE, related_name="events")
-    check = models.ForeignKey(DriverVerificationCheck, on_delete=models.SET_NULL, null=True, blank=True, related_name="events")
+    verification_check = models.ForeignKey(DriverVerificationCheck, on_delete=models.SET_NULL, null=True, blank=True, related_name="events")
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="driver_verification_events")
     event_type = models.CharField(max_length=32, choices=EventType.choices)
     previous_status = models.CharField(max_length=16, blank=True)
