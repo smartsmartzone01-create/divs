@@ -160,7 +160,7 @@ def record_government_api_result(
 
     This function is deliberately not exposed through a public DRF endpoint.
     Adapters must authenticate the provider and normalize its response before
-    calling it. Only references, outcomes and an optional digest are retained.
+    calling it. Only provider references and normalized outcomes are retained.
     """
     provider = str(provider or "").strip()
     provider_reference = str(provider_reference or "").strip()
