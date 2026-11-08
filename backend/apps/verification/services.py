@@ -90,8 +90,8 @@ def review_driver_check(*, check_id, reviewer, status, method=DriverVerification
         raise VerificationReviewError("An inconclusive result requires further review.")
 
     verification = DriverVerification.objects.select_for_update().get(pk=check.verification_id)
-    if verification.status == DriverVerification.Status.REJECTED:
-        raise VerificationReviewError("A rejected verification cannot be changed.")
+    if verification.status in {DriverVerification.Status.APPROVED, DriverVerification.Status.REJECTED}:
+        raise VerificationReviewError("A final verification decision has been recorded; check findings are locked.")
     now = timezone.now()
     previous_check_status = check.status
     check.status = status
