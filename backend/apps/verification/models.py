@@ -212,6 +212,20 @@ class DriverVerificationEvidence(models.Model):
         choices=Status.choices,
         default=Status.SUBMITTED,
     )
+
+    class ScanStatus(models.TextChoices):
+        PENDING = "pending", "Quarantined / scan pending"
+        CLEAN = "clean", "Scan clean"
+        INFECTED = "infected", "Threat detected"
+        ERROR = "error", "Scan failed"
+
+    scan_status = models.CharField(
+        max_length=12,
+        choices=ScanStatus.choices,
+        default=ScanStatus.PENDING,
+    )
+    scan_provider = models.CharField(max_length=80, blank=True)
+    scanned_at = models.DateTimeField(null=True, blank=True)
     original_filename = models.CharField(max_length=255, blank=True)
     content_type = models.CharField(max_length=120, blank=True)
     file_size = models.PositiveBigIntegerField(null=True, blank=True)
