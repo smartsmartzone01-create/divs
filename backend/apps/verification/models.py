@@ -5,7 +5,7 @@ from django.db import models
 
 
 class DriverVerification(models.Model):
-    """Verification decision and progress; never stores government response payloads."""
+    """Verification progress and final decision; never stores government response payloads."""
 
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -18,6 +18,7 @@ class DriverVerification(models.Model):
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
     decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="driver_verification_decisions")
     decided_at = models.DateTimeField(null=True, blank=True)
+    decision_reason = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -25,20 +26,24 @@ class DriverVerification(models.Model):
         ordering = ["-created_at"]
 
     @property
+    def checks_are_complete(self):
+        required_types = {value for value, _label in DriverVerificationCheck.CheckType.choices}
+        checks = list(self.checks.all())
+        return (
+            {check.check_type for check in checks} == required_types
+            and all(check.status == DriverVerificationCheck.Status.PASSED for check in checks)
+        )
+
+    @property
     def is_discoverable(self):
-        """Require approval and successful outcomes for every check and a current licence class."""
+        """Require final approval, Admin activation, all successful checks and a current licence class."""
         successful_results = {
             DriverVerificationCheck.CheckType.NATIONAL_IDENTITY: DriverVerificationCheck.ResultCode.MATCH,
             DriverVerificationCheck.CheckType.DRIVING_LICENCE: DriverVerificationCheck.ResultCode.VALID,
             DriverVerificationCheck.CheckType.TRAFFIC_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
             DriverVerificationCheck.CheckType.ACCIDENT_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
         }
-        # Use prefetched rows when callers load discovery results in batches.
-        checks_by_type = {
-            check.check_type: check
-            for check in self.checks.all()
-        }
-        all_checks_successful = True
+        checks_by_type = {check.check_type: check for check in self.checks.all()}
         for check_type, result_code in successful_results.items():
             check = checks_by_type.get(check_type)
             if (
@@ -46,26 +51,16 @@ class DriverVerification(models.Model):
                 or check.status != DriverVerificationCheck.Status.PASSED
                 or check.result_code != result_code
             ):
-                all_checks_successful = False
-                break
+                return False
 
-        licence_check = checks_by_type.get(
-            DriverVerificationCheck.CheckType.DRIVING_LICENCE
-        )
+        licence_check = checks_by_type.get(DriverVerificationCheck.CheckType.DRIVING_LICENCE)
         has_current_class = (
             licence_check is not None
-            and any(
-                licence_class.is_current
-                for licence_class in licence_check.verified_licence_classes.all()
-            )
+            and any(item.is_current for item in licence_check.verified_licence_classes.all())
         )
         return (
             self.profile.status == "active"
             and self.status == self.Status.APPROVED
-            and all_checks_successful
-            and licence_check is not None
-            and licence_check.status == DriverVerificationCheck.Status.PASSED
-            and licence_check.result_code == DriverVerificationCheck.ResultCode.VALID
             and has_current_class
         )
 
@@ -107,6 +102,7 @@ class DriverVerificationCheck(models.Model):
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
     method = models.CharField(max_length=20, choices=Method.choices, blank=True)
     result_code = models.CharField(max_length=24, choices=ResultCode.choices, blank=True)
+    review_notes = models.TextField(blank=True)
     checked_at = models.DateTimeField(null=True, blank=True)
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="reviewed_driver_verification_checks")
     created_at = models.DateTimeField(auto_now_add=True)
