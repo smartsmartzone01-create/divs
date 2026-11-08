@@ -223,6 +223,10 @@ def record_verified_licence_classes(*, check_id, licence_classes, reviewer):
     if check is None:
         raise VerificationReviewError("Verification check not found.")
     if (
+        check.verification.status in {DriverVerification.Status.APPROVED, DriverVerification.Status.REJECTED}
+    ):
+        raise VerificationReviewError("Licence classes cannot be changed after a final verification decision.")
+    if (
         check.check_type != DriverVerificationCheck.CheckType.DRIVING_LICENCE
         or check.status != DriverVerificationCheck.Status.PASSED
         or check.result_code != DriverVerificationCheck.ResultCode.VALID
