@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
@@ -7,7 +8,6 @@ from apps.verification.models import (
     DriverVerificationEvidenceEvent,
 )
 from apps.verification.storage import _s3_client
-from django.conf import settings
 
 
 class Command(BaseCommand):
@@ -49,7 +49,8 @@ class Command(BaseCommand):
 
         client = _s3_client()
         deleted = 0
-        for candidate in eligible.values_list("pk", flat=True).iterator():
+        candidate_ids = list(eligible.values_list("pk", flat=True))
+        for candidate in candidate_ids:
             try:
                 with transaction.atomic():
                     evidence = (
