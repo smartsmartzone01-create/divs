@@ -209,6 +209,17 @@ class VerificationReviewServiceTests(APITestCase):
         self.checks = list(self.verification.checks.all())
 
     def test_operations_user_can_record_minimal_manual_check_outcome(self):
+        check = self.checks[0]
+        DriverVerificationEvidence.objects.create(
+            verification_check=check,
+            evidence_type=check.check_type,
+            source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
+            status=DriverVerificationEvidence.Status.ACCEPTED,
+            scan_status=DriverVerificationEvidence.ScanStatus.CLEAN,
+            storage_key="verification-evidence/accepted-test-object",
+            uploaded_by=check.verification.profile.registration.account,
+            reviewed_by=self.reviewer,
+        )
         self.client.force_authenticate(user=self.reviewer)
         url = reverse(
             "verification:operations-check-review",
@@ -262,6 +273,16 @@ class VerificationReviewServiceTests(APITestCase):
             DriverVerificationCheck.CheckType.ACCIDENT_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
         }
         for check in self.checks:
+            DriverVerificationEvidence.objects.create(
+                verification_check=check,
+                evidence_type=check.check_type,
+                source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
+                status=DriverVerificationEvidence.Status.ACCEPTED,
+                scan_status=DriverVerificationEvidence.ScanStatus.CLEAN,
+                storage_key=f"verification-evidence/accepted-{check.check_type}",
+                uploaded_by=check.verification.profile.registration.account,
+                reviewed_by=self.reviewer,
+            )
             review_driver_check(
                 check_id=check.id,
                 reviewer=self.reviewer,
