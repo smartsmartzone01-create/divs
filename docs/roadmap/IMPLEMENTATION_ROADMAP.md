@@ -150,14 +150,14 @@ The Driver Workspace is the visual reference for the Client and Admin workspaces
 - Manage driver performance where authorized.
 
 **Operator may not:**
-- Reject final verification.
+- Approve or reject final verification.
 - Activate public driver availability.
 - Remove drivers.
 - Approve appeals or reserved administrative decisions.
 - Manage Admin invitations unless explicitly granted by a future policy.
 
 **Admin may additionally:**
-- Reject final verification.
+- Approve or reject final verification.
 - Activate or deactivate driver availability.
 - Manage restrictions and suspensions.
 - Remove drivers.
