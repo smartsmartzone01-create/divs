@@ -138,7 +138,23 @@ def store_verification_evidence(*, check, uploaded_file, actor, source):
     return evidence
 
 
+def _validate_evidence_storage_key(storage_key):
+    """Restrict retrieval to generated keys inside the evidence-only prefix."""
+    if not isinstance(storage_key, str) or not storage_key.startswith("verification-evidence/"):
+        raise EvidenceStorageError("The evidence storage reference is invalid.")
+
+    parts = storage_key.split("/")
+    if (
+        len(parts) < 2
+        or any(part in {"", ".", ".."} for part in parts)
+        or "\\" in storage_key
+        or any(not char.isprintable() for char in storage_key)
+    ):
+        raise EvidenceStorageError("The evidence storage reference is invalid.")
+
+
 def retrieve_verification_evidence(evidence):
+    _validate_evidence_storage_key(evidence.storage_key)
     client = _s3_client()
     try:
         result = client.get_object(
