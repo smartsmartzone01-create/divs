@@ -33,7 +33,7 @@ def _s3_client():
 def _read_and_validate(uploaded_file):
     max_bytes = settings.R2_MAX_UPLOAD_BYTES
     if uploaded_file.size <= 0 or uploaded_file.size > max_bytes:
-        raise EvidenceStorageError("The file must be between 1 byte and 10 MB.")
+        raise EvidenceStorageError(f"The file must be between 1 byte and {max_bytes // (1024 * 1024)} MB.")
 
     content = uploaded_file.read(max_bytes + 1)
     if len(content) != uploaded_file.size or len(content) > max_bytes:
@@ -77,6 +77,9 @@ def store_verification_evidence(*, check, uploaded_file, actor, source):
     }:
         raise EvidenceStorageError("Unsupported evidence upload source.")
 
+    if check.verification.status in {"approved", "rejected"}:
+        raise EvidenceStorageError("Evidence cannot be uploaded after a final verification decision.")
+
     content, content_type, digest = _read_and_validate(uploaded_file)
     object_key = f"verification-evidence/{check.verification_id}/{uuid.uuid4().hex}"
     client = _s3_client()
@@ -105,20 +108,20 @@ def store_verification_evidence(*, check, uploaded_file, actor, source):
             storage_key=object_key,
             uploaded_by=actor,
         )
+
+        from apps.verification.models import DriverVerificationEvidenceEvent
+
+        DriverVerificationEvidenceEvent.objects.create(
+            evidence=evidence,
+            actor=actor,
+            event_type="uploaded",
+            new_status=DriverVerificationEvidence.Status.SUBMITTED,
+        )
     except Exception:
         try:
             client.delete_object(Bucket=settings.R2_BUCKET_NAME, Key=object_key)
         finally:
             raise
-
-    from apps.verification.models import DriverVerificationEvidenceEvent
-
-    DriverVerificationEvidenceEvent.objects.create(
-        evidence=evidence,
-        actor=actor,
-        event_type="uploaded",
-        new_status=DriverVerificationEvidence.Status.SUBMITTED,
-    )
     return evidence
 
 
