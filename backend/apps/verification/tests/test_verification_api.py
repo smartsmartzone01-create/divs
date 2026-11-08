@@ -516,6 +516,138 @@ class VerificationReviewServiceTests(APITestCase):
                 result_code=result_codes[check.check_type],
             )
 
+    def _approve_and_activate_driver(self):
+        self._pass_all_checks()
+        licence_check = next(
+            check for check in self.checks
+            if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
+        )
+        record_verified_licence_classes(
+            check_id=licence_check.id,
+            reviewer=self.reviewer,
+            licence_classes=["C"],
+        )
+        self.client.force_authenticate(user=self.admin)
+        approval = self.client.post(
+            reverse(
+                "verification:operations-verification-approve",
+                kwargs={"verification_id": self.verification.id},
+            ),
+            {},
+            format="json",
+        )
+        self.assertEqual(approval.status_code, status.HTTP_200_OK)
+        activation = self.client.post(
+            reverse(
+                "verification:operations-driver-activate",
+                kwargs={"verification_id": self.verification.id},
+            ),
+            {},
+            format="json",
+        )
+        self.assertEqual(activation.status_code, status.HTTP_200_OK)
+        self.verification.refresh_from_db()
+        self.verification.profile.refresh_from_db()
+        self.assertTrue(self.verification.is_discoverable)
+
+    def test_trusted_adverse_api_result_revokes_approved_driver(self):
+        self._approve_and_activate_driver()
+        licence_check = next(
+            check for check in self.checks
+            if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
+        )
+        accepted_evidence = licence_check.evidence.get(
+            status=DriverVerificationEvidence.Status.ACCEPTED
+        )
+        licence_classes = list(licence_check.verified_licence_classes.filter(is_current=True))
+
+        updated = record_government_api_result(
+            check_id=licence_check.id,
+            provider="authorized-test-provider",
+            provider_reference="post-approval-adverse-1",
+            outcome=GovernmentVerificationAttempt.Outcome.NOT_MATCHED,
+            result_code=DriverVerificationCheck.ResultCode.INVALID,
+        )
+
+        updated.refresh_from_db()
+        accepted_evidence.refresh_from_db()
+        self.verification.refresh_from_db()
+        self.verification.profile.refresh_from_db()
+        self.assertEqual(updated.status, DriverVerificationCheck.Status.FAILED)
+        self.assertEqual(updated.method, DriverVerificationCheck.Method.GOVERNMENT_API)
+        self.assertEqual(self.verification.status, DriverVerification.Status.IN_REVIEW)
+        self.assertIsNone(self.verification.decided_by)
+        self.assertIsNone(self.verification.decided_at)
+        self.assertEqual(self.verification.profile.status, DriverProfile.Status.PENDING_ACTIVATION)
+        self.assertFalse(self.verification.is_discoverable)
+        self.assertEqual(accepted_evidence.status, DriverVerificationEvidence.Status.ACCEPTED)
+        self.assertTrue(licence_classes)
+        for licence_class in licence_classes:
+            licence_class.refresh_from_db()
+            self.assertFalse(licence_class.is_current)
+            self.assertFalse(licence_class.qualifies_for_discovery)
+        self.assertTrue(
+            DriverVerificationEvent.objects.filter(
+                verification=self.verification,
+                verification_check=licence_check,
+                event_type=DriverVerificationEvent.EventType.CHECK_INVALIDATED,
+                new_status=DriverVerificationCheck.Status.FAILED,
+            ).exists()
+        )
+        self.assertTrue(
+            DriverVerificationEvent.objects.filter(
+                verification=self.verification,
+                event_type=DriverVerificationEvent.EventType.VERIFICATION_REOPENED,
+                previous_status=DriverVerification.Status.APPROVED,
+                new_status=DriverVerification.Status.IN_REVIEW,
+            ).exists()
+        )
+        self.assertTrue(
+            DriverVerificationEvent.objects.filter(
+                verification=self.verification,
+                event_type=DriverVerificationEvent.EventType.AVAILABILITY_DEACTIVATED,
+            ).exists()
+        )
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.verification.profile.registration.account,
+                event_type="driver.verification.revoked",
+            ).exists()
+        )
+
+    def test_unavailable_and_error_results_cannot_revoke_approved_verification(self):
+        self._approve_and_activate_driver()
+        check = next(
+            item for item in self.checks
+            if item.check_type == DriverVerificationCheck.CheckType.NATIONAL_IDENTITY
+        )
+        for outcome, reference in (
+            (GovernmentVerificationAttempt.Outcome.UNAVAILABLE, "post-approval-unavailable"),
+            (GovernmentVerificationAttempt.Outcome.ERROR, "post-approval-error"),
+        ):
+            with self.assertRaisesMessage(Exception, "Only a definitive adverse provider result"):
+                record_government_api_result(
+                    check_id=check.id,
+                    provider="authorized-test-provider",
+                    provider_reference=reference,
+                    outcome=outcome,
+                )
+        check.refresh_from_db()
+        self.verification.refresh_from_db()
+        self.verification.profile.refresh_from_db()
+        self.assertEqual(check.status, DriverVerificationCheck.Status.PASSED)
+        self.assertEqual(self.verification.status, DriverVerification.Status.APPROVED)
+        self.assertEqual(self.verification.profile.status, DriverProfile.Status.ACTIVE)
+        self.assertTrue(self.verification.is_discoverable)
+        self.assertFalse(
+            GovernmentVerificationAttempt.objects.filter(
+                provider="authorized-test-provider",
+                provider_reference__in=[
+                    "post-approval-unavailable", "post-approval-error",
+                ],
+            ).exists()
+        )
+
     def test_all_checks_admin_approval_and_activation_are_required_for_discovery(self):
         self._pass_all_checks()
         self.verification.refresh_from_db()
