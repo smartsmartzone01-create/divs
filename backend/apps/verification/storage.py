@@ -157,7 +157,13 @@ def _validate_evidence_storage_key(storage_key):
 def retrieve_verification_evidence(evidence):
     if evidence.storage_deleted_at is not None or evidence.status == DriverVerificationEvidence.Status.EXPIRED:
         raise EvidenceStorageError("This evidence file has expired and is no longer available.")
-    if evidence.scan_status != DriverVerificationEvidence.ScanStatus.CLEAN:
+    scan_is_clean = evidence.scan_status == DriverVerificationEvidence.ScanStatus.CLEAN
+    development_bypass = (
+        settings.DEBUG
+        and settings.DIVS_ALLOW_UNSCANNED_EVIDENCE_ACCESS
+        and evidence.scan_status == DriverVerificationEvidence.ScanStatus.PENDING
+    )
+    if not scan_is_clean and not development_bypass:
         raise EvidenceStorageError("The evidence file is quarantined until a successful security scan is recorded.")
     _validate_evidence_storage_key(evidence.storage_key)
     client = _s3_client()
