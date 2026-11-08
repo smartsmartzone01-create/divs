@@ -56,6 +56,8 @@ class DriverVerificationEvidenceTests(TestCase):
 
         self.assertEqual(evidence_data["source"], "physical_inspection")
         self.assertEqual(evidence_data["status"], "under_review")
+        self.assertEqual(evidence_data["scan_status"], "pending")
+        self.assertIsNone(evidence_data["scanned_at"])
         self.assertEqual(len(evidence_data["events"]), 1)
         self.assertNotIn("storage_key", evidence_data)
         self.assertNotIn("sha256", evidence_data)
