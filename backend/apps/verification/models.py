@@ -226,6 +226,8 @@ class DriverVerificationEvidence(models.Model):
     )
     scan_provider = models.CharField(max_length=80, blank=True)
     scanned_at = models.DateTimeField(null=True, blank=True)
+    legal_hold = models.BooleanField(default=False)
+    storage_deleted_at = models.DateTimeField(null=True, blank=True)
     original_filename = models.CharField(max_length=255, blank=True)
     content_type = models.CharField(max_length=120, blank=True)
     file_size = models.PositiveBigIntegerField(null=True, blank=True)
