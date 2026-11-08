@@ -557,6 +557,87 @@ class VerificationReviewServiceTests(APITestCase):
         self.verification.profile.refresh_from_db()
         self.assertTrue(self.verification.is_discoverable)
 
+    def test_admin_reopening_invalidates_evidence_and_public_availability(self):
+        self._pass_all_checks()
+        identity_check = next(
+            check for check in self.checks
+            if check.check_type == DriverVerificationCheck.CheckType.NATIONAL_IDENTITY
+        )
+        old_evidence = identity_check.evidence.get(status=DriverVerificationEvidence.Status.ACCEPTED)
+        licence_check = next(
+            check for check in self.checks
+            if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
+        )
+        record_verified_licence_classes(
+            check_id=licence_check.id,
+            reviewer=self.reviewer,
+            licence_classes=["C"],
+        )
+        self.client.force_authenticate(user=self.admin)
+        approved = self.client.post(
+            reverse("verification:operations-verification-approve", kwargs={"verification_id": self.verification.id}),
+            {},
+            format="json",
+        )
+        self.assertEqual(approved.status_code, status.HTTP_200_OK)
+        activated = self.client.post(
+            reverse("verification:operations-driver-activate", kwargs={"verification_id": self.verification.id}),
+            {},
+            format="json",
+        )
+        self.assertEqual(activated.status_code, status.HTTP_200_OK)
+        self.assertTrue(self.verification.is_discoverable)
+
+        reopened = self.client.post(
+            reverse("verification:operations-check-reopen", kwargs={"check_id": identity_check.id}),
+            {"reason": "Identity evidence requires a current replacement."},
+            format="json",
+        )
+        self.assertEqual(reopened.status_code, status.HTTP_200_OK)
+        identity_check.refresh_from_db()
+        old_evidence.refresh_from_db()
+        self.verification.refresh_from_db()
+        self.verification.profile.refresh_from_db()
+        self.assertEqual(self.verification.status, DriverVerification.Status.IN_REVIEW)
+        self.assertEqual(identity_check.status, DriverVerificationCheck.Status.PENDING)
+        self.assertEqual(old_evidence.status, DriverVerificationEvidence.Status.SUPERSEDED)
+        self.assertEqual(self.verification.profile.status, DriverProfile.Status.PENDING_ACTIVATION)
+        self.assertFalse(self.verification.is_discoverable)
+        self.assertTrue(
+            DriverVerificationEvent.objects.filter(
+                verification=self.verification,
+                verification_check=identity_check,
+                actor=self.admin,
+                event_type=DriverVerificationEvent.EventType.CHECK_REOPENED,
+            ).exists()
+        )
+        self.assertTrue(
+            DriverVerificationEvent.objects.filter(
+                verification=self.verification,
+                actor=self.admin,
+                event_type=DriverVerificationEvent.EventType.AVAILABILITY_DEACTIVATED,
+            ).exists()
+        )
+
+    def test_operator_cannot_reopen_a_final_verification(self):
+        self._pass_all_checks()
+        self.client.force_authenticate(user=self.admin)
+        approved = self.client.post(
+            reverse("verification:operations-verification-approve", kwargs={"verification_id": self.verification.id}),
+            {},
+            format="json",
+        )
+        self.assertEqual(approved.status_code, status.HTTP_200_OK)
+
+        self.client.force_authenticate(user=self.reviewer)
+        check = self.checks[0]
+        response = self.client.post(
+            reverse("verification:operations-check-reopen", kwargs={"check_id": check.id}),
+            {"reason": "Attempted operator reopening."},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_expired_evidence_invalidates_verification_completion(self):
         self._pass_all_checks()
         identity_check = next(
