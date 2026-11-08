@@ -24,6 +24,7 @@ export default function AdminWorkspacePage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [canReviewApplications, setCanReviewApplications] = useState(false);
+  const [verificationCount, setVerificationCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -40,6 +41,17 @@ export default function AdminWorkspacePage() {
         setAccount(accountResult);
         setAccess(accessResult);
         setNotifications(notificationResult.results ?? []);
+
+        if (accessResult.capabilities.includes("view_operations_workspace")) {
+          try {
+            const queue = await getJson<{ count: number; results: unknown[] }>("/api/backend/verification/operations/queue/");
+            if (active) setVerificationCount(queue.count);
+          } catch (caught) {
+            if ((caught as { status?: number }).status !== 403 && active) {
+              setError(sw ? "Imeshindikana kupakia foleni ya uhakiki wa madereva." : "Could not load the driver verification queue.");
+            }
+          }
+        }
 
         if (accessResult.role === "admin") {
           try {
@@ -121,7 +133,7 @@ export default function AdminWorkspacePage() {
           <div className="admin-horizontal-links">
             <a href="#recent-activity"><span aria-hidden="true">◉</span>{sw ? "Arifa" : "Notifications"}<small>{unread || ""}</small></a>
             {canReviewApplications ? <Link href="/workspace/admin/applications"><span aria-hidden="true">✓</span>{sw ? "Maombi" : "Applications"}<small>{applications.length || ""}</small></Link> : null}
-            <span className="is-coming"><span aria-hidden="true">⌕</span>{sw ? "Uhakiki" : "Verification"}</span>
+            <Link href="/workspace/admin/verification"><span aria-hidden="true">⌕</span>{sw ? "Uhakiki" : "Verification"}<small>{verificationCount ?? ""}</small></Link>
             <span className="is-coming"><span aria-hidden="true">▤</span>{sw ? "Madereva" : "Drivers"}</span>
             <span className="is-coming"><span aria-hidden="true">↗</span>{sw ? "Utendaji" : "Performance"}</span>
           </div>
@@ -159,10 +171,10 @@ export default function AdminWorkspacePage() {
           <div className="admin-section-heading"><div><h2>{sw ? "Zana za usimamizi" : "Management areas"}</h2><p>{sw ? "Sehemu zinazojengwa kwa ajili ya shughuli zako." : "Areas being prepared for your operational responsibilities."}</p></div></div>
           <div className="admin-management-list">
             {[
-              { title: sw ? "Uhakiki wa madereva" : "Driver verification", description: sw ? "Kagua utambulisho, leseni na rekodi." : "Review identity, licence and record checks.", status: sw ? "Inakuja" : "Coming next" },
+              { title: sw ? "Uhakiki wa madereva" : "Driver verification", description: sw ? "Kagua utambulisho, leseni na rekodi." : "Review identity, licence and record checks.", status: verificationCount === null ? (sw ? "Fungua" : "Open") : String(verificationCount), href: "/workspace/admin/verification" },
               { title: sw ? "Usimamizi wa madereva" : "Driver management", description: sw ? "Kagua taarifa na wasifu wa madereva." : "Review driver records and profiles.", status: sw ? "Inakuja" : "Coming next" },
               { title: sw ? "Utendaji na rufaa" : "Performance & appeals", description: sw ? "Kagua matukio ya utendaji na rufaa." : "Review performance events and appeals.", status: sw ? "Inakuja" : "Coming next" },
-            ].map((item) => <div className="admin-management-row" key={item.title}><span><strong>{item.title}</strong><small>{item.description}</small></span><em>{item.status}</em></div>)}
+            ].map((item) => {item.href ? <Link href={item.href} className="admin-management-row" key={item.title}><span><strong>{item.title}</strong><small>{item.description}</small></span><em>{item.status}</em></Link> : <div className="admin-management-row" key={item.title}><span><strong>{item.title}</strong><small>{item.description}</small></span><em>{item.status}</em></div>})}
             <Link href="/account" className="admin-management-row admin-management-account"><span><strong>{sw ? "Akaunti na vipindi" : "Account & sessions"}</strong><small>{sw ? "Simamia kuingia na vifaa vyako." : "Manage your sign-in and devices."}</small></span><b>{sw ? "Fungua" : "Open"}</b></Link>
           </div>
         </section>
