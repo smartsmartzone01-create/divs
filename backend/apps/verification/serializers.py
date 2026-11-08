@@ -32,8 +32,8 @@ class DriverVerificationEvidenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = DriverVerificationEvidence
         fields = [
-            "id", "evidence_type", "source", "status", "original_filename",
-            "content_type", "file_size", "submitted_at", "reviewed_at",
+            "id", "evidence_type", "source", "status", "scan_status", "scanned_at",
+            "original_filename", "content_type", "file_size", "submitted_at", "reviewed_at",
             "expires_at", "review_notes", "events",
         ]
         read_only_fields = fields
