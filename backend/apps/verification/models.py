@@ -35,11 +35,27 @@ class DriverVerification(models.Model):
             DriverVerificationCheck.CheckType.TRAFFIC_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
             DriverVerificationCheck.CheckType.ACCIDENT_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
         }
+        allowed_scan_statuses = [DriverVerificationEvidence.ScanStatus.CLEAN]
+        if settings.DEBUG and getattr(settings, "DIVS_ALLOW_UNSCANNED_EVIDENCE_ACCESS", False):
+            allowed_scan_statuses.append(DriverVerificationEvidence.ScanStatus.PENDING)
+
+        def has_accepted_manual_evidence(check):
+            if check.method != DriverVerificationCheck.Method.MANUAL:
+                return True
+            return check.evidence.filter(
+                status=DriverVerificationEvidence.Status.ACCEPTED,
+                scan_status__in=allowed_scan_statuses,
+                storage_deleted_at__isnull=True,
+                storage_key__gt="",
+                evidence_type=check.check_type,
+            ).exists()
+
         return (
             {check.check_type for check in checks} == required_types
             and all(
                 check.status == DriverVerificationCheck.Status.PASSED
                 and check.result_code == expected_results.get(check.check_type)
+                and has_accepted_manual_evidence(check)
                 for check in checks
             )
         )
@@ -62,6 +78,18 @@ class DriverVerification(models.Model):
                 or check.result_code != result_code
             ):
                 return False
+            if check.method == DriverVerificationCheck.Method.MANUAL:
+                allowed_scan_statuses = [DriverVerificationEvidence.ScanStatus.CLEAN]
+                if settings.DEBUG and getattr(settings, "DIVS_ALLOW_UNSCANNED_EVIDENCE_ACCESS", False):
+                    allowed_scan_statuses.append(DriverVerificationEvidence.ScanStatus.PENDING)
+                if not check.evidence.filter(
+                    status=DriverVerificationEvidence.Status.ACCEPTED,
+                    scan_status__in=allowed_scan_statuses,
+                    storage_deleted_at__isnull=True,
+                    storage_key__gt="",
+                    evidence_type=check.check_type,
+                ).exists():
+                    return False
 
         licence_check = checks_by_type.get(DriverVerificationCheck.CheckType.DRIVING_LICENCE)
         has_current_class = (
