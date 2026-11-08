@@ -12,6 +12,7 @@ from apps.verification.models import (
     VerifiedDriverLicenceClass,
     DriverVerificationEvidence,
     DriverVerificationEvidenceEvent,
+    GovernmentVerificationAttempt,
 )
 
 
@@ -143,6 +144,134 @@ def review_driver_check(*, check_id, reviewer, status, method=DriverVerification
         )
     return check
 
+
+
+
+@transaction.atomic
+def record_government_api_result(
+    *,
+    check_id,
+    provider,
+    provider_reference,
+    outcome,
+    result_code="",
+    response_fingerprint="",
+):
+    """Record a normalized result delivered by a trusted server-side API adapter.
+
+    This function is deliberately not exposed through a public DRF endpoint.
+    Adapters must authenticate the provider and normalize its response before
+    calling it. Only references, outcomes and an optional digest are retained.
+    """
+    provider = str(provider or "").strip()
+    provider_reference = str(provider_reference or "").strip()
+    if not provider or len(provider) > 80:
+        raise VerificationReviewError("A valid government API provider is required.")
+    if not provider_reference or len(provider_reference) > 255:
+        raise VerificationReviewError("A provider request reference is required.")
+    if outcome not in GovernmentVerificationAttempt.Outcome.values:
+        raise VerificationReviewError("Unsupported government API outcome.")
+    if response_fingerprint and (
+        len(response_fingerprint) != 64
+        or any(char not in "0123456789abcdefABCDEF" for char in response_fingerprint)
+    ):
+        raise VerificationReviewError("Response fingerprint must be a SHA-256 hex digest.")
+
+    check = (
+        DriverVerificationCheck.objects.select_for_update()
+        .select_related("verification")
+        .filter(pk=check_id)
+        .first()
+    )
+    if check is None:
+        raise VerificationReviewError("Verification check not found.")
+    verification = DriverVerification.objects.select_for_update().get(pk=check.verification_id)
+    if verification.status in {
+        DriverVerification.Status.APPROVED,
+        DriverVerification.Status.REJECTED,
+    }:
+        raise VerificationReviewError("A final verification decision has been recorded; check findings are locked.")
+
+    compatible_results = {
+        DriverVerificationCheck.CheckType.NATIONAL_IDENTITY: {
+            DriverVerificationCheck.ResultCode.MATCH,
+            DriverVerificationCheck.ResultCode.MISMATCH,
+            DriverVerificationCheck.ResultCode.INCONCLUSIVE,
+        },
+        DriverVerificationCheck.CheckType.DRIVING_LICENCE: {
+            DriverVerificationCheck.ResultCode.VALID,
+            DriverVerificationCheck.ResultCode.INVALID,
+            DriverVerificationCheck.ResultCode.INCONCLUSIVE,
+        },
+        DriverVerificationCheck.CheckType.TRAFFIC_RECORDS: {
+            DriverVerificationCheck.ResultCode.CLEAR,
+            DriverVerificationCheck.ResultCode.RECORD_FOUND,
+            DriverVerificationCheck.ResultCode.INCONCLUSIVE,
+        },
+        DriverVerificationCheck.CheckType.ACCIDENT_RECORDS: {
+            DriverVerificationCheck.ResultCode.CLEAR,
+            DriverVerificationCheck.ResultCode.RECORD_FOUND,
+            DriverVerificationCheck.ResultCode.INCONCLUSIVE,
+        },
+    }
+    if result_code and result_code not in compatible_results[check.check_type]:
+        raise VerificationReviewError("Government result code does not match this check type.")
+
+    success_code = SUCCESSFUL_RESULTS[check.check_type]
+    if outcome == GovernmentVerificationAttempt.Outcome.MATCHED:
+        if result_code != success_code:
+            raise VerificationReviewError("A matched API outcome requires the successful result code.")
+        check_status = DriverVerificationCheck.Status.PASSED
+    elif outcome == GovernmentVerificationAttempt.Outcome.NOT_MATCHED:
+        if not result_code or result_code in {success_code, DriverVerificationCheck.ResultCode.INCONCLUSIVE}:
+            raise VerificationReviewError("A negative API outcome requires a compatible negative result code.")
+        check_status = DriverVerificationCheck.Status.FAILED
+    elif outcome == GovernmentVerificationAttempt.Outcome.INCONCLUSIVE:
+        if result_code != DriverVerificationCheck.ResultCode.INCONCLUSIVE:
+            raise VerificationReviewError("An inconclusive API outcome requires the inconclusive result code.")
+        check_status = DriverVerificationCheck.Status.NEEDS_REVIEW
+    else:
+        result_code = ""
+        check_status = DriverVerificationCheck.Status.UNAVAILABLE
+
+    now = timezone.now()
+    GovernmentVerificationAttempt.objects.create(
+        verification_check=check,
+        provider=provider,
+        provider_reference=provider_reference,
+        outcome=outcome,
+        result_code=result_code,
+        response_fingerprint=response_fingerprint.lower(),
+        completed_at=now,
+    )
+    previous_status = check.status
+    check.status = check_status
+    check.method = DriverVerificationCheck.Method.GOVERNMENT_API
+    check.result_code = result_code
+    check.review_notes = f"Government provider: {provider}; reference: {provider_reference}; outcome: {outcome}."
+    check.checked_at = now
+    check.reviewed_by = None
+    check.save(update_fields=[
+        "status", "method", "result_code", "review_notes", "checked_at",
+        "reviewed_by", "updated_at",
+    ])
+    DriverVerificationEvent.objects.create(
+        verification=verification,
+        verification_check=check,
+        actor=None,
+        event_type=DriverVerificationEvent.EventType.GOVERNMENT_API_RESULT,
+        previous_status=previous_status,
+        new_status=check_status,
+        notes=f"Provider: {provider}; reference: {provider_reference}; outcome: {outcome}.",
+    )
+    if verification.status == DriverVerification.Status.PENDING:
+        verification.status = DriverVerification.Status.IN_REVIEW
+        verification.save(update_fields=["status", "updated_at"])
+        _notify_driver(
+            verification, "driver.verification.in_review",
+            "Verification in review", "Your driver verification is being reviewed.",
+        )
+    return check
 
 
 @transaction.atomic
