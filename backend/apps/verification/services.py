@@ -103,7 +103,7 @@ def process_expired_verification_evidence(*, now=None, dry_run=False):
     reopened_verifications = set()
     affected_verifications = set()
     deactivated_profiles = 0
-    for check_id, check_evidence in expired_by_check.items():
+    for check_id in expired_by_check:
         check = (
             DriverVerificationCheck.objects.select_for_update()
             .select_related("verification__profile")
@@ -120,6 +120,10 @@ def process_expired_verification_evidence(*, now=None, dry_run=False):
             pk=check.verification_id
         )
         previous_check_status = check.status
+        if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE:
+            VerifiedDriverLicenceClass.objects.filter(
+                licence_check=check, is_current=True
+            ).update(is_current=False, updated_at=now)
         check.status = DriverVerificationCheck.Status.NEEDS_REVIEW
         check.result_code = ""
         check.checked_at = None
@@ -136,7 +140,10 @@ def process_expired_verification_evidence(*, now=None, dry_run=False):
             event_type=DriverVerificationEvent.EventType.CHECK_INVALIDATED,
             previous_status=previous_check_status,
             new_status=DriverVerificationCheck.Status.NEEDS_REVIEW,
-            notes="Manual verification invalidated because all accepted supporting evidence has expired.",
+            notes=(
+                "Manual verification invalidated because all accepted supporting evidence has expired."
+                + (" Existing verified licence classes were marked non-current." if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE else "")
+            ),
         )
         reopened_checks += 1
         affected_verifications.add(verification.pk)
