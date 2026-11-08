@@ -15,8 +15,13 @@ from apps.verification.models import (
     DriverVerificationCheck,
     DriverVerificationEvidence,
     DriverVerificationEvidenceEvent,
+    GovernmentVerificationAttempt,
 )
-from apps.verification.services import record_verified_licence_classes, review_driver_check
+from apps.verification.services import (
+    record_government_api_result,
+    record_verified_licence_classes,
+    review_driver_check,
+)
 
 
 class DriverVerificationAPITests(APITestCase):
@@ -280,6 +285,41 @@ class VerificationReviewServiceTests(APITestCase):
                 status=DriverVerificationCheck.Status.PASSED,
                 result_code=successful_result,
             )
+
+    def test_trusted_government_result_is_recorded_without_source_payload(self):
+        check = self.checks[0]
+        expected_result = {
+            DriverVerificationCheck.CheckType.NATIONAL_IDENTITY: DriverVerificationCheck.ResultCode.MATCH,
+            DriverVerificationCheck.CheckType.DRIVING_LICENCE: DriverVerificationCheck.ResultCode.VALID,
+            DriverVerificationCheck.CheckType.TRAFFIC_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
+            DriverVerificationCheck.CheckType.ACCIDENT_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
+        }[check.check_type]
+        updated = record_government_api_result(
+            check_id=check.id,
+            provider="authorized-test-provider",
+            provider_reference="request-123",
+            outcome=GovernmentVerificationAttempt.Outcome.MATCHED,
+            result_code=expected_result,
+            response_fingerprint="a" * 64,
+        )
+        self.assertEqual(updated.method, DriverVerificationCheck.Method.GOVERNMENT_API)
+        self.assertEqual(updated.status, DriverVerificationCheck.Status.PASSED)
+        attempt = GovernmentVerificationAttempt.objects.get(verification_check=check)
+        self.assertEqual(attempt.provider_reference, "request-123")
+        self.assertEqual(attempt.response_fingerprint, "a" * 64)
+        self.assertFalse(hasattr(attempt, "response_payload"))
+
+    def test_operator_cannot_make_final_verification_approval(self):
+        self.client.force_authenticate(user=self.reviewer)
+        response = self.client.post(
+            reverse(
+                "verification:operations-verification-approve",
+                kwargs={"verification_id": self.verification.id},
+            ),
+            {},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_manual_review_cannot_claim_government_api_method(self):
         check = self.checks[0]
