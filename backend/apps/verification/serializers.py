@@ -97,7 +97,6 @@ class ManualCheckReviewSerializer(serializers.Serializer):
     status = serializers.ChoiceField(
         choices=[
             DriverVerificationCheck.Status.PASSED,
-            DriverVerificationCheck.Status.FAILED,
             DriverVerificationCheck.Status.NEEDS_REVIEW,
             DriverVerificationCheck.Status.UNAVAILABLE,
         ]
