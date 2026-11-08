@@ -302,11 +302,13 @@ def review_verification_evidence(*, evidence_id, reviewer, decision, review_note
         DriverVerification.Status.REJECTED,
     }:
         raise VerificationReviewError("Evidence is locked after a final verification decision.")
-    if evidence.status in {
-        DriverVerificationEvidence.Status.EXPIRED,
-        DriverVerificationEvidence.Status.SUPERSEDED,
-    } or evidence.storage_deleted_at is not None:
-        raise VerificationReviewError("Expired or deleted evidence cannot be reviewed.")
+    if evidence.status not in {
+        DriverVerificationEvidence.Status.SUBMITTED,
+        DriverVerificationEvidence.Status.UNDER_REVIEW,
+    }:
+        raise VerificationReviewError("Only newly submitted evidence can be reviewed.")
+    if evidence.storage_deleted_at is not None:
+        raise VerificationReviewError("Deleted evidence cannot be reviewed.")
     if evidence.evidence_type != evidence.verification_check.check_type:
         raise VerificationReviewError("Evidence type does not match its verification check.")
     if evidence.scan_status in {
