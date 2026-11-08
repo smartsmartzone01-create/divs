@@ -1,7 +1,9 @@
 import io
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -16,6 +18,7 @@ from apps.verification.models import (
     DriverVerificationEvidence,
     DriverVerificationEvidenceEvent,
     GovernmentVerificationAttempt,
+    VerifiedDriverLicenceClass,
 )
 from apps.verification.services import (
     record_government_api_result,
@@ -278,13 +281,64 @@ class VerificationReviewServiceTests(APITestCase):
             DriverVerificationCheck.CheckType.TRAFFIC_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
             DriverVerificationCheck.CheckType.ACCIDENT_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
         }[check.check_type]
-        with self.assertRaisesMessage(Exception, "matching evidence has been accepted"):
+        with self.assertRaisesMessage(Exception, "matching accepted evidence is valid and available"):
             review_driver_check(
                 check_id=check.id,
                 reviewer=self.reviewer,
                 status=DriverVerificationCheck.Status.PASSED,
                 result_code=successful_result,
             )
+
+    def test_expired_accepted_evidence_cannot_pass_a_manual_check(self):
+        check = next(
+            item for item in self.checks
+            if item.check_type == DriverVerificationCheck.CheckType.NATIONAL_IDENTITY
+        )
+        DriverVerificationEvidence.objects.create(
+            verification_check=check,
+            evidence_type=check.check_type,
+            source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
+            status=DriverVerificationEvidence.Status.ACCEPTED,
+            scan_status=DriverVerificationEvidence.ScanStatus.CLEAN,
+            storage_key="verification-evidence/expired-object",
+            expires_at=timezone.now() - timedelta(seconds=1),
+            uploaded_by=check.verification.profile.registration.account,
+            reviewed_by=self.reviewer,
+        )
+        with self.assertRaisesMessage(Exception, "valid and available"):
+            review_driver_check(
+                check_id=check.id,
+                reviewer=self.reviewer,
+                status=DriverVerificationCheck.Status.PASSED,
+                result_code=DriverVerificationCheck.ResultCode.MATCH,
+            )
+
+    def test_unreviewed_licence_class_does_not_qualify_for_discovery(self):
+        check = next(
+            item for item in self.checks
+            if item.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
+        )
+        DriverVerificationEvidence.objects.create(
+            verification_check=check,
+            evidence_type=check.check_type,
+            source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
+            status=DriverVerificationEvidence.Status.ACCEPTED,
+            scan_status=DriverVerificationEvidence.ScanStatus.CLEAN,
+            storage_key="verification-evidence/licence-object",
+            uploaded_by=check.verification.profile.registration.account,
+            reviewed_by=self.reviewer,
+        )
+        check.status = DriverVerificationCheck.Status.PASSED
+        check.method = DriverVerificationCheck.Method.MANUAL
+        check.result_code = DriverVerificationCheck.ResultCode.VALID
+        check.save(update_fields=["status", "method", "result_code", "updated_at"])
+        licence_class = VerifiedDriverLicenceClass.objects.create(
+            licence_check=check,
+            licence_class="B",
+            is_current=True,
+            verified_at=timezone.now(),
+        )
+        self.assertFalse(licence_class.qualifies_for_discovery)
 
     def test_trusted_government_result_is_recorded_without_source_payload(self):
         check = self.checks[0]
