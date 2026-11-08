@@ -42,11 +42,11 @@ class MyDriverVerificationView(RoleProtectedAPIView):
     def get(self, request):
         profile = get_object_or_404(
             DriverProfile.objects.select_related("registration", "registration__account")
-            .prefetch_related("verification__checks__verified_licence_classes", "verification__checks__evidence__events"),
+            .prefetch_related("verification__checks__verified_licence_classes", "verification__checks__evidence__events", "verification__checks__government_attempts"),
             registration__account=request.user,
         )
         verification = get_object_or_404(
-            DriverVerification.objects.prefetch_related("checks__verified_licence_classes", "checks__evidence__events"),
+            DriverVerification.objects.prefetch_related("checks__verified_licence_classes", "checks__evidence__events", "checks__government_attempts"),
             profile=profile,
         )
         return Response(DriverVerificationSerializer(verification).data)
@@ -63,7 +63,7 @@ class OperationsVerificationQueueView(RoleProtectedAPIView):
                 status__in=[DriverVerification.Status.PENDING, DriverVerification.Status.IN_REVIEW]
             )
             .select_related("profile", "profile__registration", "profile__registration__account")
-            .prefetch_related("checks__verified_licence_classes", "checks__evidence__events", "events")
+            .prefetch_related("checks__verified_licence_classes", "checks__evidence__events", "checks__government_attempts", "events")
             .order_by("created_at")
         )
         return Response({
@@ -81,7 +81,7 @@ class OperationsVerificationDetailView(RoleProtectedAPIView):
         verification = get_object_or_404(
             DriverVerification.objects.select_related(
                 "profile", "profile__registration", "profile__registration__account"
-            ).prefetch_related("checks__verified_licence_classes", "events"),
+            ).prefetch_related("checks__verified_licence_classes", "checks__government_attempts", "events"),
             pk=verification_id,
         )
         return Response(OperationsDriverVerificationSerializer(verification).data)
