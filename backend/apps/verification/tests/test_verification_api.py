@@ -1209,14 +1209,19 @@ class VerificationReviewServiceTests(APITestCase):
         evidence = check.evidence.get(status=DriverVerificationEvidence.Status.ACCEPTED)
         licence_classes = list(check.verified_licence_classes.filter(is_current=True))
 
-        updated = review_driver_check(
-            check_id=check.id,
-            reviewer=self.reviewer,
-            status=DriverVerificationCheck.Status.NEEDS_REVIEW,
-            result_code=DriverVerificationCheck.ResultCode.INVALID,
-            review_notes="Manual inspection identified a licence validity concern.",
+        self.client.force_authenticate(user=self.reviewer)
+        response = self.client.post(
+            reverse("verification:operations-check-review", kwargs={"check_id": check.id}),
+            {
+                "status": DriverVerificationCheck.Status.NEEDS_REVIEW,
+                "result_code": DriverVerificationCheck.ResultCode.INVALID,
+                "review_notes": "Manual inspection identified a licence validity concern.",
+            },
+            format="json",
         )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+        updated = DriverVerificationCheck.objects.get(pk=check.id)
         updated.refresh_from_db()
         evidence.refresh_from_db()
         self.verification.refresh_from_db()
