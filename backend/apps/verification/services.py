@@ -335,12 +335,14 @@ def reopen_driver_verification_check(*, check_id, actor, reason):
 def review_driver_check(*, check_id, reviewer, status, method=DriverVerificationCheck.Method.MANUAL, result_code="", review_notes=""):
     allowed_statuses = {
         DriverVerificationCheck.Status.PASSED,
-        DriverVerificationCheck.Status.FAILED,
         DriverVerificationCheck.Status.NEEDS_REVIEW,
         DriverVerificationCheck.Status.UNAVAILABLE,
     }
     if status not in allowed_statuses:
-        raise VerificationReviewError("Unsupported verification outcome.")
+        raise VerificationReviewError(
+            "Manual reviewers can pass a check, request further review, or record source unavailability. "
+            "A failed check is not a final manual-review action."
+        )
     # Government API outcomes must use a dedicated trusted integration path;
     # this human review service must never accept a caller-selected API method.
     if method != DriverVerificationCheck.Method.MANUAL:
@@ -366,6 +368,12 @@ def review_driver_check(*, check_id, reviewer, status, method=DriverVerification
             DriverVerificationCheck.ResultCode.INCONCLUSIVE,
         },
     }
+    adverse_results = {
+        DriverVerificationCheck.CheckType.NATIONAL_IDENTITY: DriverVerificationCheck.ResultCode.MISMATCH,
+        DriverVerificationCheck.CheckType.DRIVING_LICENCE: DriverVerificationCheck.ResultCode.INVALID,
+        DriverVerificationCheck.CheckType.TRAFFIC_RECORDS: DriverVerificationCheck.ResultCode.RECORD_FOUND,
+        DriverVerificationCheck.CheckType.ACCIDENT_RECORDS: DriverVerificationCheck.ResultCode.RECORD_FOUND,
+    }
 
     check = (
         DriverVerificationCheck.objects.select_for_update()
@@ -376,16 +384,25 @@ def review_driver_check(*, check_id, reviewer, status, method=DriverVerification
         raise VerificationReviewError("Verification check not found.")
     if result_code and result_code not in compatible_results[check.check_type]:
         raise VerificationReviewError("Result code does not match this check type.")
-    if status in {DriverVerificationCheck.Status.PASSED, DriverVerificationCheck.Status.FAILED} and not result_code:
-        raise VerificationReviewError("A result code is required when a check passes or fails.")
+    if status == DriverVerificationCheck.Status.PASSED and not result_code:
+        raise VerificationReviewError("A result code is required when a check passes.")
     if status == DriverVerificationCheck.Status.PASSED and result_code != SUCCESSFUL_RESULTS[check.check_type]:
         raise VerificationReviewError("A check can only pass when its result confirms successful verification.")
-    if status == DriverVerificationCheck.Status.FAILED and result_code == SUCCESSFUL_RESULTS[check.check_type]:
-        raise VerificationReviewError("A successful result cannot be recorded as failed.")
-    if result_code == DriverVerificationCheck.ResultCode.INCONCLUSIVE and status in {
-        DriverVerificationCheck.Status.PASSED, DriverVerificationCheck.Status.FAILED,
-    }:
+    if result_code == DriverVerificationCheck.ResultCode.INCONCLUSIVE and status == DriverVerificationCheck.Status.PASSED:
         raise VerificationReviewError("An inconclusive result requires further review.")
+
+    adverse_result = result_code == adverse_results[check.check_type]
+    if adverse_result:
+        if status != DriverVerificationCheck.Status.NEEDS_REVIEW:
+            raise VerificationReviewError(
+                "A manual adverse finding must be recorded as needs_review, not as a final failed decision."
+            )
+        if not str(review_notes or "").strip():
+            raise VerificationReviewError("A manual adverse finding requires review notes explaining the concern.")
+        if not check.has_trusted_supporting_record(method=DriverVerificationCheck.Method.MANUAL):
+            raise VerificationReviewError(
+                "A manual adverse finding requires matching accepted, current and clean supporting evidence."
+            )
 
     if status == DriverVerificationCheck.Status.PASSED and not check.has_trusted_supporting_record(
         method=DriverVerificationCheck.Method.MANUAL
@@ -395,14 +412,19 @@ def review_driver_check(*, check_id, reviewer, status, method=DriverVerification
         )
 
     verification = DriverVerification.objects.select_for_update().get(pk=check.verification_id)
-    if verification.status in {DriverVerification.Status.APPROVED, DriverVerification.Status.REJECTED}:
-        raise VerificationReviewError("A final verification decision has been recorded; check findings are locked.")
+    if verification.status == DriverVerification.Status.REJECTED:
+        raise VerificationReviewError("A final rejection has been recorded; check findings are locked.")
+    if verification.status == DriverVerification.Status.APPROVED and not adverse_result:
+        raise VerificationReviewError(
+            "An approved verification can only be reopened by a substantiated manual adverse finding."
+        )
+
     now = timezone.now()
     previous_check_status = check.status
     check.status = status
     check.method = method
     check.result_code = result_code
-    check.review_notes = review_notes.strip()
+    check.review_notes = str(review_notes or "").strip()
     check.checked_at = now
     check.reviewed_by = reviewer
     check.save(update_fields=[
@@ -416,8 +438,75 @@ def review_driver_check(*, check_id, reviewer, status, method=DriverVerification
         notes=check.review_notes,
     )
 
-    # Findings never approve or reject the overall application.
-    if verification.status == DriverVerification.Status.PENDING:
+    if adverse_result and previous_check_status == DriverVerificationCheck.Status.PASSED:
+        if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE:
+            VerifiedDriverLicenceClass.objects.filter(
+                licence_check=check, is_current=True
+            ).update(is_current=False, updated_at=now)
+        DriverVerificationEvent.objects.create(
+            verification=verification,
+            verification_check=check,
+            actor=reviewer,
+            event_type=DriverVerificationEvent.EventType.CHECK_INVALIDATED,
+            previous_status=previous_check_status,
+            new_status=DriverVerificationCheck.Status.NEEDS_REVIEW,
+            notes=(
+                "Previously passed check moved back to review after a substantiated manual adverse finding. "
+                + check.review_notes
+            ),
+        )
+
+    if verification.status == DriverVerification.Status.APPROVED and adverse_result:
+        previous_verification_status = verification.status
+        verification.status = DriverVerification.Status.IN_REVIEW
+        verification.decided_by = None
+        verification.decided_at = None
+        verification.decision_reason = ""
+        verification.save(update_fields=[
+            "status", "decided_by", "decided_at", "decision_reason", "updated_at",
+        ])
+        DriverVerificationEvent.objects.create(
+            verification=verification,
+            actor=reviewer,
+            event_type=DriverVerificationEvent.EventType.VERIFICATION_REOPENED,
+            previous_status=previous_verification_status,
+            new_status=DriverVerification.Status.IN_REVIEW,
+            notes=f"Verification reopened after a substantiated manual adverse finding: {check.review_notes}",
+        )
+        profile = DriverProfile.objects.select_for_update().get(pk=verification.profile_id)
+        if profile.status == DriverProfile.Status.ACTIVE:
+            profile.status = DriverProfile.Status.PENDING_ACTIVATION
+            profile.availability_activated_at = None
+            profile.availability_activated_by = None
+            profile.save(update_fields=[
+                "status", "availability_activated_at",
+                "availability_activated_by", "updated_at",
+            ])
+            DriverVerificationEvent.objects.create(
+                verification=verification,
+                actor=reviewer,
+                event_type=DriverVerificationEvent.EventType.AVAILABILITY_DEACTIVATED,
+                previous_status=DriverProfile.Status.ACTIVE,
+                new_status=DriverProfile.Status.PENDING_ACTIVATION,
+                notes="Public availability deactivated after a substantiated manual adverse finding.",
+            )
+        _notify_driver(
+            verification,
+            "driver.verification.revoked",
+            "Verification requires renewed review",
+            "An operations reviewer recorded a substantiated concern about your verification. Your verification has been reopened and your profile is no longer eligible for public discovery pending Admin review and activation.",
+        )
+    elif adverse_result:
+        if verification.status == DriverVerification.Status.PENDING:
+            verification.status = DriverVerification.Status.IN_REVIEW
+            verification.save(update_fields=["status", "updated_at"])
+        _notify_driver(
+            verification,
+            "driver.verification.adverse_finding",
+            "Verification check requires further review",
+            "An operations reviewer recorded a concern that requires further review. Your application has not been finally rejected. Please check your verification status for updates.",
+        )
+    elif verification.status == DriverVerification.Status.PENDING:
         verification.status = DriverVerification.Status.IN_REVIEW
         verification.save(update_fields=["status", "updated_at"])
         _notify_driver(
@@ -425,7 +514,6 @@ def review_driver_check(*, check_id, reviewer, status, method=DriverVerification
             "Verification in review", "Your driver verification is being reviewed.",
         )
     return check
-
 
 
 
