@@ -581,6 +581,14 @@ class VerificationReviewServiceTests(APITestCase):
         self.assertEqual(self.verification.profile.status, DriverProfile.Status.PENDING_ACTIVATION)
         self.assertFalse(self.verification.is_discoverable)
         self.assertEqual(accepted_evidence.status, DriverVerificationEvidence.Status.ACCEPTED)
+        self.assertTrue(
+            GovernmentVerificationAttempt.objects.filter(
+                verification_check=licence_check,
+                provider="authorized-test-provider",
+                provider_reference="post-approval-adverse-1",
+                outcome=GovernmentVerificationAttempt.Outcome.NOT_MATCHED,
+            ).exists()
+        )
         self.assertTrue(licence_classes)
         for licence_class in licence_classes:
             licence_class.refresh_from_db()
@@ -614,6 +622,28 @@ class VerificationReviewServiceTests(APITestCase):
                 event_type="driver.verification.revoked",
             ).exists()
         )
+
+    def test_adverse_provider_result_during_review_does_not_auto_reject_application(self):
+        self._pass_all_checks()
+        identity_check = next(
+            check for check in self.checks
+            if check.check_type == DriverVerificationCheck.CheckType.NATIONAL_IDENTITY
+        )
+
+        updated = record_government_api_result(
+            check_id=identity_check.id,
+            provider="authorized-test-provider",
+            provider_reference="pre-approval-adverse-1",
+            outcome=GovernmentVerificationAttempt.Outcome.NOT_MATCHED,
+            result_code=DriverVerificationCheck.ResultCode.MISMATCH,
+        )
+
+        updated.refresh_from_db()
+        self.verification.refresh_from_db()
+        self.assertEqual(updated.status, DriverVerificationCheck.Status.FAILED)
+        self.assertEqual(self.verification.status, DriverVerification.Status.IN_REVIEW)
+        self.assertIsNone(self.verification.decided_by)
+        self.assertIsNone(self.verification.decided_at)
 
     def test_unavailable_and_error_results_cannot_revoke_approved_verification(self):
         self._approve_and_activate_driver()
