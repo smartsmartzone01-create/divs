@@ -155,7 +155,6 @@ def record_government_api_result(
     provider_reference,
     outcome,
     result_code="",
-    response_fingerprint="",
 ):
     """Record a normalized result delivered by a trusted server-side API adapter.
 
@@ -171,12 +170,6 @@ def record_government_api_result(
         raise VerificationReviewError("A provider request reference is required.")
     if outcome not in GovernmentVerificationAttempt.Outcome.values:
         raise VerificationReviewError("Unsupported government API outcome.")
-    if response_fingerprint and (
-        len(response_fingerprint) != 64
-        or any(char not in "0123456789abcdefABCDEF" for char in response_fingerprint)
-    ):
-        raise VerificationReviewError("Response fingerprint must be a SHA-256 hex digest.")
-
     check = (
         DriverVerificationCheck.objects.select_for_update()
         .select_related("verification")
@@ -241,7 +234,6 @@ def record_government_api_result(
         provider_reference=provider_reference,
         outcome=outcome,
         result_code=result_code,
-        response_fingerprint=response_fingerprint.lower(),
         completed_at=now,
     )
     previous_status = check.status
