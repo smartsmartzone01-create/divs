@@ -32,7 +32,7 @@ class DriverVerificationCheckSerializer(serializers.ModelSerializer):
 class DriverVerificationEventSerializer(serializers.ModelSerializer):
     class Meta:
         model = DriverVerificationEvent
-        fields = ["id", "event_type", "previous_status", "new_status", "notes", "actor", "check", "created_at"]
+        fields = ["id", "event_type", "previous_status", "new_status", "notes", "actor", "verification_check", "created_at"]
         read_only_fields = fields
 
 
