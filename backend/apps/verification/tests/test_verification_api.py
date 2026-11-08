@@ -1170,6 +1170,36 @@ class VerificationReviewServiceTests(APITestCase):
             ).exists()
         )
 
+    def test_admin_retains_final_rejection_authority_after_manual_adverse_finding(self):
+        self._pass_all_checks()
+        check = next(
+            item for item in self.checks
+            if item.check_type == DriverVerificationCheck.CheckType.TRAFFIC_RECORDS
+        )
+        review_driver_check(
+            check_id=check.id,
+            reviewer=self.reviewer,
+            status=DriverVerificationCheck.Status.NEEDS_REVIEW,
+            result_code=DriverVerificationCheck.ResultCode.RECORD_FOUND,
+            review_notes="Reviewed record requires a final decision.",
+        )
+        self.verification.refresh_from_db()
+        self.assertEqual(self.verification.status, DriverVerification.Status.IN_REVIEW)
+
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.post(
+            reverse(
+                "verification:operations-verification-reject",
+                kwargs={"verification_id": self.verification.id},
+            ),
+            {"reason": "Admin reviewed the substantiated adverse finding."},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.verification.refresh_from_db()
+        self.assertEqual(self.verification.status, DriverVerification.Status.REJECTED)
+        self.assertEqual(self.verification.decided_by, self.admin)
+
     def test_manual_adverse_finding_revokes_approved_driver_and_preserves_evidence(self):
         self._approve_and_activate_driver()
         check = next(
