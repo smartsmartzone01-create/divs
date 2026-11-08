@@ -177,3 +177,101 @@ class DriverVerificationEvent(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+
+class DriverVerificationEvidence(models.Model):
+    """Evidence metadata for a check; private file storage is configured separately."""
+
+    class Source(models.TextChoices):
+        DRIVER_UPLOAD = "driver_upload", "Driver upload"
+        OPERATIONS_UPLOAD = "operations_upload", "Operations upload"
+        PHYSICAL_INSPECTION = "physical_inspection", "Physical inspection"
+        GOVERNMENT_API = "government_api", "Government API"
+
+    class Status(models.TextChoices):
+        SUBMITTED = "submitted", "Submitted"
+        UNDER_REVIEW = "under_review", "Under review"
+        ACCEPTED = "accepted", "Accepted"
+        REJECTED = "rejected", "Rejected"
+        EXPIRED = "expired", "Expired"
+        SUPERSEDED = "superseded", "Superseded"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    verification_check = models.ForeignKey(
+        DriverVerificationCheck,
+        on_delete=models.PROTECT,
+        related_name="evidence",
+    )
+    evidence_type = models.CharField(
+        max_length=32,
+        choices=DriverVerificationCheck.CheckType.choices,
+    )
+    source = models.CharField(max_length=24, choices=Source.choices)
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.SUBMITTED,
+    )
+    original_filename = models.CharField(max_length=255, blank=True)
+    content_type = models.CharField(max_length=120, blank=True)
+    file_size = models.PositiveBigIntegerField(null=True, blank=True)
+    sha256 = models.CharField(max_length=64, blank=True)
+    storage_key = models.CharField(max_length=512, blank=True)
+    source_reference = models.CharField(max_length=255, blank=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="uploaded_driver_verification_evidence",
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_driver_verification_evidence",
+    )
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    review_notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-submitted_at"]
+        indexes = [
+            models.Index(fields=["verification_check", "status"], name="drv_evidence_check_status_idx"),
+            models.Index(fields=["evidence_type", "source"], name="drv_evidence_type_source_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.evidence_type} evidence ({self.status})"
+
+
+class DriverVerificationEvidenceEvent(models.Model):
+    """Append-only audit history for evidence review and lifecycle changes."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    evidence = models.ForeignKey(
+        DriverVerificationEvidence,
+        on_delete=models.PROTECT,
+        related_name="events",
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="driver_verification_evidence_events",
+    )
+    event_type = models.CharField(max_length=32)
+    previous_status = models.CharField(max_length=16, blank=True)
+    new_status = models.CharField(max_length=16, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
