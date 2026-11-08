@@ -78,6 +78,8 @@ def review_driver_check(*, check_id, reviewer, status, method=DriverVerification
         raise VerificationReviewError("Verification check not found.")
     if result_code and result_code not in compatible_results[check.check_type]:
         raise VerificationReviewError("Result code does not match this check type.")
+    if status in {DriverVerificationCheck.Status.PASSED, DriverVerificationCheck.Status.FAILED} and not result_code:
+        raise VerificationReviewError("A result code is required when a check passes or fails.")
     if status == DriverVerificationCheck.Status.PASSED and result_code != SUCCESSFUL_RESULTS[check.check_type]:
         raise VerificationReviewError("A check can only pass when its result confirms successful verification.")
     if status == DriverVerificationCheck.Status.FAILED and result_code == SUCCESSFUL_RESULTS[check.check_type]:
@@ -197,6 +199,7 @@ def activate_driver_availability(*, verification_id, actor):
         raise VerificationReviewError("A suspended driver profile cannot be activated.")
     if verification.profile.status == DriverProfile.Status.ACTIVE:
         raise VerificationReviewError("Driver availability is already active.")
+    previous_profile_status = verification.profile.status
     verification.profile.status = DriverProfile.Status.ACTIVE
     verification.profile.availability_activated_at = timezone.now()
     verification.profile.availability_activated_by = actor
@@ -204,7 +207,7 @@ def activate_driver_availability(*, verification_id, actor):
     DriverVerificationEvent.objects.create(
         verification=verification, actor=actor,
         event_type=DriverVerificationEvent.EventType.AVAILABILITY_ACTIVATED,
-        previous_status=verification.profile.status,
+        previous_status=previous_profile_status,
         new_status=DriverProfile.Status.ACTIVE,
     )
     _notify_driver(
