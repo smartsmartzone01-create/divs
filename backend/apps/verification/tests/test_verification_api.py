@@ -1070,7 +1070,7 @@ class VerificationReviewServiceTests(APITestCase):
             item for item in self.checks
             if item.check_type == DriverVerificationCheck.CheckType.TRAFFIC_RECORDS
         )
-        with self.assertRaisesMessage(Exception, "A result code is required when a check passes."):
+        with self.assertRaisesMessage(Exception, "manual adverse finding must be recorded as needs_review"):
             review_driver_check(
                 check_id=check.id,
                 reviewer=self.reviewer,
@@ -1083,7 +1083,7 @@ class VerificationReviewServiceTests(APITestCase):
             item for item in self.checks
             if item.check_type == DriverVerificationCheck.CheckType.NATIONAL_IDENTITY
         )
-        with self.assertRaisesMessage(Exception, "only pass when its result confirms"):
+        with self.assertRaisesMessage(Exception, "A result code is required when a check passes."):
             review_driver_check(
                 check_id=check.id,
                 reviewer=self.reviewer,
