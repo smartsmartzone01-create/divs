@@ -148,11 +148,14 @@ export default function DriverWorkspacePage() {
         method: "POST",
         body: data,
       });
-      const refreshed = await readApi<Verification>("/api/backend/verification/driver/me/");
-      if (refreshed.data) setVerification(refreshed.data);
-      else throw new Error(sw ? "Faili imepokelewa lakini hali haikuweza kusasishwa." : "The file was uploaded, but verification status could not be refreshed.");
       form.reset();
-      setUploadNotice(sw ? "Ushahidi umepokelewa na umehifadhiwa kwa usalama." : "Evidence uploaded and stored securely.");
+      const refreshed = await readApi<Verification>("/api/backend/verification/driver/me/");
+      if (refreshed.data) {
+        setVerification(refreshed.data);
+        setUploadNotice(sw ? "Ushahidi umepokelewa na hali imesasishwa." : "Evidence uploaded and verification status refreshed.");
+      } else {
+        setUploadNotice(sw ? "Ushahidi umepokelewa. Onyesha upya ukurasa kuona hali mpya." : "Evidence was uploaded. Refresh the page to see the updated status.");
+      }
     } catch (caught) {
       const payload = caught instanceof ApiError ? caught.payload as { detail?: string } | undefined : undefined;
       setUploadError(payload?.detail || (caught instanceof Error ? caught.message : (sw ? "Imeshindikana kupakia faili." : "Evidence upload failed.")));
