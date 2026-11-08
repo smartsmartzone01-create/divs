@@ -7,6 +7,7 @@ import boto3
 from botocore.config import Config
 from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 from PIL import Image, UnidentifiedImageError
 from pypdf import PdfReader
 
@@ -155,7 +156,12 @@ def _validate_evidence_storage_key(storage_key):
 
 
 def retrieve_verification_evidence(evidence):
-    if evidence.storage_deleted_at is not None or evidence.status == DriverVerificationEvidence.Status.EXPIRED:
+    expires_at = getattr(evidence, "expires_at", None)
+    if (
+        evidence.storage_deleted_at is not None
+        or evidence.status == DriverVerificationEvidence.Status.EXPIRED
+        or (expires_at is not None and expires_at <= timezone.now())
+    ):
         raise EvidenceStorageError("This evidence file has expired and is no longer available.")
     scan_is_clean = evidence.scan_status == DriverVerificationEvidence.ScanStatus.CLEAN
     development_bypass = (
