@@ -71,7 +71,7 @@ class EvidenceRetentionCommandTests(TestCase):
 
     @patch("apps.verification.management.commands.purge_expired_verification_evidence._s3_client")
     def test_execute_deletes_only_expired_files_without_legal_hold(self, get_client):
-        output = BytesIO()
+        output = StringIO()
         call_command("purge_expired_verification_evidence", "--execute", stdout=output)
 
         get_client.return_value.delete_object.assert_called_once_with(
