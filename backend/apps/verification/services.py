@@ -95,7 +95,9 @@ def review_driver_check(*, check_id, reviewer, status, method=DriverVerification
     }:
         raise VerificationReviewError("An inconclusive result requires further review.")
 
-    if status == DriverVerificationCheck.Status.PASSED and not check.has_trusted_supporting_record():
+    if status == DriverVerificationCheck.Status.PASSED and not check.has_trusted_supporting_record(
+        method=DriverVerificationCheck.Method.MANUAL
+    ):
         raise VerificationReviewError(
             "A manual check can pass only while matching accepted evidence is valid and available."
         )
