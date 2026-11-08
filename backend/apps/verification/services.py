@@ -624,7 +624,7 @@ def record_government_api_result(
             verification,
             "driver.verification.revoked",
             "Verification requires renewed review",
-            "A trusted verification source returned an adverse result. Your verification has been reopened and public availability has been paused pending Admin review.",
+            "A trusted verification source returned an adverse result. Your verification has been reopened, and your profile is no longer eligible for public discovery pending renewed Admin review and activation.",
         )
     elif adverse_result:
         _notify_driver(
