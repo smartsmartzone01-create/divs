@@ -144,10 +144,14 @@ class DriverVerificationCheck(models.Model):
                 Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
             ).exists()
         if method == self.Method.GOVERNMENT_API:
-            return self.government_attempts.filter(
-                outcome=GovernmentVerificationAttempt.Outcome.MATCHED,
-                result_code=self.result_code,
-            ).exists()
+            latest_attempt = self.government_attempts.order_by(
+                "-completed_at", "-created_at"
+            ).first()
+            return (
+                latest_attempt is not None
+                and latest_attempt.outcome == GovernmentVerificationAttempt.Outcome.MATCHED
+                and latest_attempt.result_code == self.result_code
+            )
         return False
 
     def __str__(self):
