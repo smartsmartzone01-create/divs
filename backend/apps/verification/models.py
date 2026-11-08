@@ -144,3 +144,26 @@ class VerifiedDriverLicenceClass(models.Model):
 
     def __str__(self):
         return f"{self.licence_class} ({self.licence_check.verification.profile_id})"
+
+
+class DriverVerificationEvent(models.Model):
+    """Append-only audit trail for verification findings and administrative decisions."""
+
+    class EventType(models.TextChoices):
+        CHECK_REVIEWED = "check_reviewed", "Check reviewed"
+        APPROVED = "approved", "Verification approved"
+        REJECTED = "rejected", "Verification rejected"
+        AVAILABILITY_ACTIVATED = "availability_activated", "Availability activated"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    verification = models.ForeignKey(DriverVerification, on_delete=models.CASCADE, related_name="events")
+    check = models.ForeignKey(DriverVerificationCheck, on_delete=models.SET_NULL, null=True, blank=True, related_name="events")
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="driver_verification_events")
+    event_type = models.CharField(max_length=32, choices=EventType.choices)
+    previous_status = models.CharField(max_length=16, blank=True)
+    new_status = models.CharField(max_length=24, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
