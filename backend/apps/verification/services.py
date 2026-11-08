@@ -101,6 +101,7 @@ def process_expired_verification_evidence(*, now=None, dry_run=False):
 
     reopened_checks = 0
     reopened_verifications = set()
+    affected_verifications = set()
     deactivated_profiles = 0
     for check_id, check_evidence in expired_by_check.items():
         check = (
@@ -138,6 +139,7 @@ def process_expired_verification_evidence(*, now=None, dry_run=False):
             notes="Manual verification invalidated because all accepted supporting evidence has expired.",
         )
         reopened_checks += 1
+        affected_verifications.add(verification.pk)
 
         if verification.status == DriverVerification.Status.APPROVED:
             previous_verification_status = verification.status
@@ -178,7 +180,7 @@ def process_expired_verification_evidence(*, now=None, dry_run=False):
             )
             deactivated_profiles += 1
 
-    for verification_id in reopened_verifications:
+    for verification_id in affected_verifications:
         verification = DriverVerification.objects.select_related(
             "profile", "profile__registration", "profile__registration__account"
         ).get(pk=verification_id)
@@ -186,7 +188,7 @@ def process_expired_verification_evidence(*, now=None, dry_run=False):
             verification,
             "driver.verification.evidence_expired",
             "Verification evidence expired",
-            "Evidence supporting one of your verification checks has expired. Submit current evidence for review. Your public availability is paused until verification and Admin activation are complete.",
+            "Evidence supporting one of your verification checks has expired. Submit current evidence for review. If your profile was active, its public availability has been paused and will require fresh approval and Admin activation.",
         )
 
     return {
