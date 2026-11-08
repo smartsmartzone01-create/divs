@@ -1,16 +1,19 @@
+from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import status as http_status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.profiles.models import DriverProfile
-from apps.verification.models import DriverVerification, DriverVerificationCheck
+from apps.verification.models import DriverVerification, DriverVerificationCheck, DriverVerificationEvidence
 from apps.verification.serializers import (
     DriverVerificationSerializer,
     ManualCheckReviewSerializer,
     OperationsDriverVerificationSerializer,
     VerificationDecisionSerializer,
     VerifiedLicenceClassesInputSerializer,
+    DriverVerificationEvidenceSerializer,
+    VerificationEvidenceUploadSerializer,
 )
 from apps.verification.services import (
     VerificationReviewError,
@@ -18,6 +21,11 @@ from apps.verification.services import (
     decide_driver_verification,
     record_verified_licence_classes,
     review_driver_check,
+)
+from apps.verification.storage import (
+    EvidenceStorageError,
+    retrieve_verification_evidence,
+    store_verification_evidence,
 )
 from apps.operations.permissions import HasOperationsCapability
 from common.permissions import HasRequiredProfile
@@ -173,3 +181,100 @@ class OperationsDriverAvailabilityActivateView(RoleProtectedAPIView):
             "driver_profile_id": str(profile.id),
             "status": profile.status,
         }, status=http_status.OK)
+
+
+
+def _evidence_file_response(evidence):
+    try:
+        body, content_type, _filename = retrieve_verification_evidence(evidence)
+    except EvidenceStorageError as exc:
+        return Response({"detail": str(exc)}, status=http_status.SERVICE_UNAVAILABLE)
+
+    def file_chunks():
+        try:
+            while True:
+                chunk = body.read(64 * 1024)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            body.close()
+
+    response = StreamingHttpResponse(file_chunks(), content_type=content_type)
+    response["Content-Disposition"] = 'inline; filename="verification-evidence"'
+    response["Cache-Control"] = "private, no-store"
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Content-Security-Policy"] = "sandbox; default-src 'none'"
+    return response
+
+
+class DriverVerificationEvidenceUploadView(RoleProtectedAPIView):
+    required_profile_type = "driver"
+
+    def post(self, request, check_id):
+        check = get_object_or_404(
+            DriverVerificationCheck.objects.select_related("verification", "verification__profile"),
+            pk=check_id,
+            verification__profile__registration__account=request.user,
+        )
+        serializer = VerificationEvidenceUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            evidence = store_verification_evidence(
+                check=check,
+                uploaded_file=serializer.validated_data["file"],
+                actor=request.user,
+                source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
+            )
+        except EvidenceStorageError as exc:
+            return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
+        return Response(DriverVerificationEvidenceSerializer(evidence).data, status=http_status.CREATED)
+
+
+class OperationsVerificationEvidenceUploadView(RoleProtectedAPIView):
+    required_profile_type = "operations"
+    required_operations_capability = "review_driver_verification"
+    permission_classes = [IsAuthenticated, HasRequiredProfile, HasOperationsCapability]
+
+    def post(self, request, check_id):
+        check = get_object_or_404(
+            DriverVerificationCheck.objects.select_related("verification", "verification__profile"),
+            pk=check_id,
+        )
+        serializer = VerificationEvidenceUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            evidence = store_verification_evidence(
+                check=check,
+                uploaded_file=serializer.validated_data["file"],
+                actor=request.user,
+                source=DriverVerificationEvidence.Source.OPERATIONS_UPLOAD,
+            )
+        except EvidenceStorageError as exc:
+            return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
+        return Response(DriverVerificationEvidenceSerializer(evidence).data, status=http_status.CREATED)
+
+
+class DriverVerificationEvidenceFileView(RoleProtectedAPIView):
+    required_profile_type = "driver"
+
+    def get(self, request, evidence_id):
+        evidence = get_object_or_404(
+            DriverVerificationEvidence.objects.select_related("verification_check__verification__profile"),
+            pk=evidence_id,
+            verification_check__verification__profile__registration__account=request.user,
+        )
+        return _evidence_file_response(evidence)
+
+
+class OperationsVerificationEvidenceFileView(RoleProtectedAPIView):
+    required_profile_type = "operations"
+    required_operations_capability = "review_driver_verification"
+    permission_classes = [IsAuthenticated, HasRequiredProfile, HasOperationsCapability]
+
+    def get(self, request, evidence_id):
+        evidence = get_object_or_404(
+            DriverVerificationEvidence.objects.select_related("verification_check__verification__profile"),
+            pk=evidence_id,
+        )
+        return _evidence_file_response(evidence)
