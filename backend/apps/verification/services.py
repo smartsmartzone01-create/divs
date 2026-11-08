@@ -478,4 +478,13 @@ def record_verified_licence_classes(*, check_id, licence_classes, reviewer):
             defaults={"is_current": True, "verified_at": now, "verified_by": reviewer},
         )
         records.append(record)
+
+    DriverVerificationEvent.objects.create(
+        verification=check.verification,
+        verification_check=check,
+        actor=reviewer,
+        event_type=DriverVerificationEvent.EventType.LICENCE_CLASSES_RECORDED,
+        new_status=check.status,
+        notes="Verified licence classes recorded: " + ", ".join(normalized),
+    )
     return records
