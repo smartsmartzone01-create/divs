@@ -30,7 +30,7 @@ A commit is not proof that a feature deploys, passes tests, or is production-rea
 | **1A — Evidence data foundation** | Evidence metadata model, evidence event history, migration, serializers and initial tests | Implemented; tests not confirmed as run |
 | **1B — Private evidence storage** | Cloudflare R2 integration, private upload/retrieval endpoints, file validation, upload throttling and storage configuration | In progress; code committed, audit/deployment/live R2 test outstanding |
 | **1C — Evidence security hardening** | Authorization tests, quarantine/malware-scanning strategy, access audit, retention/deletion policy, orphan cleanup and safe file delivery | In progress; access audit, R2 orphan reconciliation, explicit-expiry deletion/legal hold and missing-object handling are coded. Malware scanning is deferred for development; a DEBUG-gated pending-file retrieval option is implemented for the development service only. CI test workflow currently fails before exposing any test steps; full test execution remains unverified. |
-| **1D — Verification workflow integration** | Connect evidence to identity, driving-licence, traffic/police and accident checks; evidence review states and reviewer actions | Planned / needs verification |
+| **1D — Verification workflow integration** | Connect evidence to identity, driving-licence, traffic/police and accident checks; evidence review states, trusted API result records and reviewer actions | In progress; manual evidence review, accepted-evidence gating and a separate server-side government-result audit path are coded. Provider integration and acceptance verification remain outstanding |
 | **1E — Verification API and permission acceptance tests** | Driver ownership, operator capabilities, Admin-only decisions, approval/rejection, reopening and activation rules | Planned / needs verification |
 
 ### Phase 1 acceptance criteria
@@ -53,7 +53,7 @@ A commit is not proof that a feature deploys, passes tests, or is production-rea
 3. Complete recovery validation for missing objects, orphan reconciliation and restore procedures.
 4. Resolve GitHub Actions runner/workflow startup failure and execute the full backend suite.
 5. Confirm the latest Render deployment is live and verify all expected migrations.
-6. Complete Stage 1D by binding evidence acceptance to the four verification check types and manual/API review paths.
+6. Complete Stage 1D by validating evidence-to-check binding, accepted-evidence gating, trusted API result recording and the manual fallback path.
 
 ### Stage 1B — immediate work sequence
 
@@ -145,8 +145,8 @@ The Driver Workspace is the visual reference for the Client and Admin workspaces
 - View the operations workspace.
 - Manage driver registrations.
 - Review verification information and evidence.
-- Record preliminary findings.
-- Approve verification when all required checks pass, subject to the established workflow.
+- Accept or reject submitted evidence with an auditable review decision.
+- Record preliminary findings for the four verification checks.
 - Manage driver performance where authorized.
 
 **Operator may not:**
@@ -169,7 +169,7 @@ Admin registration is not public. Admin access is controlled through the establi
 ### Verification decision rules
 
 - Findings do not automatically decide the overall verification outcome.
-- Final approval/rejection is an explicit decision.
+- Final approval/rejection is an explicit Admin-only decision.
 - Approval and public availability activation are separate actions.
 - Reopening a check or revoking approval is Admin-only.
 - Reopening must remove the driver from discovery, preserve previous findings/history, set the verification back to review and notify the driver.
