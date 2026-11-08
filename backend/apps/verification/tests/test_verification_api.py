@@ -265,6 +265,61 @@ class VerificationReviewServiceTests(APITestCase):
         )
         response.close()
 
+    def test_manual_check_cannot_pass_without_accepted_evidence(self):
+        check = self.checks[0]
+        successful_result = {
+            DriverVerificationCheck.CheckType.NATIONAL_IDENTITY: DriverVerificationCheck.ResultCode.MATCH,
+            DriverVerificationCheck.CheckType.DRIVING_LICENCE: DriverVerificationCheck.ResultCode.VALID,
+            DriverVerificationCheck.CheckType.TRAFFIC_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
+            DriverVerificationCheck.CheckType.ACCIDENT_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
+        }[check.check_type]
+        with self.assertRaisesMessage(Exception, "matching evidence has been accepted"):
+            review_driver_check(
+                check_id=check.id,
+                reviewer=self.reviewer,
+                status=DriverVerificationCheck.Status.PASSED,
+                result_code=successful_result,
+            )
+
+    def test_manual_review_cannot_claim_government_api_method(self):
+        check = self.checks[0]
+        with self.assertRaisesMessage(Exception, "cannot be recorded through manual review"):
+            review_driver_check(
+                check_id=check.id,
+                reviewer=self.reviewer,
+                status=DriverVerificationCheck.Status.NEEDS_REVIEW,
+                method=DriverVerificationCheck.Method.GOVERNMENT_API,
+            )
+
+    def test_operator_can_accept_matching_submitted_evidence(self):
+        check = self.checks[0]
+        evidence = DriverVerificationEvidence.objects.create(
+            verification_check=check,
+            evidence_type=check.check_type,
+            source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
+            scan_status=DriverVerificationEvidence.ScanStatus.CLEAN,
+            storage_key="verification-evidence/reviewable-object",
+            uploaded_by=check.verification.profile.registration.account,
+        )
+        self.client.force_authenticate(user=self.reviewer)
+        response = self.client.post(
+            reverse("verification:operations-evidence-review", kwargs={"evidence_id": evidence.id}),
+            {"decision": "accepted", "review_notes": "Evidence reviewed."},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        evidence.refresh_from_db()
+        self.assertEqual(evidence.status, DriverVerificationEvidence.Status.ACCEPTED)
+        self.assertEqual(evidence.reviewed_by, self.reviewer)
+        self.assertTrue(
+            DriverVerificationEvidenceEvent.objects.filter(
+                evidence=evidence,
+                actor=self.reviewer,
+                event_type="reviewed",
+                new_status=DriverVerificationEvidence.Status.ACCEPTED,
+            ).exists()
+        )
+
     def _pass_all_checks(self):
         result_codes = {
             DriverVerificationCheck.CheckType.NATIONAL_IDENTITY: DriverVerificationCheck.ResultCode.MATCH,
