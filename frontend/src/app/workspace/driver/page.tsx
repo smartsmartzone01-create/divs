@@ -51,7 +51,7 @@ function statusLabel(value: string, sw: boolean) {
     approved: ["Approved", "Imeidhinishwa"], rejected: ["Rejected", "Imekataliwa"],
     passed: ["Passed", "Imepita"], failed: ["Failed", "Haijapita"],
     needs_review: ["Needs review", "Inahitaji ukaguzi"], unavailable: ["Unavailable", "Haipatikani"],
-    accepted: ["Accepted", "Imekubaliwa"], rejected: ["Rejected", "Imekataliwa"],
+    accepted: ["Accepted", "Imekubaliwa"],
     under_review: ["Under review", "Inakaguliwa"], expired: ["Expired", "Muda umeisha"],
     superseded: ["Superseded", "Imebadilishwa"],
     active: ["Active", "Inatumika"], suspended: ["Suspended", "Imesimamishwa"],
@@ -62,7 +62,7 @@ function statusLabel(value: string, sw: boolean) {
 }
 
 function StatusPill({ value, sw }: { value: string; sw: boolean }) {
-  const tone = ["approved", "passed", "active", "upheld"].includes(value) ? "success" : ["rejected", "failed", "suspended", "denied"].includes(value) ? "danger" : "pending";
+  const tone = ["approved", "passed", "accepted", "active", "upheld"].includes(value) ? "success" : ["rejected", "failed", "suspended", "denied", "expired"].includes(value) ? "danger" : "pending";
   return <span className={`driver-status-pill is-${tone}`}>{statusLabel(value, sw)}</span>;
 }
 
