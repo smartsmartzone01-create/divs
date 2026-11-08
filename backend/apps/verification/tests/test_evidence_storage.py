@@ -139,6 +139,10 @@ class EvidenceR2StorageTests(TestCase):
                     "content_type": "image/jpeg",
                     "original_filename": "identity.jpg",
                     "scan_status": DriverVerificationEvidence.ScanStatus.CLEAN,
+                "storage_deleted_at": None,
+                "status": DriverVerificationEvidence.Status.SUBMITTED,
+                    "storage_deleted_at": None,
+                    "status": DriverVerificationEvidence.Status.SUBMITTED,
                 },
             )()
             with self.subTest(key=key):
