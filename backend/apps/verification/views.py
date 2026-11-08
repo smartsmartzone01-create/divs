@@ -81,7 +81,7 @@ class OperationsVerificationDetailView(RoleProtectedAPIView):
         verification = get_object_or_404(
             DriverVerification.objects.select_related(
                 "profile", "profile__registration", "profile__registration__account"
-            ).prefetch_related("checks__verified_licence_classes", "checks__government_attempts", "events"),
+            ).prefetch_related("checks__verified_licence_classes", "checks__evidence__events", "checks__government_attempts", "events"),
             pk=verification_id,
         )
         return Response(OperationsDriverVerificationSerializer(verification).data)
