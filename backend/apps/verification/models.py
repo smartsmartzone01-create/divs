@@ -249,6 +249,12 @@ class GovernmentVerificationAttempt(models.Model):
 
     class Meta:
         ordering = ["-completed_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["provider", "provider_reference"],
+                name="uniq_gov_provider_ref",
+            ),
+        ]
         indexes = [
             models.Index(fields=["verification_check", "completed_at"], name="gov_attempt_check_time_idx"),
         ]
