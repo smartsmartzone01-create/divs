@@ -98,8 +98,8 @@ def store_verification_evidence(*, check, uploaded_file, actor, source):
     except Exception as exc:
         raise EvidenceStorageError("The private evidence file could not be stored.") from exc
 
-    safe_filename = (uploaded_file.name or "evidence").replace("\\\\", "/").rsplit("/", 1)[-1]
-    safe_filename = "".join(char for char in safe_filename if char.isprintable() and char not in "\\r\\n")[:255]
+    safe_filename = (uploaded_file.name or "evidence").replace("\\", "/").rsplit("/", 1)[-1]
+    safe_filename = "".join(char for char in safe_filename if char.isprintable() and char not in "\r\n")[:255]
 
     # Keep the database transaction inside this try block. This also catches a
     # failure raised while the transaction commits, not only row-creation errors.
