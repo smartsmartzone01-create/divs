@@ -51,7 +51,7 @@ class OperationsVerificationQueueView(RoleProtectedAPIView):
                 status__in=[DriverVerification.Status.PENDING, DriverVerification.Status.IN_REVIEW]
             )
             .select_related("profile", "profile__registration", "profile__registration__account")
-            .prefetch_related("checks__verified_licence_classes")
+            .prefetch_related("checks__verified_licence_classes", "events")
             .order_by("created_at")
         )
         return Response({
@@ -69,7 +69,7 @@ class OperationsVerificationDetailView(RoleProtectedAPIView):
         verification = get_object_or_404(
             DriverVerification.objects.select_related(
                 "profile", "profile__registration", "profile__registration__account"
-            ).prefetch_related("checks__verified_licence_classes"),
+            ).prefetch_related("checks__verified_licence_classes", "events"),
             pk=verification_id,
         )
         return Response(OperationsDriverVerificationSerializer(verification).data)
