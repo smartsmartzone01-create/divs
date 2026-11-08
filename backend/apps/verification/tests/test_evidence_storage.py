@@ -123,6 +123,29 @@ class EvidenceR2StorageTests(TestCase):
         )
 
     @patch("apps.verification.storage._s3_client")
+    def test_retrieval_rejects_keys_outside_private_evidence_prefix(self, get_client):
+        for key in (
+            "other-prefix/private-object",
+            "../verification-evidence/object",
+            "verification-evidence/../other-object",
+            "verification-evidence\\\\outside",
+        ):
+            evidence = type(
+                "EvidenceStub",
+                (),
+                {
+                    "storage_key": key,
+                    "content_type": "image/jpeg",
+                    "original_filename": "identity.jpg",
+                },
+            )()
+            with self.subTest(key=key):
+                with self.assertRaises(EvidenceStorageError):
+                    retrieve_verification_evidence(evidence)
+
+        get_client.assert_not_called()
+
+    @patch("apps.verification.storage._s3_client")
     def test_retrieval_reads_object_using_private_storage_key(self, get_client):
         body = io.BytesIO(b"private evidence bytes")
         get_client.return_value.get_object.return_value = {"Body": body}
