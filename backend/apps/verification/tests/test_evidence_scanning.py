@@ -1,4 +1,7 @@
-from django.test import TestCase
+import io
+from unittest.mock import patch
+
+from django.test import TestCase, override_settings
 
 from apps.identity.models import Account
 from apps.registrations.models import DriverRegistration
@@ -7,7 +10,27 @@ from apps.verification.models import (
     DriverVerificationEvidence,
     DriverVerificationEvidenceEvent,
 )
-from apps.verification.scanning import EvidenceScanError, record_evidence_scan_result
+from apps.verification.scanning import (
+    EvidenceScanError,
+    record_evidence_scan_result,
+    scan_verification_evidence,
+)
+
+
+class CleanTestScanner:
+    provider_name = "test-scanner"
+
+    def scan(self, content, *, content_type, filename):
+        if content != b"test":
+            raise ValueError("Unexpected test payload")
+        return DriverVerificationEvidence.ScanStatus.CLEAN
+
+
+class FailingTestScanner:
+    provider_name = "test-scanner"
+
+    def scan(self, content, *, content_type, filename):
+        raise RuntimeError("scanner unavailable")
 
 
 class EvidenceScanningServiceTests(TestCase):
@@ -34,6 +57,9 @@ class EvidenceScanningServiceTests(TestCase):
             evidence_type=check.check_type,
             source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
             storage_key="verification-evidence/test-object",
+            original_filename="identity.jpg",
+            content_type="image/jpeg",
+            file_size=4,
         )
 
     def test_clean_scan_result_is_recorded_with_audit_event(self):
@@ -82,3 +108,48 @@ class EvidenceScanningServiceTests(TestCase):
 
         self.evidence.refresh_from_db()
         self.assertEqual(self.evidence.scan_status, DriverVerificationEvidence.ScanStatus.PENDING)
+
+
+    @override_settings(
+        DIVS_EVIDENCE_SCANNER_CLASS="apps.verification.tests.test_evidence_scanning.CleanTestScanner",
+        R2_EVIDENCE_STORAGE_ENABLED=True,
+        R2_BUCKET_NAME="divs-private-evidence",
+        R2_MAX_UPLOAD_BYTES=10 * 1024 * 1024,
+    )
+    @patch("apps.verification.scanning._s3_client")
+    def test_configured_scanner_reads_quarantined_object_and_records_clean(self, get_client):
+        get_client.return_value.get_object.return_value = {"Body": io.BytesIO(b"test")}
+
+        evidence = scan_verification_evidence(evidence_id=self.evidence.id)
+
+        self.assertEqual(evidence.scan_status, DriverVerificationEvidence.ScanStatus.CLEAN)
+        self.assertEqual(evidence.scan_provider, "test-scanner")
+        get_client.return_value.get_object.assert_called_once_with(
+            Bucket="divs-private-evidence",
+            Key="verification-evidence/test-object",
+        )
+
+    @override_settings(DIVS_EVIDENCE_SCANNER_CLASS="")
+    @patch("apps.verification.scanning._s3_client")
+    def test_missing_scanner_keeps_evidence_quarantined(self, get_client):
+        with self.assertRaises(EvidenceScanError):
+            scan_verification_evidence(evidence_id=self.evidence.id)
+
+        get_client.assert_not_called()
+        self.evidence.refresh_from_db()
+        self.assertEqual(self.evidence.scan_status, DriverVerificationEvidence.ScanStatus.PENDING)
+
+    @override_settings(
+        DIVS_EVIDENCE_SCANNER_CLASS="apps.verification.tests.test_evidence_scanning.FailingTestScanner",
+        R2_EVIDENCE_STORAGE_ENABLED=True,
+        R2_BUCKET_NAME="divs-private-evidence",
+        R2_MAX_UPLOAD_BYTES=10 * 1024 * 1024,
+    )
+    @patch("apps.verification.scanning._s3_client")
+    def test_scanner_failure_records_error_and_never_clean(self, get_client):
+        get_client.return_value.get_object.return_value = {"Body": io.BytesIO(b"test")}
+
+        evidence = scan_verification_evidence(evidence_id=self.evidence.id)
+
+        self.assertEqual(evidence.scan_status, DriverVerificationEvidence.ScanStatus.ERROR)
+        self.assertEqual(evidence.scan_provider, "test-scanner")
