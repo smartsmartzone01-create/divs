@@ -114,6 +114,7 @@ class EvidenceR2StorageTests(TestCase):
         self.assertEqual(evidence.storage_key, upload_args["Key"])
         self.assertEqual(evidence.original_filename, "identity.jpg")
         self.assertEqual(evidence.status, DriverVerificationEvidence.Status.SUBMITTED)
+        self.assertEqual(evidence.scan_status, DriverVerificationEvidence.ScanStatus.PENDING)
         self.assertTrue(
             DriverVerificationEvidenceEvent.objects.filter(
                 evidence=evidence,
@@ -137,9 +138,34 @@ class EvidenceR2StorageTests(TestCase):
                     "storage_key": key,
                     "content_type": "image/jpeg",
                     "original_filename": "identity.jpg",
+                    "scan_status": DriverVerificationEvidence.ScanStatus.CLEAN,
                 },
             )()
             with self.subTest(key=key):
+                with self.assertRaises(EvidenceStorageError):
+                    retrieve_verification_evidence(evidence)
+
+        get_client.assert_not_called()
+
+
+    @patch("apps.verification.storage._s3_client")
+    def test_retrieval_refuses_pending_or_failed_scan_without_contacting_r2(self, get_client):
+        for scan_status in (
+            DriverVerificationEvidence.ScanStatus.PENDING,
+            DriverVerificationEvidence.ScanStatus.ERROR,
+            DriverVerificationEvidence.ScanStatus.INFECTED,
+        ):
+            evidence = type(
+                "EvidenceStub",
+                (),
+                {
+                    "storage_key": "verification-evidence/private-object",
+                    "content_type": "image/jpeg",
+                    "original_filename": "identity.jpg",
+                    "scan_status": scan_status,
+                },
+            )()
+            with self.subTest(scan_status=scan_status):
                 with self.assertRaises(EvidenceStorageError):
                     retrieve_verification_evidence(evidence)
 
@@ -156,6 +182,7 @@ class EvidenceR2StorageTests(TestCase):
                 "storage_key": "verification-evidence/private-object",
                 "content_type": "image/jpeg",
                 "original_filename": "identity.jpg",
+                "scan_status": DriverVerificationEvidence.ScanStatus.CLEAN,
             },
         )()
 
