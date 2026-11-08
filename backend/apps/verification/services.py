@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -179,6 +180,18 @@ def review_verification_evidence(*, evidence_id, reviewer, decision, review_note
         DriverVerificationEvidence.ScanStatus.ERROR,
     }:
         raise VerificationReviewError("Evidence blocked by security scanning cannot be accepted.")
+    development_scan_bypass = (
+        settings.DEBUG
+        and settings.DIVS_ALLOW_UNSCANNED_EVIDENCE_ACCESS
+        and evidence.scan_status == DriverVerificationEvidence.ScanStatus.PENDING
+    )
+    if (
+        evidence.scan_status != DriverVerificationEvidence.ScanStatus.CLEAN
+        and not development_scan_bypass
+    ):
+        raise VerificationReviewError("Evidence must pass the security scan before it can be accepted.")
+    if not evidence.storage_key:
+        raise VerificationReviewError("Evidence has no stored private file and cannot be accepted.")
 
     previous_status = evidence.status
     evidence.status = decision
