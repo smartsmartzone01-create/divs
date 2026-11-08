@@ -1044,7 +1044,7 @@ class VerificationReviewServiceTests(APITestCase):
             check for check in self.checks
             if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
         )
-        with self.assertRaisesMessage(Exception, "invalid licence result must use the failed status"):
+        with self.assertRaisesMessage(Exception, "manual adverse finding must be recorded as needs_review"):
             review_driver_check(
                 check_id=licence_check.id,
                 reviewer=self.reviewer,
@@ -1057,7 +1057,7 @@ class VerificationReviewServiceTests(APITestCase):
             item for item in self.checks
             if item.check_type == DriverVerificationCheck.CheckType.NATIONAL_IDENTITY
         )
-        with self.assertRaisesMessage(Exception, "only pass when its result confirms"):
+        with self.assertRaisesMessage(Exception, "manual adverse finding must be recorded as needs_review"):
             review_driver_check(
                 check_id=check.id,
                 reviewer=self.reviewer,
@@ -1070,7 +1070,7 @@ class VerificationReviewServiceTests(APITestCase):
             item for item in self.checks
             if item.check_type == DriverVerificationCheck.CheckType.TRAFFIC_RECORDS
         )
-        with self.assertRaisesMessage(Exception, "only pass when its result confirms"):
+        with self.assertRaisesMessage(Exception, "A result code is required when a check passes."):
             review_driver_check(
                 check_id=check.id,
                 reviewer=self.reviewer,
