@@ -30,8 +30,8 @@ A commit is not proof that a feature deploys, passes tests, or is production-rea
 | **1A — Evidence data foundation** | Evidence metadata model, evidence event history, migration, serializers and initial tests | Implemented; tests not confirmed as run |
 | **1B — Private evidence storage** | Cloudflare R2 integration, private upload/retrieval endpoints, file validation, upload throttling and storage configuration | In progress; code committed, audit/deployment/live R2 test outstanding |
 | **1C — Evidence security hardening** | Authorization tests, quarantine/malware-scanning strategy, access audit, retention/deletion policy, orphan cleanup and safe file delivery | In progress; access audit, R2 orphan reconciliation, explicit-expiry deletion/legal hold and missing-object handling are coded. Malware scanning is deferred for development; a DEBUG-gated pending-file retrieval option is implemented for the development service only. CI test workflow currently fails before exposing any test steps; full test execution remains unverified. |
-| **1D — Verification workflow integration** | Connect evidence to identity, driving-licence, traffic/police and accident checks; evidence review states, trusted API result records and reviewer actions | In progress; manual evidence review, expiry-aware accepted-evidence gating, trusted server-side government-result audit records, licence-class audit events, Admin-only approval/activation and Admin-only check reopening with evidence invalidation are coded. Provider integration and acceptance verification remain outstanding |
-| **1E — Verification API and permission acceptance tests** | Driver ownership, operator capabilities, Admin-only decisions, approval/rejection, reopening and activation rules | In progress; Admin-only reopening endpoint and service guard are coded. Operator denial, evidence supersession, availability deactivation and fresh-activation behavior have acceptance tests added; tests have not been run by the assistant |
+| **1D — Verification workflow integration** | Connect evidence to identity, driving-licence, traffic/police and accident checks; evidence review states, trusted API result records and reviewer actions | In progress; manual evidence review, expiry-aware accepted-evidence gating, trusted server-side government-result audit records, licence-class audit events, Admin-only approval/activation and Admin-only check reopening, plus expiry processing that invalidates unsupported manual checks and deactivates active profiles, are coded. Provider integration, expiry scheduling and acceptance verification remain outstanding |
+| **1E — Verification API and permission acceptance tests** | Driver ownership, operator capabilities, Admin-only decisions, approval/rejection, reopening, expiry revocation and activation rules | In progress; acceptance tests have been added for Admin-only reopening, Operator denial, evidence supersession, expiry-driven invalidation, alternate valid evidence, dry-run safety and availability deactivation. Tests have not been run by the assistant |
 
 ### Phase 1 acceptance criteria
 
@@ -45,6 +45,9 @@ A commit is not proof that a feature deploys, passes tests, or is production-rea
 - Retention deletion requires an explicit expiry timestamp, an expired evidence status and no legal hold; evidence metadata and audit history remain.
 - No statutory retention duration has been assumed. Recovery behavior and operational restore tests remain outstanding.
 - A driver becomes publicly discoverable only after verification approval and separate Admin activation.
+- Expired accepted evidence must stop supporting a manual check. If no other valid accepted evidence remains, invalidate the check, return approved verification to review, and deactivate active public availability.
+- Evidence expiry processing and private-file retention deletion are separate operations; expiry processing must run before retention deletion.
+- Government API result validity periods are not assumed; define them with the authorized source/provider policy before adding automatic API-result expiry.
 
 ### Stage 1C — current work sequence
 
@@ -54,6 +57,7 @@ A commit is not proof that a feature deploys, passes tests, or is production-rea
 4. Resolve GitHub Actions runner/workflow startup failure and execute the full backend suite.
 5. Confirm the latest Render deployment is live and verify all expected migrations.
 6. Complete Stage 1D by validating evidence-to-check binding, accepted-evidence expiry and scan-state gating, trusted API result recording, licence-class audit history and the manual fallback path.
+7. Run `python manage.py process_expired_verification_evidence` as a dry run; execute only after reviewing the counts with `--execute`. Configure a scheduled run after the command is validated.
 
 ### Stage 1B — immediate work sequence
 
