@@ -58,21 +58,29 @@ def process_expired_verification_evidence(*, now=None, dry_run=False):
         .order_by("verification_check_id", "expires_at")
     )
     if dry_run:
-        impacted_check_ids = {
-            item.verification_check_id
-            for item in expired
-            if item.verification_check.method == DriverVerificationCheck.Method.MANUAL
-            and item.verification_check.status == DriverVerificationCheck.Status.PASSED
+        impacted_checks = {}
+        for item in expired:
+            check = item.verification_check
+            if (
+                check.method == DriverVerificationCheck.Method.MANUAL
+                and check.status == DriverVerificationCheck.Status.PASSED
+            ):
+                impacted_checks[check.pk] = check
+        checks_to_reopen = [
+            check for check in impacted_checks.values()
+            if not check.has_trusted_supporting_record(
+                method=DriverVerificationCheck.Method.MANUAL
+            )
+        ]
+        profiles_to_deactivate = {
+            check.verification.profile_id
+            for check in checks_to_reopen
+            if check.verification.profile.status == DriverProfile.Status.ACTIVE
         }
         return {
             "evidence_expired": len(expired),
-            "checks_to_reopen": len(impacted_check_ids),
-            "profiles_to_deactivate": DriverProfile.objects.filter(
-                status=DriverProfile.Status.ACTIVE,
-                verification__checks__id__in=impacted_check_ids,
-                verification__checks__method=DriverVerificationCheck.Method.MANUAL,
-                verification__checks__status=DriverVerificationCheck.Status.PASSED,
-            ).distinct().count(),
+            "checks_to_reopen": len(checks_to_reopen),
+            "profiles_to_deactivate": len(profiles_to_deactivate),
             "dry_run": True,
         }
 
