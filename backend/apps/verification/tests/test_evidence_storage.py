@@ -1,4 +1,5 @@
 import io
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -174,6 +175,25 @@ class EvidenceR2StorageTests(TestCase):
                 with self.assertRaises(EvidenceStorageError):
                     retrieve_verification_evidence(evidence)
 
+        get_client.assert_not_called()
+
+    @patch("apps.verification.storage._s3_client")
+    def test_retrieval_refuses_expired_timestamp_before_contacting_r2(self, get_client):
+        evidence = type(
+            "EvidenceStub",
+            (),
+            {
+                "storage_key": "verification-evidence/expired-object",
+                "content_type": "image/jpeg",
+                "original_filename": "identity.jpg",
+                "scan_status": DriverVerificationEvidence.ScanStatus.CLEAN,
+                "storage_deleted_at": None,
+                "status": DriverVerificationEvidence.Status.ACCEPTED,
+                "expires_at": timezone.now() - timedelta(seconds=1),
+            },
+        )()
+        with self.assertRaises(EvidenceStorageError):
+            retrieve_verification_evidence(evidence)
         get_client.assert_not_called()
 
     @patch("apps.verification.storage._s3_client")
