@@ -300,13 +300,11 @@ class VerificationReviewServiceTests(APITestCase):
             provider_reference="request-123",
             outcome=GovernmentVerificationAttempt.Outcome.MATCHED,
             result_code=expected_result,
-            response_fingerprint="a" * 64,
         )
         self.assertEqual(updated.method, DriverVerificationCheck.Method.GOVERNMENT_API)
         self.assertEqual(updated.status, DriverVerificationCheck.Status.PASSED)
         attempt = GovernmentVerificationAttempt.objects.get(verification_check=check)
         self.assertEqual(attempt.provider_reference, "request-123")
-        self.assertEqual(attempt.response_fingerprint, "a" * 64)
         self.assertFalse(hasattr(attempt, "response_payload"))
 
     def test_operator_cannot_make_final_verification_approval(self):
