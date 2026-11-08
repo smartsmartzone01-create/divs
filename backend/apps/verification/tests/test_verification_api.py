@@ -322,6 +322,39 @@ class VerificationReviewServiceTests(APITestCase):
         self.assertEqual(attempt.provider_reference, "request-123")
         self.assertFalse(hasattr(attempt, "response_payload"))
 
+    def test_unavailable_government_source_can_fall_back_to_manual_review(self):
+        check = self.checks[0]
+        record_government_api_result(
+            check_id=check.id,
+            provider="authorized-test-provider",
+            provider_reference="request-unavailable-1",
+            outcome=GovernmentVerificationAttempt.Outcome.UNAVAILABLE,
+        )
+        DriverVerificationEvidence.objects.create(
+            verification_check=check,
+            evidence_type=check.check_type,
+            source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
+            status=DriverVerificationEvidence.Status.ACCEPTED,
+            scan_status=DriverVerificationEvidence.ScanStatus.CLEAN,
+            storage_key="verification-evidence/manual-fallback",
+            uploaded_by=check.verification.profile.registration.account,
+            reviewed_by=self.reviewer,
+        )
+        result_code = {
+            DriverVerificationCheck.CheckType.NATIONAL_IDENTITY: DriverVerificationCheck.ResultCode.MATCH,
+            DriverVerificationCheck.CheckType.DRIVING_LICENCE: DriverVerificationCheck.ResultCode.VALID,
+            DriverVerificationCheck.CheckType.TRAFFIC_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
+            DriverVerificationCheck.CheckType.ACCIDENT_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
+        }[check.check_type]
+        updated = review_driver_check(
+            check_id=check.id,
+            reviewer=self.reviewer,
+            status=DriverVerificationCheck.Status.PASSED,
+            result_code=result_code,
+        )
+        self.assertEqual(updated.method, DriverVerificationCheck.Method.MANUAL)
+        self.assertEqual(updated.status, DriverVerificationCheck.Status.PASSED)
+
     def test_operator_cannot_make_final_verification_approval(self):
         self.client.force_authenticate(user=self.reviewer)
         response = self.client.post(
