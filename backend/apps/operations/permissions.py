@@ -12,7 +12,6 @@ ROLE_CAPABILITIES = {
             "view_operations_workspace",
             "manage_driver_registrations",
             "review_driver_verification",
-            "approve_driver_verification",
             "manage_driver_performance",
         }
     ),
