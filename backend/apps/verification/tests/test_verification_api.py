@@ -376,6 +376,15 @@ class VerificationReviewServiceTests(APITestCase):
         )
         self.assertEqual(attempt.provider_reference, "request-123")
         self.assertFalse(hasattr(attempt, "response_payload"))
+        record_government_api_result(
+            check_id=check.id,
+            provider="authorized-test-provider",
+            provider_reference="request-124",
+            outcome=GovernmentVerificationAttempt.Outcome.UNAVAILABLE,
+        )
+        check.refresh_from_db()
+        self.assertEqual(check.status, DriverVerificationCheck.Status.UNAVAILABLE)
+        self.assertFalse(check.has_trusted_supporting_record())
 
     def test_unavailable_government_source_can_fall_back_to_manual_review(self):
         check = self.checks[0]
