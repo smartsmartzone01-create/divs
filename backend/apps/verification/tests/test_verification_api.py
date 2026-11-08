@@ -189,13 +189,13 @@ class VerificationReviewServiceTests(APITestCase):
         self.reviewer = Account.objects.create_user(
             email="operator@example.com", password="StrongPassword123!"
         )
-        admin = Account.objects.create_superuser(
+        self.admin = Account.objects.create_superuser(
             email="system-admin@example.com", password="StrongPassword123!"
         )
         membership = OperationsMembership.objects.create(
             account=self.reviewer,
             role=OperationsMembership.Role.OPERATOR,
-            approved_by=admin,
+            approved_by=self.admin,
         )
         OperationsProfile.objects.create(membership=membership)
         driver = Account.objects.create_user(
@@ -421,6 +421,19 @@ class VerificationReviewServiceTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_operator_cannot_activate_driver_availability(self):
+        self._pass_all_checks()
+        self.client.force_authenticate(user=self.reviewer)
+        response = self.client.post(
+            reverse(
+                "verification:operations-driver-activate",
+                kwargs={"verification_id": self.verification.id},
+            ),
+            {},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_manual_review_cannot_claim_government_api_method(self):
         check = self.checks[0]
         with self.assertRaisesMessage(Exception, "cannot be recorded through manual review"):
@@ -492,10 +505,10 @@ class VerificationReviewServiceTests(APITestCase):
                 result_code=result_codes[check.check_type],
             )
 
-    def test_all_checks_and_validated_licence_class_are_required_for_discovery(self):
+    def test_all_checks_admin_approval_and_activation_are_required_for_discovery(self):
         self._pass_all_checks()
         self.verification.refresh_from_db()
-        self.assertEqual(self.verification.status, DriverVerification.Status.APPROVED)
+        self.assertEqual(self.verification.status, DriverVerification.Status.IN_REVIEW)
         self.assertFalse(self.verification.is_discoverable)
 
         licence_check = next(
@@ -507,6 +520,31 @@ class VerificationReviewServiceTests(APITestCase):
             reviewer=self.reviewer,
             licence_classes=["C", "CE"],
         )
+
+        self.client.force_authenticate(user=self.admin)
+        approval = self.client.post(
+            reverse(
+                "verification:operations-verification-approve",
+                kwargs={"verification_id": self.verification.id},
+            ),
+            {},
+            format="json",
+        )
+        self.assertEqual(approval.status_code, status.HTTP_200_OK)
+        self.verification.refresh_from_db()
+        self.assertEqual(self.verification.status, DriverVerification.Status.APPROVED)
+        self.assertFalse(self.verification.is_discoverable)
+
+        activation = self.client.post(
+            reverse(
+                "verification:operations-driver-activate",
+                kwargs={"verification_id": self.verification.id},
+            ),
+            {},
+            format="json",
+        )
+        self.assertEqual(activation.status_code, status.HTTP_200_OK)
+        self.verification.profile.refresh_from_db()
         self.assertTrue(self.verification.is_discoverable)
 
     def test_discovery_rechecks_result_codes_even_if_status_says_passed(self):
