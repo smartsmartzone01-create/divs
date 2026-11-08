@@ -40,6 +40,157 @@ def _notify_driver(verification, event, title, message):
 
 
 @transaction.atomic
+def process_expired_verification_evidence(*, now=None, dry_run=False):
+    """Expire accepted evidence and revoke any manual check it no longer supports.
+
+    This is intentionally separate from file-retention deletion. Expiry changes
+    verification eligibility; retention later removes private bytes if policy allows.
+    """
+    now = now or timezone.now()
+    expired = list(
+        DriverVerificationEvidence.objects.select_for_update()
+        .filter(
+            status=DriverVerificationEvidence.Status.ACCEPTED,
+            expires_at__isnull=False,
+            expires_at__lte=now,
+        )
+        .select_related("verification_check__verification__profile")
+        .order_by("verification_check_id", "expires_at")
+    )
+    if dry_run:
+        impacted_check_ids = {
+            item.verification_check_id
+            for item in expired
+            if item.verification_check.method == DriverVerificationCheck.Method.MANUAL
+            and item.verification_check.status == DriverVerificationCheck.Status.PASSED
+        }
+        return {
+            "evidence_expired": len(expired),
+            "checks_to_reopen": len(impacted_check_ids),
+            "profiles_to_deactivate": DriverProfile.objects.filter(
+                status=DriverProfile.Status.ACTIVE,
+                verification__checks__id__in=impacted_check_ids,
+                verification__checks__method=DriverVerificationCheck.Method.MANUAL,
+                verification__checks__status=DriverVerificationCheck.Status.PASSED,
+            ).distinct().count(),
+            "dry_run": True,
+        }
+
+    expired_by_check = {}
+    for evidence in expired:
+        previous_status = evidence.status
+        evidence.status = DriverVerificationEvidence.Status.EXPIRED
+        evidence.save(update_fields=["status", "updated_at"])
+        DriverVerificationEvidenceEvent.objects.create(
+            evidence=evidence,
+            actor=None,
+            event_type="expired",
+            previous_status=previous_status,
+            new_status=DriverVerificationEvidence.Status.EXPIRED,
+            notes="Evidence expired automatically at its configured expiry time.",
+        )
+        expired_by_check.setdefault(evidence.verification_check_id, []).append(evidence)
+
+    reopened_checks = 0
+    reopened_verifications = set()
+    deactivated_profiles = 0
+    for check_id, check_evidence in expired_by_check.items():
+        check = (
+            DriverVerificationCheck.objects.select_for_update()
+            .select_related("verification__profile")
+            .get(pk=check_id)
+        )
+        if (
+            check.method != DriverVerificationCheck.Method.MANUAL
+            or check.status != DriverVerificationCheck.Status.PASSED
+            or check.has_trusted_supporting_record(method=DriverVerificationCheck.Method.MANUAL)
+        ):
+            continue
+
+        verification = DriverVerification.objects.select_for_update().select_related("profile").get(
+            pk=check.verification_id
+        )
+        previous_check_status = check.status
+        check.status = DriverVerificationCheck.Status.NEEDS_REVIEW
+        check.result_code = ""
+        check.checked_at = None
+        check.reviewed_by = None
+        check.review_notes = "Previously accepted evidence expired; fresh evidence and review are required."
+        check.save(update_fields=[
+            "status", "result_code", "checked_at", "reviewed_by",
+            "review_notes", "updated_at",
+        ])
+        DriverVerificationEvent.objects.create(
+            verification=verification,
+            verification_check=check,
+            actor=None,
+            event_type=DriverVerificationEvent.EventType.CHECK_INVALIDATED,
+            previous_status=previous_check_status,
+            new_status=DriverVerificationCheck.Status.NEEDS_REVIEW,
+            notes="Manual verification invalidated because all accepted supporting evidence has expired.",
+        )
+        reopened_checks += 1
+
+        if verification.status == DriverVerification.Status.APPROVED:
+            previous_verification_status = verification.status
+            verification.status = DriverVerification.Status.IN_REVIEW
+            verification.decided_by = None
+            verification.decided_at = None
+            verification.decision_reason = ""
+            verification.save(update_fields=[
+                "status", "decided_by", "decided_at", "decision_reason", "updated_at",
+            ])
+            DriverVerificationEvent.objects.create(
+                verification=verification,
+                actor=None,
+                event_type=DriverVerificationEvent.EventType.VERIFICATION_REOPENED,
+                previous_status=previous_verification_status,
+                new_status=DriverVerification.Status.IN_REVIEW,
+                notes="Verification reopened automatically because accepted supporting evidence expired.",
+            )
+            reopened_verifications.add(verification.pk)
+
+        profile = verification.profile
+        if profile.status == DriverProfile.Status.ACTIVE:
+            profile.status = DriverProfile.Status.PENDING_ACTIVATION
+            profile.availability_activated_at = None
+            profile.availability_activated_by = None
+            profile.save(update_fields=[
+                "status", "availability_activated_at",
+                "availability_activated_by", "updated_at",
+            ])
+            DriverVerificationEvent.objects.create(
+                verification=verification,
+                verification_check=check,
+                actor=None,
+                event_type=DriverVerificationEvent.EventType.AVAILABILITY_DEACTIVATED,
+                previous_status=DriverProfile.Status.ACTIVE,
+                new_status=DriverProfile.Status.PENDING_ACTIVATION,
+                notes="Public availability deactivated because required verification evidence expired.",
+            )
+            deactivated_profiles += 1
+
+    for verification_id in reopened_verifications:
+        verification = DriverVerification.objects.select_related(
+            "profile", "profile__registration", "profile__registration__account"
+        ).get(pk=verification_id)
+        _notify_driver(
+            verification,
+            "driver.verification.evidence_expired",
+            "Verification evidence expired",
+            "Evidence supporting one of your verification checks has expired. Submit current evidence for review. Your public availability is paused until verification and Admin activation are complete.",
+        )
+
+    return {
+        "evidence_expired": len(expired),
+        "checks_reopened": reopened_checks,
+        "verifications_reopened": len(reopened_verifications),
+        "profiles_deactivated": deactivated_profiles,
+        "dry_run": False,
+    }
+
+
+@transaction.atomic
 def reopen_driver_verification_check(*, check_id, actor, reason):
     """Reopen one check after a final decision and invalidate its prior support."""
     from apps.operations.permissions import capabilities_for
