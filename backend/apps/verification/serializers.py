@@ -6,6 +6,8 @@ from apps.verification.models import (
     DriverVerificationCheck,
     VerifiedDriverLicenceClass,
     DriverVerificationEvent,
+    DriverVerificationEvidence,
+    DriverVerificationEvidenceEvent,
 )
 
 
@@ -16,7 +18,29 @@ class VerifiedDriverLicenceClassSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+
+class DriverVerificationEvidenceEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DriverVerificationEvidenceEvent
+        fields = ["id", "event_type", "previous_status", "new_status", "notes", "created_at"]
+        read_only_fields = fields
+
+
+class DriverVerificationEvidenceSerializer(serializers.ModelSerializer):
+    events = DriverVerificationEvidenceEventSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = DriverVerificationEvidence
+        fields = [
+            "id", "evidence_type", "source", "status", "original_filename",
+            "content_type", "file_size", "submitted_at", "reviewed_at",
+            "expires_at", "review_notes", "events",
+        ]
+        read_only_fields = fields
+
+
 class DriverVerificationCheckSerializer(serializers.ModelSerializer):
+    evidence = DriverVerificationEvidenceSerializer(many=True, read_only=True)
     verified_licence_classes = VerifiedDriverLicenceClassSerializer(many=True, read_only=True)
 
     class Meta:
@@ -24,7 +48,7 @@ class DriverVerificationCheckSerializer(serializers.ModelSerializer):
         fields = [
             "id", "check_type", "status", "method", "result_code",
             "review_notes", "checked_at", "reviewed_by",
-            "verified_licence_classes", "created_at", "updated_at",
+            "verified_licence_classes", "evidence", "created_at", "updated_at",
         ]
         read_only_fields = fields
 
