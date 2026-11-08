@@ -2,6 +2,8 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
+from django.utils import timezone
 
 
 class DriverVerification(models.Model):
@@ -35,79 +37,40 @@ class DriverVerification(models.Model):
             DriverVerificationCheck.CheckType.TRAFFIC_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
             DriverVerificationCheck.CheckType.ACCIDENT_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
         }
-        allowed_scan_statuses = [DriverVerificationEvidence.ScanStatus.CLEAN]
-        if settings.DEBUG and getattr(settings, "DIVS_ALLOW_UNSCANNED_EVIDENCE_ACCESS", False):
-            allowed_scan_statuses.append(DriverVerificationEvidence.ScanStatus.PENDING)
-
-        def has_trusted_supporting_record(check):
-            if check.method == DriverVerificationCheck.Method.MANUAL:
-                return check.evidence.filter(
-                    status=DriverVerificationEvidence.Status.ACCEPTED,
-                    scan_status__in=allowed_scan_statuses,
-                    storage_deleted_at__isnull=True,
-                    storage_key__gt="",
-                    evidence_type=check.check_type,
-                ).exists()
-            if check.method == DriverVerificationCheck.Method.GOVERNMENT_API:
-                return check.government_attempts.filter(
-                    outcome=GovernmentVerificationAttempt.Outcome.MATCHED,
-                    result_code=expected_results.get(check.check_type),
-                ).exists()
-            return False
-
         return (
             {check.check_type for check in checks} == required_types
             and all(
                 check.status == DriverVerificationCheck.Status.PASSED
                 and check.result_code == expected_results.get(check.check_type)
-                and has_trusted_supporting_record(check)
+                and check.has_trusted_supporting_record()
                 for check in checks
             )
         )
 
     @property
     def is_discoverable(self):
-        """Require final approval, Admin activation, all successful checks and a current licence class."""
-        successful_results = {
+        """Require final approval, Admin activation and current trusted verification support."""
+        expected_results = {
             DriverVerificationCheck.CheckType.NATIONAL_IDENTITY: DriverVerificationCheck.ResultCode.MATCH,
             DriverVerificationCheck.CheckType.DRIVING_LICENCE: DriverVerificationCheck.ResultCode.VALID,
             DriverVerificationCheck.CheckType.TRAFFIC_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
             DriverVerificationCheck.CheckType.ACCIDENT_RECORDS: DriverVerificationCheck.ResultCode.CLEAR,
         }
         checks_by_type = {check.check_type: check for check in self.checks.all()}
-        for check_type, result_code in successful_results.items():
+        for check_type, result_code in expected_results.items():
             check = checks_by_type.get(check_type)
             if (
                 check is None
                 or check.status != DriverVerificationCheck.Status.PASSED
                 or check.result_code != result_code
+                or not check.has_trusted_supporting_record()
             ):
-                return False
-            if check.method == DriverVerificationCheck.Method.MANUAL:
-                allowed_scan_statuses = [DriverVerificationEvidence.ScanStatus.CLEAN]
-                if settings.DEBUG and getattr(settings, "DIVS_ALLOW_UNSCANNED_EVIDENCE_ACCESS", False):
-                    allowed_scan_statuses.append(DriverVerificationEvidence.ScanStatus.PENDING)
-                if not check.evidence.filter(
-                    status=DriverVerificationEvidence.Status.ACCEPTED,
-                    scan_status__in=allowed_scan_statuses,
-                    storage_deleted_at__isnull=True,
-                    storage_key__gt="",
-                    evidence_type=check.check_type,
-                ).exists():
-                    return False
-            elif check.method == DriverVerificationCheck.Method.GOVERNMENT_API:
-                if not check.government_attempts.filter(
-                    outcome=GovernmentVerificationAttempt.Outcome.MATCHED,
-                    result_code=result_code,
-                ).exists():
-                    return False
-            else:
                 return False
 
         licence_check = checks_by_type.get(DriverVerificationCheck.CheckType.DRIVING_LICENCE)
         has_current_class = (
             licence_check is not None
-            and any(item.is_current for item in licence_check.verified_licence_classes.all())
+            and any(item.qualifies_for_discovery for item in licence_check.verified_licence_classes.all())
         )
         return (
             self.profile.status == "active"
@@ -164,6 +127,28 @@ class DriverVerificationCheck(models.Model):
         constraints = [models.UniqueConstraint(fields=["verification", "check_type"], name="uniq_driver_verification_check")]
         indexes = [models.Index(fields=["status", "check_type"], name="drv_vcheck_status_type_idx")]
 
+    def has_trusted_supporting_record(self):
+        """Return whether this check still has valid supporting evidence."""
+        if self.method == self.Method.MANUAL:
+            allowed_scan_statuses = [DriverVerificationEvidence.ScanStatus.CLEAN]
+            if settings.DEBUG and getattr(settings, "DIVS_ALLOW_UNSCANNED_EVIDENCE_ACCESS", False):
+                allowed_scan_statuses.append(DriverVerificationEvidence.ScanStatus.PENDING)
+            return self.evidence.filter(
+                status=DriverVerificationEvidence.Status.ACCEPTED,
+                scan_status__in=allowed_scan_statuses,
+                storage_deleted_at__isnull=True,
+                storage_key__gt="",
+                evidence_type=self.check_type,
+            ).filter(
+                Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
+            ).exists()
+        if self.method == self.Method.GOVERNMENT_API:
+            return self.government_attempts.filter(
+                outcome=GovernmentVerificationAttempt.Outcome.MATCHED,
+                result_code=self.result_code,
+            ).exists()
+        return False
+
     def __str__(self):
         return f"{self.check_type} — {self.status}"
 
@@ -191,6 +176,9 @@ class VerifiedDriverLicenceClass(models.Model):
             and self.licence_check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
             and self.licence_check.status == DriverVerificationCheck.Status.PASSED
             and self.licence_check.result_code == DriverVerificationCheck.ResultCode.VALID
+            and self.licence_check.has_trusted_supporting_record()
+            and self.verified_by_id is not None
+            and self.verified_at is not None
         )
 
     def __str__(self):
