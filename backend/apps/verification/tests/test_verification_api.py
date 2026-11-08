@@ -586,6 +586,8 @@ class VerificationReviewServiceTests(APITestCase):
             format="json",
         )
         self.assertEqual(activated.status_code, status.HTTP_200_OK)
+        self.verification.refresh_from_db()
+        self.verification.profile.refresh_from_db()
         self.assertTrue(self.verification.is_discoverable)
 
         reopened = self.client.post(
@@ -603,6 +605,7 @@ class VerificationReviewServiceTests(APITestCase):
         self.assertEqual(old_evidence.status, DriverVerificationEvidence.Status.SUPERSEDED)
         self.assertEqual(self.verification.profile.status, DriverProfile.Status.PENDING_ACTIVATION)
         self.assertFalse(self.verification.is_discoverable)
+        self.assertFalse(self.verification.checks_are_complete)
         self.assertTrue(
             DriverVerificationEvent.objects.filter(
                 verification=self.verification,
