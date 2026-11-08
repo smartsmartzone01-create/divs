@@ -29,7 +29,7 @@ A commit is not proof that a feature deploys, passes tests, or is production-rea
 |---|---|---|
 | **1A — Evidence data foundation** | Evidence metadata model, evidence event history, migration, serializers and initial tests | Implemented; tests not confirmed as run |
 | **1B — Private evidence storage** | Cloudflare R2 integration, private upload/retrieval endpoints, file validation, upload throttling and storage configuration | In progress; code committed, audit/deployment/live R2 test outstanding |
-| **1C — Evidence security hardening** | Authorization tests, quarantine/malware-scanning strategy, access audit, retention/deletion policy, orphan cleanup and safe file delivery | In progress; access auditing, quarantine gate, scan-result audit, orphan cleanup, explicit-expiry deletion and legal hold are coded; scanner integration, recovery validation and test execution remain outstanding |
+| **1C — Evidence security hardening** | Authorization tests, quarantine/malware-scanning strategy, access audit, retention/deletion policy, orphan cleanup and safe file delivery | In progress; access auditing, quarantine gate, provider-neutral scanner adapter boundary, scan-result audit, orphan cleanup, explicit-expiry deletion and legal hold are coded; no scanner provider is configured, recovery validation and test execution remain outstanding |
 | **1D — Verification workflow integration** | Connect evidence to identity, driving-licence, traffic/police and accident checks; evidence review states and reviewer actions | Planned / needs verification |
 | **1E — Verification API and permission acceptance tests** | Driver ownership, operator capabilities, Admin-only decisions, approval/rejection, reopening and activation rules | Planned / needs verification |
 
