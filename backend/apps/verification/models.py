@@ -39,23 +39,28 @@ class DriverVerification(models.Model):
         if settings.DEBUG and getattr(settings, "DIVS_ALLOW_UNSCANNED_EVIDENCE_ACCESS", False):
             allowed_scan_statuses.append(DriverVerificationEvidence.ScanStatus.PENDING)
 
-        def has_accepted_manual_evidence(check):
-            if check.method != DriverVerificationCheck.Method.MANUAL:
-                return True
-            return check.evidence.filter(
-                status=DriverVerificationEvidence.Status.ACCEPTED,
-                scan_status__in=allowed_scan_statuses,
-                storage_deleted_at__isnull=True,
-                storage_key__gt="",
-                evidence_type=check.check_type,
-            ).exists()
+        def has_trusted_supporting_record(check):
+            if check.method == DriverVerificationCheck.Method.MANUAL:
+                return check.evidence.filter(
+                    status=DriverVerificationEvidence.Status.ACCEPTED,
+                    scan_status__in=allowed_scan_statuses,
+                    storage_deleted_at__isnull=True,
+                    storage_key__gt="",
+                    evidence_type=check.check_type,
+                ).exists()
+            if check.method == DriverVerificationCheck.Method.GOVERNMENT_API:
+                return check.government_attempts.filter(
+                    outcome=GovernmentVerificationAttempt.Outcome.MATCHED,
+                    result_code=expected_results.get(check.check_type),
+                ).exists()
+            return False
 
         return (
             {check.check_type for check in checks} == required_types
             and all(
                 check.status == DriverVerificationCheck.Status.PASSED
                 and check.result_code == expected_results.get(check.check_type)
-                and has_accepted_manual_evidence(check)
+                and has_trusted_supporting_record(check)
                 for check in checks
             )
         )
@@ -90,6 +95,14 @@ class DriverVerification(models.Model):
                     evidence_type=check.check_type,
                 ).exists():
                     return False
+            elif check.method == DriverVerificationCheck.Method.GOVERNMENT_API:
+                if not check.government_attempts.filter(
+                    outcome=GovernmentVerificationAttempt.Outcome.MATCHED,
+                    result_code=result_code,
+                ).exists():
+                    return False
+            else:
+                return False
 
         licence_check = checks_by_type.get(DriverVerificationCheck.CheckType.DRIVING_LICENCE)
         has_current_class = (
