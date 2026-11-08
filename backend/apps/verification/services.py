@@ -141,7 +141,7 @@ def process_expired_verification_evidence(*, now=None, dry_run=False):
             previous_status=previous_check_status,
             new_status=DriverVerificationCheck.Status.NEEDS_REVIEW,
             notes=(
-                "Manual verification invalidated because all accepted supporting evidence has expired."
+                "Manual verification invalidated because no eligible accepted supporting evidence remains after expiry processing."
                 + (" Existing verified licence classes were marked non-current." if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE else "")
             ),
         )
