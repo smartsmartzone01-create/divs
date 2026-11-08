@@ -48,10 +48,6 @@ class Migration(migrations.Migration):
                     models.CharField(blank=True, max_length=24),
                 ),
                 (
-                    "response_fingerprint",
-                    models.CharField(blank=True, max_length=64),
-                ),
-                (
                     "completed_at",
                     models.DateTimeField(),
                 ),
