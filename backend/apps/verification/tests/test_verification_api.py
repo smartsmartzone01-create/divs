@@ -25,6 +25,7 @@ from apps.verification.services import (
     record_government_api_result,
     record_verified_licence_classes,
     review_driver_check,
+    process_expired_verification_evidence,
 )
 
 
@@ -649,6 +650,138 @@ class VerificationReviewServiceTests(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_expiry_processing_reopens_approved_verification_and_deactivates_driver(self):
+        self._pass_all_checks()
+        licence_check = next(
+            check for check in self.checks
+            if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
+        )
+        record_verified_licence_classes(
+            check_id=licence_check.id,
+            reviewer=self.reviewer,
+            licence_classes=["C"],
+        )
+        self.client.force_authenticate(user=self.admin)
+        approval = self.client.post(
+            reverse(
+                "verification:operations-verification-approve",
+                kwargs={"verification_id": self.verification.id},
+            ),
+            {},
+            format="json",
+        )
+        self.assertEqual(approval.status_code, status.HTTP_200_OK)
+        activation = self.client.post(
+            reverse(
+                "verification:operations-driver-activate",
+                kwargs={"verification_id": self.verification.id},
+            ),
+            {},
+            format="json",
+        )
+        self.assertEqual(activation.status_code, status.HTTP_200_OK)
+
+        identity_check = next(
+            check for check in self.checks
+            if check.check_type == DriverVerificationCheck.CheckType.NATIONAL_IDENTITY
+        )
+        evidence = identity_check.evidence.get(status=DriverVerificationEvidence.Status.ACCEPTED)
+        expired_at = timezone.now() - timedelta(seconds=1)
+        evidence.expires_at = expired_at
+        evidence.save(update_fields=["expires_at", "updated_at"])
+
+        result = process_expired_verification_evidence(now=timezone.now())
+
+        evidence.refresh_from_db()
+        identity_check.refresh_from_db()
+        self.verification.refresh_from_db()
+        self.verification.profile.refresh_from_db()
+        self.assertEqual(result["evidence_expired"], 1)
+        self.assertEqual(result["checks_reopened"], 1)
+        self.assertEqual(result["verifications_reopened"], 1)
+        self.assertEqual(result["profiles_deactivated"], 1)
+        self.assertEqual(evidence.status, DriverVerificationEvidence.Status.EXPIRED)
+        self.assertEqual(identity_check.status, DriverVerificationCheck.Status.NEEDS_REVIEW)
+        self.assertEqual(self.verification.status, DriverVerification.Status.IN_REVIEW)
+        self.assertEqual(self.verification.profile.status, DriverProfile.Status.PENDING_ACTIVATION)
+        self.assertFalse(self.verification.is_discoverable)
+        self.assertTrue(
+            DriverVerificationEvidenceEvent.objects.filter(
+                evidence=evidence,
+                event_type="expired",
+                new_status=DriverVerificationEvidence.Status.EXPIRED,
+            ).exists()
+        )
+        self.assertTrue(
+            DriverVerificationEvent.objects.filter(
+                verification=self.verification,
+                verification_check=identity_check,
+                event_type=DriverVerificationEvent.EventType.CHECK_INVALIDATED,
+            ).exists()
+        )
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.verification.profile.registration.account,
+                event_type="driver.verification.evidence_expired",
+            ).exists()
+        )
+
+    def test_expired_evidence_does_not_invalidate_check_with_another_valid_record(self):
+        self._pass_all_checks()
+        identity_check = next(
+            check for check in self.checks
+            if check.check_type == DriverVerificationCheck.CheckType.NATIONAL_IDENTITY
+        )
+        original = identity_check.evidence.get(status=DriverVerificationEvidence.Status.ACCEPTED)
+        DriverVerificationEvidence.objects.create(
+            verification_check=identity_check,
+            evidence_type=identity_check.check_type,
+            source=DriverVerificationEvidence.Source.OPERATIONS_UPLOAD,
+            status=DriverVerificationEvidence.Status.ACCEPTED,
+            scan_status=DriverVerificationEvidence.ScanStatus.CLEAN,
+            storage_key="verification-evidence/second-valid-identity",
+            uploaded_by=self.verification.profile.registration.account,
+            reviewed_by=self.reviewer,
+            expires_at=timezone.now() + timedelta(days=30),
+        )
+        original.expires_at = timezone.now() - timedelta(seconds=1)
+        original.save(update_fields=["expires_at", "updated_at"])
+
+        result = process_expired_verification_evidence(now=timezone.now())
+
+        identity_check.refresh_from_db()
+        self.assertEqual(result["evidence_expired"], 1)
+        self.assertEqual(result["checks_reopened"], 0)
+        self.assertEqual(identity_check.status, DriverVerificationCheck.Status.PASSED)
+        self.assertTrue(
+            identity_check.has_trusted_supporting_record(
+                method=DriverVerificationCheck.Method.MANUAL
+            )
+        )
+
+    def test_expiry_processing_dry_run_makes_no_changes(self):
+        self._pass_all_checks()
+        identity_check = next(
+            check for check in self.checks
+            if check.check_type == DriverVerificationCheck.CheckType.NATIONAL_IDENTITY
+        )
+        evidence = identity_check.evidence.get(status=DriverVerificationEvidence.Status.ACCEPTED)
+        evidence.expires_at = timezone.now() - timedelta(seconds=1)
+        evidence.save(update_fields=["expires_at", "updated_at"])
+
+        result = process_expired_verification_evidence(
+            now=timezone.now(),
+            dry_run=True,
+        )
+
+        evidence.refresh_from_db()
+        identity_check.refresh_from_db()
+        self.assertTrue(result["dry_run"])
+        self.assertEqual(result["evidence_expired"], 1)
+        self.assertEqual(result["checks_to_reopen"], 1)
+        self.assertEqual(evidence.status, DriverVerificationEvidence.Status.ACCEPTED)
+        self.assertEqual(identity_check.status, DriverVerificationCheck.Status.PASSED)
 
     def test_expired_evidence_invalidates_verification_completion(self):
         self._pass_all_checks()
