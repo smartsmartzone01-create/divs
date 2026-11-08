@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/features/identity/api";
 import { useDIVSPreferences } from "@/components/preferences/preferences-provider";
+import { apiRequest, ApiError } from "@/lib/api/client";
 
 type Registration = {
   first_name: string; middle_name: string; last_name: string; nationality: string;
@@ -12,7 +13,8 @@ type Registration = {
   contact_email: string | null; contact_phone_number: string | null;
 };
 type DriverProfile = { id: string; status: "active" | "suspended" | "closed"; registration: Registration; created_at: string };
-type Check = { id: string; check_type: string; status: string; method: string; result_code: string; checked_at: string | null; verified_licence_classes: { id: string; licence_class: string; is_current: boolean; verified_at: string }[] };
+type Evidence = { id: string; original_filename: string; status: string; scan_status: string; file_size: number | null; submitted_at: string; expires_at: string | null; review_notes: string; };
+type Check = { id: string; check_type: string; status: string; method: string; result_code: string; checked_at: string | null; evidence: Evidence[]; verified_licence_classes: { id: string; licence_class: string; is_current: boolean; verified_at: string }[] };
 type Verification = { id: string; status: string; checks: Check[]; is_discoverable: boolean; decided_at: string | null };
 type Performance = { score: { effective_score: number | null; calculated_score: number | null; manual_override_score: number | null } | null; history: { id: string; change_type: string; previous_score: number | null; new_score: number | null; reason: string; created_at: string }[]; active_restrictions: { id: string; kind: string; status: string; reason: string }[]; score_status: string };
 type Appeal = { id: string; status: string; reason: string; created_at: string };
@@ -92,6 +94,9 @@ export default function DriverWorkspacePage() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState("");
   const [dataWarnings, setDataWarnings] = useState<string[]>([]);
+  const [uploadingCheck, setUploadingCheck] = useState("");
+  const [uploadError, setUploadError] = useState("");
+  const [uploadNotice, setUploadNotice] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -128,6 +133,30 @@ export default function DriverWorkspacePage() {
   const pendingAppeals = appeals.filter((item) => ["submitted", "pending", "in_review"].includes(item.status)).length;
   const verificationStatus = verification?.status ?? "pending";
   const experience = experienceLabels[registration?.driving_experience ?? ""]?.[sw ? "sw" : "en"] ?? (sw ? "Uzoefu haujawekwa" : "Experience not set");
+
+  async function submitEvidence(checkId: string, file: File, form: HTMLFormElement) {
+    setUploadingCheck(checkId);
+    setUploadError("");
+    setUploadNotice("");
+    const data = new FormData();
+    data.append("file", file);
+    try {
+      await apiRequest<Evidence>(`verification/driver/checks/${checkId}/evidence/`, {
+        method: "POST",
+        body: data,
+      });
+      const refreshed = await readApi<Verification>("/api/backend/verification/driver/me/");
+      if (refreshed.data) setVerification(refreshed.data);
+      else throw new Error(sw ? "Faili imepokelewa lakini hali haikuweza kusasishwa." : "The file was uploaded, but verification status could not be refreshed.");
+      form.reset();
+      setUploadNotice(sw ? "Ushahidi umepokelewa na umehifadhiwa kwa usalama." : "Evidence uploaded and stored securely.");
+    } catch (caught) {
+      const payload = caught instanceof ApiError ? caught.payload as { detail?: string } | undefined : undefined;
+      setUploadError(payload?.detail || (caught instanceof Error ? caught.message : (sw ? "Imeshindikana kupakia faili." : "Evidence upload failed.")));
+    } finally {
+      setUploadingCheck("");
+    }
+  }
 
   async function signOut() {
     setLoggingOut(true);
@@ -208,8 +237,27 @@ export default function DriverWorkspacePage() {
         <section id="verification" className="driver-panel">
           <div className="driver-section-heading"><div><h2>{sw ? "Maendeleo ya uhakiki" : "Verification progress"}</h2><p>{sw ? "Hali rasmi ya kila ukaguzi unaohitajika." : "The recorded status of each required check."}</p></div><StatusPill value={verificationStatus} sw={sw}/></div>
           <div className="driver-check-list">
-            {checkRows.map(({ type, check }) => <div className="driver-check-row" key={type}><span className="driver-check-mark"><Icon name="shield"/></span><div className="driver-check-copy"><strong>{checkLabels[type][sw ? "sw" : "en"]}</strong><small>{check?.method ? (check.method === "government_api" ? "Government API" : "Manual review") : (sw ? "Bado haijaanza" : "Not started")}</small></div><StatusPill value={check?.status ?? "pending"} sw={sw}/></div>)}
+            {checkRows.map(({ type, check }) => <article className="driver-check-item" key={type}>
+              <div className="driver-check-row"><span className="driver-check-mark"><Icon name="shield"/></span><div className="driver-check-copy"><strong>{checkLabels[type][sw ? "sw" : "en"]}</strong><small>{check?.method ? (check.method === "government_api" ? "Government API" : "Manual review") : (sw ? "Bado haijaanza" : "Not started")}</small></div><StatusPill value={check?.status ?? "pending"} sw={sw}/></div>
+              {check?.evidence?.length ? <div className="driver-evidence-list">
+                {check.evidence.map((evidence) => <div className="driver-evidence-row" key={evidence.id}>
+                  <div><strong>{evidence.original_filename || (sw ? "Faili ya ushahidi" : "Evidence file")}</strong><small>{statusLabel(evidence.status, sw)} · {new Date(evidence.submitted_at).toLocaleDateString(sw ? "sw-TZ" : "en-GB")}</small>{evidence.review_notes ? <p>{evidence.review_notes}</p> : null}</div>
+                  <a href={`/api/backend/verification/driver/evidence/${evidence.id}/file/`} target="_blank" rel="noreferrer">{sw ? "Fungua" : "Open"}</a>
+                </div>)}
+              </div> : <p className="driver-evidence-hint">{sw ? "Bado hujawasilisha ushahidi kwa ukaguzi huu." : "No evidence has been submitted for this check yet."}</p>}
+              {check ? <form className="driver-evidence-upload" onSubmit={(event) => {
+                event.preventDefault();
+                const form = event.currentTarget;
+                const selected = new FormData(form).get("file");
+                if (selected instanceof File && selected.size > 0) void submitEvidence(check.id, selected, form);
+              }}>
+                <label><span>{sw ? "Ongeza ushahidi (PDF, JPG au PNG)" : "Upload evidence (PDF, JPG or PNG)"}</span><input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" required /></label>
+                <button type="submit" disabled={!!uploadingCheck}>{uploadingCheck === check.id ? (sw ? "Inapakia…" : "Uploading…") : (sw ? "Wasilisha ushahidi" : "Submit evidence")}</button>
+              </form> : <p className="driver-evidence-hint">{sw ? "Ukaguzi bado haujafunguliwa kwenye akaunti yako." : "This verification check is not available yet."}</p>}
+            </article>)}
           </div>
+          {uploadError ? <p className="driver-data-warning" role="alert">{uploadError}</p> : null}
+          {uploadNotice ? <p className="workspace-notice" role="status">{uploadNotice}</p> : null}
           <p className="driver-panel-footnote">{verification?.is_discoverable ? (sw ? "Wasifu wako unaruhusiwa kuonekana kwenye utafutaji." : "Your profile is eligible to appear in driver discovery.") : (sw ? "Wasifu wako hautaonekana kwa wateja hadi masharti yote ya uhakiki na idhini yatimizwe." : "Your profile will not appear in public discovery until all verification and approval requirements are met.")}</p>
         </section>
 
