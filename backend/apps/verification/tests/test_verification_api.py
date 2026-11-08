@@ -1104,6 +1104,38 @@ class VerificationReviewServiceTests(APITestCase):
                 result_code=DriverVerificationCheck.ResultCode.INCONCLUSIVE,
             )
 
+    def test_operations_api_accepts_preliminary_adverse_finding_not_final_failed_status(self):
+        self._pass_all_checks()
+        check = next(
+            item for item in self.checks
+            if item.check_type == DriverVerificationCheck.CheckType.TRAFFIC_RECORDS
+        )
+        self.client.force_authenticate(user=self.reviewer)
+        url = reverse("verification:operations-check-review", kwargs={"check_id": check.id})
+
+        response = self.client.post(
+            url,
+            {
+                "status": DriverVerificationCheck.Status.NEEDS_REVIEW,
+                "result_code": DriverVerificationCheck.ResultCode.RECORD_FOUND,
+                "review_notes": "Reviewed record requires Admin consideration.",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], DriverVerificationCheck.Status.NEEDS_REVIEW)
+
+        failed_response = self.client.post(
+            url,
+            {
+                "status": DriverVerificationCheck.Status.FAILED,
+                "result_code": DriverVerificationCheck.ResultCode.RECORD_FOUND,
+                "review_notes": "Attempted to submit a final failed status.",
+            },
+            format="json",
+        )
+        self.assertEqual(failed_response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_manual_adverse_finding_moves_check_to_review_without_final_rejection(self):
         self._pass_all_checks()
         check = next(
