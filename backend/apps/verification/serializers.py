@@ -5,6 +5,7 @@ from apps.verification.models import (
     DriverVerification,
     DriverVerificationCheck,
     VerifiedDriverLicenceClass,
+    DriverVerificationEvent,
 )
 
 
@@ -28,16 +29,24 @@ class DriverVerificationCheckSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class DriverVerificationEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DriverVerificationEvent
+        fields = ["id", "event_type", "previous_status", "new_status", "notes", "actor", "check", "created_at"]
+        read_only_fields = fields
+
+
 class DriverVerificationSerializer(serializers.ModelSerializer):
     checks = DriverVerificationCheckSerializer(many=True, read_only=True)
     is_discoverable = serializers.BooleanField(read_only=True)
     profile_status = serializers.CharField(source="profile.status", read_only=True)
+    events = DriverVerificationEventSerializer(many=True, read_only=True)
 
     class Meta:
         model = DriverVerification
         fields = [
             "id", "status", "checks", "is_discoverable", "profile_status",
-            "decision_reason", "decided_by", "decided_at", "created_at", "updated_at",
+            "decision_reason", "decided_by", "decided_at", "events", "created_at", "updated_at",
         ]
         read_only_fields = fields
 
