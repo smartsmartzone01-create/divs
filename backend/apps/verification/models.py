@@ -127,9 +127,10 @@ class DriverVerificationCheck(models.Model):
         constraints = [models.UniqueConstraint(fields=["verification", "check_type"], name="uniq_driver_verification_check")]
         indexes = [models.Index(fields=["status", "check_type"], name="drv_vcheck_status_type_idx")]
 
-    def has_trusted_supporting_record(self):
+    def has_trusted_supporting_record(self, *, method=None):
         """Return whether this check still has valid supporting evidence."""
-        if self.method == self.Method.MANUAL:
+        method = method or self.method
+        if method == self.Method.MANUAL:
             allowed_scan_statuses = [DriverVerificationEvidence.ScanStatus.CLEAN]
             if settings.DEBUG and getattr(settings, "DIVS_ALLOW_UNSCANNED_EVIDENCE_ACCESS", False):
                 allowed_scan_statuses.append(DriverVerificationEvidence.ScanStatus.PENDING)
@@ -142,7 +143,7 @@ class DriverVerificationCheck(models.Model):
             ).filter(
                 Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
             ).exists()
-        if self.method == self.Method.GOVERNMENT_API:
+        if method == self.Method.GOVERNMENT_API:
             return self.government_attempts.filter(
                 outcome=GovernmentVerificationAttempt.Outcome.MATCHED,
                 result_code=self.result_code,
