@@ -11,7 +11,7 @@ from apps.verification.models import DriverVerificationCheck
 
 
 class PublicDriverDiscoveryView(APIView):
-    """Public search for eligible drivers without exposing private contact details."""
+    """Public search for verified drivers whose availability was activated by Admin."""
 
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -65,21 +65,16 @@ class PublicDriverDiscoveryView(APIView):
             if params.get("experience") and params["experience"] != registration.driving_experience:
                 continue
 
-            # Use the prefetched relations instead of issuing per-driver queries.
             checks = list(profile.verification.checks.all())
-            licence_check = next(
-                (
-                    check for check in checks
-                    if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
-                    and check.status == DriverVerificationCheck.Status.PASSED
-                    and check.result_code == DriverVerificationCheck.ResultCode.VALID
-                ),
-                None,
-            )
+            licence_check = next((
+                check for check in checks
+                if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
+                and check.status == DriverVerificationCheck.Status.PASSED
+                and check.result_code == DriverVerificationCheck.ResultCode.VALID
+            ), None)
             classes = [] if licence_check is None else sorted(
-                licence_class.licence_class
-                for licence_class in licence_check.verified_licence_classes.all()
-                if licence_class.is_current
+                item.licence_class for item in licence_check.verified_licence_classes.all()
+                if item.is_current
             )
             if requested_class and requested_class not in classes:
                 continue
@@ -88,8 +83,6 @@ class PublicDriverDiscoveryView(APIView):
                 score = profile.performance_score.effective_score
             except DriverScore.DoesNotExist:
                 score = None
-            # The public hiring directory must enforce the threshold even if a
-            # restriction record is missing or has not yet been created.
             if score is not None and score < 40:
                 continue
             if min_score is not None and (score is None or score < min_score):
