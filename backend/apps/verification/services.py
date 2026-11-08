@@ -461,11 +461,15 @@ def record_government_api_result(
     if check is None:
         raise VerificationReviewError("Verification check not found.")
     verification = DriverVerification.objects.select_for_update().get(pk=check.verification_id)
-    if verification.status in {
-        DriverVerification.Status.APPROVED,
-        DriverVerification.Status.REJECTED,
-    }:
-        raise VerificationReviewError("A final verification decision has been recorded; check findings are locked.")
+    if verification.status == DriverVerification.Status.REJECTED:
+        raise VerificationReviewError("A final rejection has been recorded; check findings are locked.")
+    if (
+        verification.status == DriverVerification.Status.APPROVED
+        and outcome != GovernmentVerificationAttempt.Outcome.NOT_MATCHED
+    ):
+        raise VerificationReviewError(
+            "Only a definitive adverse provider result can reopen an approved verification."
+        )
 
     compatible_results = {
         DriverVerificationCheck.CheckType.NATIONAL_IDENTITY: {
@@ -544,6 +548,7 @@ def record_government_api_result(
         "status", "method", "result_code", "review_notes", "checked_at",
         "reviewed_by", "updated_at",
     ])
+    audit_notes = f"Provider: {provider}; reference: {provider_reference}; outcome: {outcome}."
     DriverVerificationEvent.objects.create(
         verification=verification,
         verification_check=check,
@@ -551,9 +556,84 @@ def record_government_api_result(
         event_type=DriverVerificationEvent.EventType.GOVERNMENT_API_RESULT,
         previous_status=previous_status,
         new_status=check_status,
-        notes=f"Provider: {provider}; reference: {provider_reference}; outcome: {outcome}.",
+        notes=audit_notes,
     )
-    if verification.status == DriverVerification.Status.PENDING:
+
+    adverse_result = outcome == GovernmentVerificationAttempt.Outcome.NOT_MATCHED
+    if adverse_result and previous_status == DriverVerificationCheck.Status.PASSED:
+        if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE:
+            VerifiedDriverLicenceClass.objects.filter(
+                licence_check=check, is_current=True
+            ).update(is_current=False, updated_at=now)
+        DriverVerificationEvent.objects.create(
+            verification=verification,
+            verification_check=check,
+            actor=None,
+            event_type=DriverVerificationEvent.EventType.CHECK_INVALIDATED,
+            previous_status=previous_status,
+            new_status=DriverVerificationCheck.Status.FAILED,
+            notes=(
+                "Previously passed check invalidated by a definitive adverse result "
+                f"from trusted provider {provider} (reference: {provider_reference})."
+                + (
+                    " Existing verified licence classes were marked non-current."
+                    if check.check_type == DriverVerificationCheck.CheckType.DRIVING_LICENCE
+                    else ""
+                )
+            ),
+        )
+
+    if verification.status == DriverVerification.Status.APPROVED and adverse_result:
+        previous_verification_status = verification.status
+        verification.status = DriverVerification.Status.IN_REVIEW
+        verification.decided_by = None
+        verification.decided_at = None
+        verification.decision_reason = ""
+        verification.save(update_fields=[
+            "status", "decided_by", "decided_at", "decision_reason", "updated_at",
+        ])
+        DriverVerificationEvent.objects.create(
+            verification=verification,
+            actor=None,
+            event_type=DriverVerificationEvent.EventType.VERIFICATION_REOPENED,
+            previous_status=previous_verification_status,
+            new_status=DriverVerification.Status.IN_REVIEW,
+            notes=(
+                "Verification reopened because a trusted government provider returned "
+                f"a definitive adverse result for {check.check_type}."
+            ),
+        )
+        profile = DriverProfile.objects.select_for_update().get(pk=verification.profile_id)
+        if profile.status == DriverProfile.Status.ACTIVE:
+            profile.status = DriverProfile.Status.PENDING_ACTIVATION
+            profile.availability_activated_at = None
+            profile.availability_activated_by = None
+            profile.save(update_fields=[
+                "status", "availability_activated_at",
+                "availability_activated_by", "updated_at",
+            ])
+            DriverVerificationEvent.objects.create(
+                verification=verification,
+                actor=None,
+                event_type=DriverVerificationEvent.EventType.AVAILABILITY_DEACTIVATED,
+                previous_status=DriverProfile.Status.ACTIVE,
+                new_status=DriverProfile.Status.PENDING_ACTIVATION,
+                notes="Public availability deactivated after a trusted adverse verification result.",
+            )
+        _notify_driver(
+            verification,
+            "driver.verification.revoked",
+            "Verification requires renewed review",
+            "A trusted verification source returned an adverse result. Your verification has been reopened and public availability has been paused pending Admin review.",
+        )
+    elif adverse_result:
+        _notify_driver(
+            verification,
+            "driver.verification.adverse_result",
+            "Verification check requires review",
+            "A trusted verification source returned a result that requires further review. Please check your verification status for updates.",
+        )
+    elif verification.status == DriverVerification.Status.PENDING:
         verification.status = DriverVerification.Status.IN_REVIEW
         verification.save(update_fields=["status", "updated_at"])
         _notify_driver(
