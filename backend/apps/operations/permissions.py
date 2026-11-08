@@ -21,6 +21,7 @@ ROLE_CAPABILITIES = {
             "manage_driver_registrations",
             "review_driver_verification",
             "approve_driver_verification",
+            "reopen_driver_verification",
             "manage_driver_performance",
             "manage_invitations",
             "reject_driver_verification",
