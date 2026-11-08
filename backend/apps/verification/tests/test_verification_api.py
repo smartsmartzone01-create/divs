@@ -62,6 +62,27 @@ class DriverVerificationAPITests(APITestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_non_operations_user_cannot_access_operations_evidence_file(self):
+        check = self.verification.checks.first()
+        evidence = DriverVerificationEvidence.objects.create(
+            verification_check=check,
+            evidence_type=check.check_type,
+            source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
+            original_filename="identity.jpg",
+            content_type="image/jpeg",
+            file_size=4,
+            sha256="a" * 64,
+            storage_key="verification-evidence/test-object",
+            uploaded_by=self.driver,
+        )
+        self.client.force_authenticate(user=self.driver)
+
+        response = self.client.get(
+            reverse("verification:operations-evidence-file", kwargs={"evidence_id": evidence.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
 
     @patch("apps.verification.views.retrieve_verification_evidence")
     def test_driver_file_access_is_recorded_in_evidence_history(self, retrieve):
@@ -174,6 +195,37 @@ class VerificationReviewServiceTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["method"], "manual")
         self.assertEqual(response.data["status"], "passed")
+
+    @patch("apps.verification.views.retrieve_verification_evidence")
+    def test_operations_evidence_file_access_is_recorded(self, retrieve):
+        check = self.checks[0]
+        evidence = DriverVerificationEvidence.objects.create(
+            verification_check=check,
+            evidence_type=check.check_type,
+            source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
+            original_filename="identity.jpg",
+            content_type="image/jpeg",
+            file_size=4,
+            sha256="a" * 64,
+            storage_key="verification-evidence/test-object",
+            uploaded_by=check.verification.profile.registration.account,
+        )
+        retrieve.return_value = (io.BytesIO(b"test"), "image/jpeg", "identity.jpg")
+        self.client.force_authenticate(user=self.reviewer)
+
+        response = self.client.get(
+            reverse("verification:operations-evidence-file", kwargs={"evidence_id": evidence.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(
+            DriverVerificationEvidenceEvent.objects.filter(
+                evidence=evidence,
+                actor=self.reviewer,
+                event_type="file_accessed",
+            ).exists()
+        )
+        response.close()
 
     def _pass_all_checks(self):
         result_codes = {
