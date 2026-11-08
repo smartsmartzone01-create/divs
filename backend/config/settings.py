@@ -150,6 +150,9 @@ R2_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME", "").strip()
 R2_ENDPOINT_URL = os.environ.get("R2_ENDPOINT_URL", "").strip().rstrip("/")
 R2_REGION = os.environ.get("R2_REGION", "auto").strip() or "auto"
 R2_MAX_UPLOAD_BYTES = int(os.environ.get("R2_MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
+# Optional dotted path to a trusted, provider-specific evidence scanner adapter.
+# Leave unset to keep all uploaded evidence quarantined.
+DIVS_EVIDENCE_SCANNER_CLASS = os.environ.get("DIVS_EVIDENCE_SCANNER_CLASS", "").strip()
 DATA_UPLOAD_MAX_MEMORY_SIZE = R2_MAX_UPLOAD_BYTES + (1024 * 1024)
 R2_EVIDENCE_STORAGE_ENABLED = all(
     [R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_ENDPOINT_URL]
