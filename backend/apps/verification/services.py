@@ -7,6 +7,7 @@ from apps.profiles.models import DriverProfile
 from apps.verification.models import (
     DriverVerification,
     DriverVerificationCheck,
+    DriverVerificationEvent,
     VerifiedDriverLicenceClass,
 )
 
@@ -96,10 +97,17 @@ def review_driver_check(*, check_id, reviewer, status, method=DriverVerification
     check.review_notes = review_notes.strip()
     check.checked_at = now
     check.reviewed_by = reviewer
+    previous_check_status = check.status
     check.save(update_fields=[
         "status", "method", "result_code", "review_notes", "checked_at",
         "reviewed_by", "updated_at",
     ])
+    DriverVerificationEvent.objects.create(
+        verification=verification, check=check, actor=reviewer,
+        event_type=DriverVerificationEvent.EventType.CHECK_REVIEWED,
+        previous_status=previous_check_status, new_status=status,
+        notes=check.review_notes,
+    )
 
     # Findings never approve or reject the overall application.
     if verification.status == DriverVerification.Status.PENDING:
@@ -147,11 +155,17 @@ def decide_driver_verification(*, verification_id, actor, decision, reason=""):
     else:
         raise VerificationReviewError("Unsupported final decision.")
 
+    previous_status = verification.status
     verification.status = decision
     verification.decided_by = actor
     verification.decided_at = timezone.now()
     verification.decision_reason = reason.strip()
     verification.save(update_fields=["status", "decided_by", "decided_at", "decision_reason", "updated_at"])
+    DriverVerificationEvent.objects.create(
+        verification=verification, actor=actor,
+        event_type=(DriverVerificationEvent.EventType.APPROVED if decision == DriverVerification.Status.APPROVED else DriverVerificationEvent.EventType.REJECTED),
+        previous_status=previous_status, new_status=decision, notes=reason.strip(),
+    )
     _notify_driver(verification, event, title, message)
     return verification
 
@@ -177,7 +191,15 @@ def activate_driver_availability(*, verification_id, actor):
     if verification.profile.status == DriverProfile.Status.ACTIVE:
         raise VerificationReviewError("Driver availability is already active.")
     verification.profile.status = DriverProfile.Status.ACTIVE
-    verification.profile.save(update_fields=["status", "updated_at"])
+    verification.profile.availability_activated_at = timezone.now()
+    verification.profile.availability_activated_by = actor
+    verification.profile.save(update_fields=["status", "availability_activated_at", "availability_activated_by", "updated_at"])
+    DriverVerificationEvent.objects.create(
+        verification=verification, actor=actor,
+        event_type=DriverVerificationEvent.EventType.AVAILABILITY_ACTIVATED,
+        previous_status=DriverProfile.Status.PENDING_ACTIVATION,
+        new_status=DriverProfile.Status.ACTIVE,
+    )
     _notify_driver(
         verification, "driver.availability.activated",
         "Driver profile activated", "Your verified driver profile is now available in the public directory.",
