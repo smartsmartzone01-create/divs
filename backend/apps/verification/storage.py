@@ -21,18 +21,27 @@ class EvidenceStorageError(Exception):
     """Raised when an evidence file cannot be safely validated or stored."""
 
 
+class EvidenceStorageUnavailable(EvidenceStorageError):
+    """Raised when the server cannot access or persist private evidence."""
+
+
 def _s3_client():
     if not settings.R2_EVIDENCE_STORAGE_ENABLED:
-        raise EvidenceStorageError("Private evidence storage is not configured.")
+        logger.error("R2 evidence storage is disabled because required configuration is incomplete or invalid.")
+        raise EvidenceStorageUnavailable("Private evidence storage is not configured.")
 
-    return boto3.client(
-        "s3",
-        endpoint_url=settings.R2_ENDPOINT_URL,
-        aws_access_key_id=settings.R2_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
-        region_name=settings.R2_REGION,
-        config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
-    )
+    try:
+        return boto3.client(
+            "s3",
+            endpoint_url=settings.R2_ENDPOINT_URL,
+            aws_access_key_id=settings.R2_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
+            region_name=settings.R2_REGION,
+            config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
+        )
+    except Exception as exc:
+        logger.exception("Could not initialize the S3-compatible client for private evidence storage.")
+        raise EvidenceStorageUnavailable("Private evidence storage is temporarily unavailable.") from exc
 
 
 def _read_and_validate(uploaded_file):
@@ -97,7 +106,12 @@ def store_verification_evidence(*, check, uploaded_file, actor, source):
             Metadata={"sha256": digest},
         )
     except Exception as exc:
-        raise EvidenceStorageError("The private evidence file could not be stored.") from exc
+        logger.exception(
+            "R2 evidence upload failed (bucket=%s, object_key=%s).",
+            settings.R2_BUCKET_NAME,
+            object_key,
+        )
+        raise EvidenceStorageUnavailable("The private evidence file could not be stored.") from exc
 
     safe_filename = (uploaded_file.name or "evidence").replace("\\", "/").rsplit("/", 1)[-1]
     safe_filename = "".join(char for char in safe_filename if char.isprintable() and char not in "\r\n")[:255]
@@ -128,14 +142,27 @@ def store_verification_evidence(*, check, uploaded_file, actor, source):
                 event_type="uploaded",
                 new_status=DriverVerificationEvidence.Status.SUBMITTED,
             )
-    except Exception:
+    except Exception as exc:
+        logger.exception(
+            "Evidence metadata transaction failed after the R2 object was uploaded "
+            "(bucket=%s, object_key=%s).",
+            settings.R2_BUCKET_NAME,
+            object_key,
+        )
         try:
             client.delete_object(Bucket=settings.R2_BUCKET_NAME, Key=object_key)
         except Exception:
             # Do not hide the database failure, but leave an operational signal
             # so an orphaned private object can be reconciled.
-            logger.exception("Could not clean up R2 evidence object after database failure: %s", object_key)
-        raise
+            logger.exception(
+                "Could not clean up R2 evidence object after database failure "
+                "(bucket=%s, object_key=%s).",
+                settings.R2_BUCKET_NAME,
+                object_key,
+            )
+        raise EvidenceStorageUnavailable(
+            "The evidence file could not be fully recorded. Please try again."
+        ) from exc
 
     return evidence
 
@@ -179,5 +206,10 @@ def retrieve_verification_evidence(evidence):
             Key=evidence.storage_key,
         )
     except Exception as exc:
-        raise EvidenceStorageError("The private evidence file could not be retrieved.") from exc
+        logger.exception(
+            "R2 evidence retrieval failed (bucket=%s, object_key=%s).",
+            settings.R2_BUCKET_NAME,
+            evidence.storage_key,
+        )
+        raise EvidenceStorageUnavailable("The private evidence file could not be retrieved.") from exc
     return result["Body"], evidence.content_type, evidence.original_filename
