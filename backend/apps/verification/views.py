@@ -1,3 +1,5 @@
+import logging
+
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import status as http_status
@@ -28,12 +30,16 @@ from apps.verification.services import (
 )
 from apps.verification.storage import (
     EvidenceStorageError,
+    EvidenceStorageUnavailable,
     retrieve_verification_evidence,
     store_verification_evidence,
 )
 from apps.operations.permissions import HasOperationsCapability
 from common.permissions import HasRequiredProfile
 from common.views import RoleProtectedAPIView
+
+
+logger = logging.getLogger(__name__)
 
 
 class MyDriverVerificationView(RoleProtectedAPIView):
@@ -291,8 +297,29 @@ class DriverVerificationEvidenceUploadView(RoleProtectedAPIView):
                 actor=request.user,
                 source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
             )
+        except EvidenceStorageUnavailable:
+            return Response(
+                {
+                    "detail": (
+                        "We couldn't submit your document right now. "
+                        "Your file has not been confirmed as submitted. Please try again."
+                    )
+                },
+                status=http_status.SERVICE_UNAVAILABLE,
+            )
         except EvidenceStorageError as exc:
             return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
+        except Exception:
+            logger.exception("Unexpected driver evidence upload failure (check_id=%s).", check_id)
+            return Response(
+                {
+                    "detail": (
+                        "We couldn't submit your document right now. "
+                        "Your file has not been confirmed as submitted. Please try again."
+                    )
+                },
+                status=http_status.SERVICE_UNAVAILABLE,
+            )
         return Response(DriverVerificationEvidenceSerializer(evidence).data, status=http_status.CREATED)
 
 
@@ -317,8 +344,29 @@ class OperationsVerificationEvidenceUploadView(RoleProtectedAPIView):
                 actor=request.user,
                 source=DriverVerificationEvidence.Source.OPERATIONS_UPLOAD,
             )
+        except EvidenceStorageUnavailable:
+            return Response(
+                {
+                    "detail": (
+                        "We couldn't store this document right now. "
+                        "It has not been confirmed as submitted. Please try again."
+                    )
+                },
+                status=http_status.SERVICE_UNAVAILABLE,
+            )
         except EvidenceStorageError as exc:
             return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
+        except Exception:
+            logger.exception("Unexpected operations evidence upload failure (check_id=%s).", check_id)
+            return Response(
+                {
+                    "detail": (
+                        "We couldn't store this document right now. "
+                        "It has not been confirmed as submitted. Please try again."
+                    )
+                },
+                status=http_status.SERVICE_UNAVAILABLE,
+            )
         return Response(DriverVerificationEvidenceSerializer(evidence).data, status=http_status.CREATED)
 
 
