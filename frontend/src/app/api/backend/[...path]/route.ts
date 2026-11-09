@@ -102,7 +102,8 @@ async function handler(request: NextRequest, context: RouteContext) {
       "auth/providers/phone",
     ]);
     let upstream: Response;
-    if (routePath === "auth/token/refresh" && request.method === "POST") {
+    stage = "forward_to_backend";
+  if (routePath === "auth/token/refresh" && request.method === "POST") {
       if (!refreshToken) {
         const response = NextResponse.json({ detail: "No active refresh session." }, { status: 401 });
         clearTokens(response);
