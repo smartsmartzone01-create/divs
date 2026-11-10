@@ -49,8 +49,8 @@ function FeedbackCard({ item, onDismiss }: { item: FeedbackItem; onDismiss: () =
 
 export function FeedbackRegion({ anchorId }: { anchorId: string }) {
   const context = useContext(FeedbackContext);
+  const { items } = useFeedbackItems();
   if (!context) throw new Error("FeedbackRegion must be used inside DIVSFeedbackProvider");
-  const { items, dismiss } = useFeedbackItems();
   return (
     <div className="divs-feedback-region" data-feedback-anchor={anchorId}>
       {items.filter((item) => item.anchorId === anchorId).map((item) => (
