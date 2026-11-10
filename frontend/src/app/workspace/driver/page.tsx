@@ -270,8 +270,8 @@ export default function DriverWorkspacePage() {
               }}>
                 <label><span>{sw ? "Ongeza ushahidi (PDF, JPG au PNG)" : "Upload evidence (PDF, JPG or PNG)"}</span><input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" required /></label>
                 <button type="submit" disabled={!!uploadingCheck}>{uploadingCheck === check.id ? (sw ? "Inapakia…" : "Uploading…") : (sw ? "Wasilisha ushahidi" : "Submit evidence")}</button>
-                <FeedbackRegion anchorId={`evidence-${check.id}`} />
-              </form> : <p className="driver-evidence-hint">{sw ? "Ukaguzi bado haujafunguliwa kwenye akaunti yako." : "This verification check is not available yet."}</p>}
+              </form>
+              <FeedbackRegion anchorId={`evidence-${check.id}`} /> : <p className="driver-evidence-hint">{sw ? "Ukaguzi bado haujafunguliwa kwenye akaunti yako." : "This verification check is not available yet."}</p>}
             </article>)}
           </div>
           <p className="driver-panel-footnote">{verification?.is_discoverable ? (sw ? "Wasifu wako unaruhusiwa kuonekana kwenye utafutaji." : "Your profile is eligible to appear in driver discovery.") : (sw ? "Wasifu wako hautaonekana kwa wateja hadi masharti yote ya uhakiki na idhini yatimizwe." : "Your profile will not appear in public discovery until all verification and approval requirements are met.")}</p>
