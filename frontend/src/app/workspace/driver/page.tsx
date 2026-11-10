@@ -200,7 +200,7 @@ export default function DriverWorkspacePage() {
           <p className="driver-settings-heading">{sw ? "Mipangilio ya jumla" : "General settings"}</p>
           <button type="button" onClick={() => setLanguage(sw ? "en" : "sw")}><span>{sw ? "Lugha" : "Language"}</span><strong>{sw ? "Kiswahili" : "English"}</strong></button>
           <button type="button" onClick={toggleTheme}><span>{sw ? "Mandhari" : "Appearance"}</span><strong>{theme === "light" ? (sw ? "Mwanga" : "Light") : (sw ? "Giza" : "Dark")}</strong></button>
-          <Link href="#recent-activity" onClick={() => setMenuOpen(false)}><span>{sw ? "Arifa" : "Notifications"}</span><strong>{unread || (sw ? "Hakuna" : "None")}</strong></Link>
+          <Link href="/workspace/driver/notifications" onClick={() => setMenuOpen(false)}><span>{sw ? "Arifa" : "Notifications"}</span><strong>{unread || (sw ? "Hakuna" : "None")}</strong></Link>
           <Link href="/account" onClick={() => setMenuOpen(false)}><span>{sw ? "Akaunti na vipindi" : "Account & sessions"}</span><Icon name="settings"/></Link>
           <button type="button" className="driver-menu-logout" onClick={() => void signOut()} disabled={loggingOut}><span>{loggingOut ? (sw ? "Inatoka…" : "Signing out…") : (sw ? "Toka" : "Sign out")}</span><Icon name="logout"/></button>
         </div> : null}
@@ -226,6 +226,11 @@ export default function DriverWorkspacePage() {
         {error ? <p className="driver-data-warning" role="alert">{error}</p> : null}
 
         <section className="driver-feature-grid">
+          <Link href="/workspace/driver/notifications" className="driver-feature-card">
+            <span className="driver-feature-icon"><Icon name="bell"/></span>
+            <span className="driver-feature-copy"><strong>{sw ? "Arifa" : "Notifications"}</strong><span>{unread ? (sw ? `${unread} hazijasomwa` : `${unread} unread`) : (sw ? "Hakuna arifa mpya" : "No unread notifications")}</span></span>
+            <Icon name="chevron"/>
+          </Link>
           <Link href="#verification" className="driver-feature-card">
             <span className="driver-feature-icon"><Icon name="shield"/></span>
             <span className="driver-feature-copy"><strong>{sw ? "Uhakiki" : "Verification"}</strong><span>{sw ? "Hali ya utambulisho, leseni na rekodi" : "Identity, licence and record checks"}</span></span>
@@ -244,7 +249,7 @@ export default function DriverWorkspacePage() {
             <a href="#verification"><Icon name="shield"/><span>{sw ? "Uhakiki" : "Verification"}</span></a>
             <a href="#performance"><Icon name="chart"/><span>{sw ? "Utendaji" : "Performance"}</span></a>
             <a href="#appeals"><Icon name="appeal"/><span>{sw ? "Rufaa" : "Appeals"}</span><small>{pendingAppeals || ""}</small></a>
-            <a href="#recent-activity"><Icon name="bell"/><span>{sw ? "Arifa" : "Notifications"}</span><small>{unread || ""}</small></a>
+            <Link href="/workspace/driver/notifications"><Icon name="bell"/><span>{sw ? "Arifa" : "Notifications"}</span><small>{unread || ""}</small></Link>
             <span className="is-coming"><Icon name="requests"/><span>{sw ? "Maombi" : "Requests"}</span></span>
             <span className="is-coming"><Icon name="clock"/><span>{sw ? "Upatikanaji" : "Availability"}</span></span>
             <span className="is-coming"><Icon name="file"/><span>{sw ? "Nyaraka" : "Documents"}</span></span>
@@ -294,11 +299,6 @@ export default function DriverWorkspacePage() {
           <div className="driver-section-heading"><div><h2>{sw ? "Rufaa zako" : "Your appeals"}</h2><p>{sw ? "Fuatilia rufaa ulizowasilisha." : "Track appeals you have submitted."}</p></div><strong className="driver-count">{appeals.length}</strong></div>
           {appeals.length ? <div className="driver-history-list">{appeals.slice(0, 4).map((item) => <div key={item.id}><span>{item.reason}</span><StatusPill value={item.status} sw={sw}/></div>)}</div> : <p className="driver-empty-state">{sw ? "Hujawasilisha rufaa yoyote." : "You have not submitted any appeals yet."}</p>}
           <p className="driver-panel-footnote">{sw ? "Unaweza kuwasilisha rufaa kuhusu tukio la utendaji linalostahili. Maamuzi hufanywa na timu ya uendeshaji." : "You can appeal eligible performance events. Decisions are made by the operations team."}</p>
-        </section>
-
-        <section id="recent-activity" className="driver-panel">
-          <div className="driver-section-heading"><div><h2>{sw ? "Shughuli za hivi karibuni" : "Recent activity"}</h2><p>{sw ? "Arifa na masasisho ya akaunti yako." : "Notifications and updates about your account."}</p></div><strong className="driver-count">{unread}</strong></div>
-          {notifications.length ? <div className="driver-notice-list">{notifications.slice(0, 5).map((item) => <article key={item.id} className={item.read_at ? "" : "is-unread"}><span className="driver-notice-dot"/><div><strong>{item.title}</strong><p>{item.message}</p><small>{new Date(item.created_at).toLocaleString(sw ? "sw-TZ" : "en-US")}</small></div></article>)}</div> : <p className="driver-empty-state">{sw ? "Hakuna arifa mpya." : "No notifications yet."}</p>}
         </section>
 
         <footer className="driver-workspace-footer">DIVS · {sw ? "Nafasi binafsi ya dereva" : "Your personal driver workspace"}</footer>
