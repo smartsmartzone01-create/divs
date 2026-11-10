@@ -268,7 +268,7 @@ export async function getDriverRegistration(): Promise<DriverRegistration | null
   if (response.status === 404) return null;
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
-    throw new Error(payload?.detail || `Could not load driver registration (${response.status}).`);
+    throw new IdentityApiError(userMessageForStatus(response.status, "en"), response.status, payload);
   }
   return response.json() as Promise<DriverRegistration>;
 }
@@ -281,7 +281,7 @@ export async function updateDriverRegistration(input: Omit<DriverRegistration, "
     body: JSON.stringify(input),
   });
   const payload = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(payload?.detail || `Driver profile update failed (${response.status}).`);
+  if (!response.ok) throw new IdentityApiError(userMessageForStatus(response.status, "en"), response.status, payload);
   return payload as DriverRegistration;
 }
 
@@ -294,15 +294,7 @@ export async function submitDriverRegistration(input: Omit<DriverRegistration, "
   });
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
-    const first = payload && typeof payload === "object"
-      ? Object.entries(payload).find(([, value]) => value !== undefined)
-      : null;
-    const message = typeof payload?.detail === "string"
-      ? payload.detail
-      : first
-        ? `${first[0].replace(/_/g, " ")}: ${Array.isArray(first[1]) ? first[1].join(" ") : String(first[1])}`
-        : `Driver registration failed (${response.status}).`;
-    throw new Error(message);
+    throw new IdentityApiError(userMessageForStatus(response.status, "en"), response.status, payload);
   }
   return payload as DriverRegistration;
 }
@@ -330,7 +322,7 @@ export async function getClientRegistration(): Promise<ClientRegistration | null
   if (response.status === 404) return null;
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
-    throw new Error(payload?.detail || `Could not load client registration (${response.status}).`);
+    throw new IdentityApiError(userMessageForStatus(response.status, "en"), response.status, payload);
   }
   return response.json() as Promise<ClientRegistration>;
 }
