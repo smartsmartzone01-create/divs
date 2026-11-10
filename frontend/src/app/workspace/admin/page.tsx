@@ -134,7 +134,7 @@ export default function AdminWorkspacePage() {
             <Link href="/workspace/admin/notifications"><span aria-hidden="true">◉</span>{sw ? "Arifa" : "Notifications"}<small>{unread || ""}</small></Link>
             {canReviewApplications ? <Link href="/workspace/admin/applications"><span aria-hidden="true">✓</span>{sw ? "Maombi" : "Applications"}<small>{applications.length || ""}</small></Link> : null}
             <Link href="/workspace/admin/verification"><span aria-hidden="true">⌕</span>{sw ? "Uhakiki" : "Verification"}<small>{verificationCount ?? ""}</small></Link>
-            <span className="is-coming"><span aria-hidden="true">▤</span>{sw ? "Madereva" : "Drivers"}</span>
+            <Link href="/workspace/admin/drivers"><span aria-hidden="true">▤</span>{sw ? "Madereva" : "Drivers"}</Link>
             <span className="is-coming"><span aria-hidden="true">↗</span>{sw ? "Utendaji" : "Performance"}</span>
           </div>
         </section>
@@ -144,7 +144,7 @@ export default function AdminWorkspacePage() {
           <div className="admin-management-list">
             {[
               { title: sw ? "Uhakiki wa madereva" : "Driver verification", description: sw ? "Kagua utambulisho, leseni na rekodi." : "Review identity, licence and record checks.", status: verificationCount === null ? (sw ? "Fungua" : "Open") : String(verificationCount), href: "/workspace/admin/verification" },
-              { title: sw ? "Usimamizi wa madereva" : "Driver management", description: sw ? "Kagua taarifa na wasifu wa madereva." : "Review driver records and profiles.", status: sw ? "Inakuja" : "Coming next", href: undefined },
+              { title: sw ? "Usimamizi wa madereva" : "Driver management", description: sw ? "Tafuta na kagua taarifa na hali za madereva." : "Search and review driver records and statuses.", status: sw ? "Fungua" : "Open", href: "/workspace/admin/drivers" },
               { title: sw ? "Utendaji na rufaa" : "Performance & appeals", description: sw ? "Kagua matukio ya utendaji na rufaa." : "Review performance events and appeals.", status: sw ? "Inakuja" : "Coming next", href: undefined },
             ].map((item) => item.href ? <Link href={item.href} className="admin-management-row" key={item.title}><span><strong>{item.title}</strong><small>{item.description}</small></span><em>{item.status}</em></Link> : <div className="admin-management-row" key={item.title}><span><strong>{item.title}</strong><small>{item.description}</small></span><em>{item.status}</em></div>)}
             <Link href="/account" className="admin-management-row admin-management-account"><span><strong>{sw ? "Akaunti na vipindi" : "Account & sessions"}</strong><small>{sw ? "Simamia kuingia na vifaa vyako." : "Manage your sign-in and devices."}</small></span><b>{sw ? "Fungua" : "Open"}</b></Link>
