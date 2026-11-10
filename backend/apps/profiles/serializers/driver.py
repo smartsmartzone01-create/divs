@@ -1,4 +1,5 @@
-from django.core.exceptions import ObjectDoesNotExist\nfrom rest_framework import serializers
+from django.core.exceptions import ObjectDoesNotExist
+from rest_framework import serializers
 
 from apps.profiles.models import DriverProfile
 from apps.registrations.serializers import DriverRegistrationSerializer
