@@ -1,3 +1,5 @@
+import { userMessageForStatus } from "@/lib/api/errors";
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -51,7 +53,7 @@ export async function apiRequest<T>(
     }
 
     throw new ApiError(
-      `API request failed with status ${response.status}.`,
+      userMessageForStatus(response.status, "en"),
       response.status,
       payload,
     );
