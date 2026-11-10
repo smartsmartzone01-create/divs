@@ -2,6 +2,7 @@ import io
 from datetime import timedelta
 from unittest.mock import patch
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -63,6 +64,39 @@ class DriverVerificationAPITests(APITestCase):
     def test_driver_endpoint_requires_authentication(self):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_driver_evidence_upload_after_final_decision_returns_conflict(self):
+        self.verification.status = DriverVerification.Status.APPROVED
+        self.verification.save(update_fields=["status", "updated_at"])
+        self.client.force_authenticate(user=self.driver)
+
+        response = self.client.post(
+            reverse(
+                "verification:driver-evidence-upload",
+                kwargs={"check_id": self.verification.checks.first().id},
+            ),
+            {"file": SimpleUploadedFile("identity.jpg", b"placeholder", content_type="image/jpeg")},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn("final verification decision", response.data["detail"])
+        self.assertFalse(DriverVerificationEvidence.objects.exists())
+
+    def test_invalid_driver_evidence_returns_bad_request_not_server_error(self):
+        self.client.force_authenticate(user=self.driver)
+
+        response = self.client.post(
+            reverse(
+                "verification:driver-evidence-upload",
+                kwargs={"check_id": self.verification.checks.first().id},
+            ),
+            {"file": SimpleUploadedFile("identity.txt", b"not a supported document", content_type="text/plain")},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("supported JPEG, PNG, or PDF", response.data["detail"])
 
     def test_client_cannot_read_driver_verification_endpoint(self):
         client_account = Account.objects.create_user(
