@@ -5,7 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/features/identity/api";
 import { useDIVSPreferences } from "@/components/preferences/preferences-provider";
-import { apiRequest, ApiError } from "@/lib/api/client";
+import { apiRequest } from "@/lib/api/client";
+import { userMessageForError } from "@/lib/api/errors";
+import { FeedbackRegion, useDIVSFeedback } from "@/components/feedback/feedback-provider";
 
 type Registration = {
   first_name: string; middle_name: string; last_name: string; nationality: string;
@@ -86,6 +88,7 @@ function Icon({ name }: { name: string }) {
 export default function DriverWorkspacePage() {
   const router = useRouter();
   const { language, setLanguage, theme, toggleTheme } = useDIVSPreferences();
+  const { showFeedback } = useDIVSFeedback();
   const sw = language === "sw";
   const [profile, setProfile] = useState<DriverProfile | null>(null);
   const [verification, setVerification] = useState<Verification | null>(null);
@@ -98,8 +101,6 @@ export default function DriverWorkspacePage() {
   const [error, setError] = useState("");
   const [dataWarnings, setDataWarnings] = useState<string[]>([]);
   const [uploadingCheck, setUploadingCheck] = useState("");
-  const [uploadError, setUploadError] = useState("");
-  const [uploadNotice, setUploadNotice] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -139,8 +140,6 @@ export default function DriverWorkspacePage() {
 
   async function submitEvidence(checkId: string, file: File, form: HTMLFormElement) {
     setUploadingCheck(checkId);
-    setUploadError("");
-    setUploadNotice("");
     const data = new FormData();
     data.append("file", file);
     try {
@@ -152,13 +151,25 @@ export default function DriverWorkspacePage() {
       const refreshed = await readApi<Verification>("/api/backend/verification/driver/me/");
       if (refreshed.data) {
         setVerification(refreshed.data);
-        setUploadNotice(sw ? "Ushahidi umepokelewa na hali imesasishwa." : "Evidence uploaded and verification status refreshed.");
+        showFeedback({
+          tone: "success",
+          anchorId: `evidence-${checkId}`,
+          message: sw ? "Ushahidi umepokelewa na hali imesasishwa." : "Evidence uploaded and verification status refreshed.",
+        });
       } else {
-        setUploadNotice(sw ? "Ushahidi umepokelewa. Onyesha upya ukurasa kuona hali mpya." : "Evidence was uploaded. Refresh the page to see the updated status.");
+        showFeedback({
+          tone: "success",
+          anchorId: `evidence-${checkId}`,
+          message: sw ? "Ushahidi umepokelewa. Onyesha upya ukurasa kuona hali mpya." : "Evidence was uploaded. Refresh the page to see the updated status.",
+        });
       }
     } catch (caught) {
-      const payload = caught instanceof ApiError ? caught.payload as { detail?: string } | undefined : undefined;
-      setUploadError(payload?.detail || (caught instanceof Error ? caught.message : (sw ? "Imeshindikana kupakia faili." : "Evidence upload failed.")));
+      showFeedback({
+        tone: "error",
+        anchorId: `evidence-${checkId}`,
+        persistent: true,
+        message: userMessageForError(caught, language),
+      });
     } finally {
       setUploadingCheck("");
     }
@@ -259,11 +270,10 @@ export default function DriverWorkspacePage() {
               }}>
                 <label><span>{sw ? "Ongeza ushahidi (PDF, JPG au PNG)" : "Upload evidence (PDF, JPG or PNG)"}</span><input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" required /></label>
                 <button type="submit" disabled={!!uploadingCheck}>{uploadingCheck === check.id ? (sw ? "Inapakia…" : "Uploading…") : (sw ? "Wasilisha ushahidi" : "Submit evidence")}</button>
+                <FeedbackRegion anchorId={`evidence-${check.id}`} />
               </form> : <p className="driver-evidence-hint">{sw ? "Ukaguzi bado haujafunguliwa kwenye akaunti yako." : "This verification check is not available yet."}</p>}
             </article>)}
           </div>
-          {uploadError ? <p className="driver-data-warning" role="alert">{uploadError}</p> : null}
-          {uploadNotice ? <p className="workspace-notice" role="status">{uploadNotice}</p> : null}
           <p className="driver-panel-footnote">{verification?.is_discoverable ? (sw ? "Wasifu wako unaruhusiwa kuonekana kwenye utafutaji." : "Your profile is eligible to appear in driver discovery.") : (sw ? "Wasifu wako hautaonekana kwa wateja hadi masharti yote ya uhakiki na idhini yatimizwe." : "Your profile will not appear in public discovery until all verification and approval requirements are met.")}</p>
         </section>
 
