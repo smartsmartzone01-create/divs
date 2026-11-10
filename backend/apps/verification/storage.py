@@ -42,6 +42,10 @@ class EvidenceStorageUnavailable(EvidenceStorageError):
     """Raised when the server cannot access or persist private evidence."""
 
 
+class EvidenceStorageConflict(EvidenceStorageError):
+    """Raised when the verification state prevents an evidence upload."""
+
+
 def _s3_client():
     if not settings.R2_EVIDENCE_STORAGE_ENABLED:
         logger.error("R2 evidence storage is disabled because required configuration is incomplete or invalid.")
@@ -108,7 +112,7 @@ def store_verification_evidence(*, check, uploaded_file, actor, source):
         raise EvidenceStorageError("Unsupported evidence upload source.")
 
     if check.verification.status in {"approved", "rejected"}:
-        raise EvidenceStorageError("Evidence cannot be uploaded after a final verification decision.")
+        raise EvidenceStorageConflict("Evidence cannot be uploaded after a final verification decision.")
 
     content, content_type, digest = _read_and_validate(uploaded_file)
     object_key = f"verification-evidence/{check.verification_id}/{uuid.uuid4().hex}"
