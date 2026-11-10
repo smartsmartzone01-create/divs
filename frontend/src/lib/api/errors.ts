@@ -61,7 +61,8 @@ export function userMessageForError(error: unknown, language: DIVSLanguage): str
     const payload = candidate.payload as ErrorPayload | undefined;
     const code = typeof payload?.code === "string" ? payload.code : "";
 
-    if (code === "VERIFICATION_ALREADY_FINAL") return copy.verificationFinal;
+    const detail = typeof payload?.detail === "string" ? payload.detail.trim().toLowerCase() : "";
+    if (code === "VERIFICATION_ALREADY_FINAL" || detail === "evidence cannot be uploaded after a final verification decision.") return copy.verificationFinal;
     if (code === "EVIDENCE_FILE_REJECTED") return copy.evidenceRejected;
 
     if (typeof candidate.status === "number") {
