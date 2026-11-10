@@ -697,7 +697,7 @@ html[data-theme="dark"] .driver-workspace a:focus-visible { outline-color: #93c5
   .admin-link-section { grid-column: 2; grid-row: 2; margin: 0; }
   .admin-workspace-content > .admin-panel { grid-column: 2; margin-top: 0; }
   .admin-workspace-content > .admin-panel#recent-activity { grid-row: 3; }
-  .admin-workspace-content > .admin-panel:not(#recent-activity) { grid-row: 4; }
+  .admin-workspace-content > .admin-panel:not(#recent-activity) { grid-row: 3; }
   .admin-workspace-footer { grid-column: 1 / -1; }
   .admin-feature-card { min-height: 6.8rem; }
   .driver-workspace-header { padding-inline: max(2rem, calc((100% - 76rem) / 2)); }
