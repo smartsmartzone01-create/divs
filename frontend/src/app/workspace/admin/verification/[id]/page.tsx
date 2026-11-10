@@ -69,6 +69,7 @@ export default function DriverVerificationDetailPage() {
   const [draftResults, setDraftResults] = useState<Record<string, string>>({});
   const [draftNotes, setDraftNotes] = useState<Record<string, string>>({});
   const [evidenceNotes, setEvidenceNotes] = useState<Record<string, string>>({});
+  const [reopenReasons, setReopenReasons] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     const [detail, permissions] = await Promise.all([
@@ -94,6 +95,7 @@ export default function DriverVerificationDetailPage() {
   const canApprove = !!access?.capabilities.includes("approve_driver_verification");
   const canReject = !!access?.capabilities.includes("reject_driver_verification");
   const canActivate = !!access?.capabilities.includes("activate_driver_availability");
+  const canReopen = !!access?.capabilities.includes("reopen_driver_verification");
   const registration = item?.registration;
   const fullName = registration ? [registration.first_name, registration.middle_name, registration.last_name].filter(Boolean).join(" ") : "";
   const allPassed = !!item && item.checks.length === 4 && item.checks.every((check) => check.status === "passed" && check.result_code === passResult[check.check_type]);
@@ -108,6 +110,20 @@ export default function DriverVerificationDetailPage() {
     catch (caught) { setError(explainError(caught, sw)); }
     finally { setBusy(""); }
   }
+  async function reopenCheck(check: Check) {
+    const reason = (reopenReasons[check.id] ?? "").trim();
+    if (!reason) {
+      setError(sw ? "Andika sababu ya kufungua tena ukaguzi huu." : "Enter a reason before reopening this check.");
+      return;
+    }
+    await runAction(
+      `verification/operations/checks/${check.id}/reopen/`,
+      "reopen-" + check.id,
+      sw ? "Ukaguzi umefunguliwa tena. Dereva anaweza kuwasilisha ushahidi uliosasishwa." : "Check reopened. The driver can now submit updated evidence.",
+      { reason },
+    );
+  }
+
   async function saveEvidenceReview(evidence: Evidence, decision: "accepted" | "rejected") {
     const notes = evidenceNotes[evidence.id] ?? evidence.review_notes ?? "";
     if (decision === "rejected" && !notes.trim()) {
@@ -223,6 +239,13 @@ export default function DriverVerificationDetailPage() {
                       <div className="verification-actions"><button type="button" disabled={!!busy || !resultValue || (isAdverse && (!notesValue.trim() || !hasAcceptedEvidence))} onClick={() => void saveCheck(check, resultValue, notesValue)}>{busy === "check-" + check.id ? (sw ? "Inahifadhi…" : "Saving…") : (sw ? "Hifadhi matokeo" : "Save finding")}</button></div>
                     </> : <div className="verification-readonly"><p>{check.result_code || (sw ? "Hakuna matokeo" : "No result recorded")}</p>{check.review_notes ? <small>{check.review_notes}</small> : null}</div>}
                     {check.check_type === "driving_licence" ? <div className="verification-licence-box"><strong>{sw ? "Madarasa ya leseni yaliyothibitishwa" : "Verified licence classes"}</strong><div className="verification-tags">{check.verified_licence_classes.filter((entry) => entry.is_current).map((entry) => <span key={entry.id}>{entry.licence_class}</span>)}</div>{canReview && !finalDecisionMade && isPassed ? <div className="verification-licence-entry"><input value={licenceInput} onChange={(event) => setLicenceInput(event.target.value)} placeholder={sw ? "Mfano: A, B, C1" : "Example: A, B, C1"} aria-label={sw ? "Madarasa ya leseni" : "Licence classes"} /><button type="button" disabled={!!busy} onClick={() => void saveLicenceClasses(check)}>{sw ? "Hifadhi madarasa" : "Save classes"}</button></div> : null}</div> : null}
+                    {canReopen && finalDecisionMade ? <div className="verification-reopen-box">
+                      <p>{sw ? "Fungua ukaguzi huu tena ikiwa dereva anahitaji kurekebisha taarifa au kuwasilisha ushahidi mpya. Hatua hii itarudisha uhakiki kwenye mapitio na kuzima upatikanaji wa umma ikiwa ulikuwa umewashwa." : "Reopen this check if the driver needs to correct information or submit new evidence. This returns the verification to review and turns off public availability if it was active."}</p>
+                      <label className="verification-field"><span>{sw ? "Sababu ya kufungua tena (inahitajika)" : "Reason for reopening (required)"}</span>
+                        <textarea value={reopenReasons[check.id] ?? ""} onChange={(event) => setReopenReasons((current) => ({ ...current, [check.id]: event.target.value }))} rows={2} />
+                      </label>
+                      <div className="verification-actions"><button type="button" disabled={!!busy || !(reopenReasons[check.id] ?? "").trim()} onClick={() => void reopenCheck(check)}>{busy === "reopen-" + check.id ? (sw ? "Inafungua…" : "Reopening…") : (sw ? "Fungua ukaguzi huu tena" : "Reopen this check")}</button></div>
+                    </div> : null}
                   </article>;
                 })}
               </div>
