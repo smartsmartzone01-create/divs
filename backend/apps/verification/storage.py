@@ -17,6 +17,23 @@ from apps.verification.models import DriverVerificationEvidence
 logger = logging.getLogger(__name__)
 
 
+def log_evidence_storage_configuration():
+    """Log only whether required R2 settings exist; never log credential values."""
+    status = {
+        "account_id_present": bool(settings.R2_ACCOUNT_ID),
+        "access_key_id_present": bool(settings.R2_ACCESS_KEY_ID),
+        "secret_access_key_present": bool(settings.R2_SECRET_ACCESS_KEY),
+        "bucket_name_present": bool(settings.R2_BUCKET_NAME),
+        "endpoint_present": bool(settings.R2_ENDPOINT_URL),
+        "endpoint_uses_https": settings.R2_ENDPOINT_URL.startswith("https://"),
+        "storage_enabled": bool(settings.R2_EVIDENCE_STORAGE_ENABLED),
+        "max_upload_bytes": settings.R2_MAX_UPLOAD_BYTES,
+    }
+    logger.info("R2 evidence storage configuration check: %s", status)
+    return status
+
+
+
 class EvidenceStorageError(Exception):
     """Raised when an evidence file cannot be safely validated or stored."""
 
