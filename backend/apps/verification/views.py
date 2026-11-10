@@ -30,6 +30,7 @@ from apps.verification.services import (
     reopen_driver_verification_check,
 )
 from apps.verification.storage import (
+    EvidenceStorageConflict,
     EvidenceStorageError,
     EvidenceStorageUnavailable,
     retrieve_verification_evidence,
@@ -113,7 +114,7 @@ class OperationsDriverCheckReviewView(RoleProtectedAPIView):
                 review_notes=serializer.validated_data.get("review_notes", ""),
             )
         except VerificationReviewError as exc:
-            return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
+            return Response({"detail": str(exc)}, status=http_status.HTTP_400_BAD_REQUEST)
         return Response({
             "id": str(check.id), "check_type": check.check_type,
             "status": check.status, "method": check.method,
@@ -139,7 +140,7 @@ class OperationsVerificationEvidenceReviewView(RoleProtectedAPIView):
                 review_notes=serializer.validated_data.get("review_notes", ""),
             )
         except VerificationReviewError as exc:
-            return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
+            return Response({"detail": str(exc)}, status=http_status.HTTP_400_BAD_REQUEST)
         return Response(DriverVerificationEvidenceSerializer(evidence).data)
 
 
@@ -158,7 +159,7 @@ class OperationsVerifiedLicenceClassesView(RoleProtectedAPIView):
                 reviewer=request.user,
             )
         except VerificationReviewError as exc:
-            return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
+            return Response({"detail": str(exc)}, status=http_status.HTTP_400_BAD_REQUEST)
         return Response([
             {
                 "id": str(record.id), "licence_class": record.licence_class,
@@ -184,7 +185,7 @@ class _OperationsFinalDecisionView(RoleProtectedAPIView):
                 reason=serializer.validated_data.get("reason", ""),
             )
         except VerificationReviewError as exc:
-            return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
+            return Response({"detail": str(exc)}, status=http_status.HTTP_400_BAD_REQUEST)
         return Response(OperationsDriverVerificationSerializer(verification).data)
 
 
@@ -213,7 +214,7 @@ class OperationsDriverVerificationReopenView(RoleProtectedAPIView):
                 reason=serializer.validated_data.get("reason", ""),
             )
         except VerificationReviewError as exc:
-            return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
+            return Response({"detail": str(exc)}, status=http_status.HTTP_400_BAD_REQUEST)
         return Response(OperationsDriverVerificationSerializer(verification).data)
 
 
@@ -229,7 +230,7 @@ class OperationsDriverAvailabilityActivateView(RoleProtectedAPIView):
                 actor=request.user,
             )
         except VerificationReviewError as exc:
-            return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
+            return Response({"detail": str(exc)}, status=http_status.HTTP_400_BAD_REQUEST)
         return Response({
             "driver_profile_id": str(profile.id),
             "status": profile.status,
@@ -355,12 +356,18 @@ class DriverVerificationEvidenceUploadView(RoleProtectedAPIView):
                     },
                     status=http_status.SERVICE_UNAVAILABLE,
                 )
+            except EvidenceStorageConflict as exc:
+                logger.info(
+                    "Driver evidence upload blocked by final verification decision (check_id=%s, request_id=%s).",
+                    check_id, request_id,
+                )
+                return Response({"detail": str(exc)}, status=http_status.HTTP_409_CONFLICT)
             except EvidenceStorageError as exc:
                 logger.warning(
                     "Driver evidence rejected by storage validation (check_id=%s, request_id=%s, error_type=%s).",
                     check_id, request_id, type(exc).__name__,
                 )
-                return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
+                return Response({"detail": str(exc)}, status=http_status.HTTP_400_BAD_REQUEST)
 
             logger.info(
                 "Driver evidence upload completed (check_id=%s, evidence_id=%s, request_id=%s).",
@@ -417,8 +424,10 @@ class OperationsVerificationEvidenceUploadView(RoleProtectedAPIView):
                 },
                 status=http_status.SERVICE_UNAVAILABLE,
             )
+        except EvidenceStorageConflict as exc:
+            return Response({"detail": str(exc)}, status=http_status.HTTP_409_CONFLICT)
         except EvidenceStorageError as exc:
-            return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
+            return Response({"detail": str(exc)}, status=http_status.HTTP_400_BAD_REQUEST)
         except Exception:
             logger.exception("Unexpected operations evidence upload failure (check_id=%s).", check_id)
             return Response(
