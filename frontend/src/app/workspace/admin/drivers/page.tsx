@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { WorkspaceHeader } from "@/components/workspace/workspace-header";
 import { useDIVSPreferences } from "@/components/preferences/preferences-provider";
 import { apiRequest, ApiError } from "@/lib/api/client";
@@ -103,7 +103,7 @@ export default function AdminDriversPage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  function submitSearch(event: React.FormEvent<HTMLFormElement>) {
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPage(1);
     setSearch(searchInput.trim());
