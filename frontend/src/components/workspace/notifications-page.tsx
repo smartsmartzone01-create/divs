@@ -95,8 +95,8 @@ export function NotificationsPage({ role, backHref, backLabel }: Props) {
             <span className="text-sm">{sw ? "Hazijasomwa" : "Unread"}</span>
           </div>
           <div className="flex gap-2" role="group" aria-label={sw ? "Chuja arifa" : "Filter notifications"}>
-            <button type="button" className={filter === "all" ? "workspace-primary-button" : "workspace-secondary-button"} onClick={() => setFilter("all")}>{sw ? "Zote" : "All"}</button>
-            <button type="button" className={filter === "unread" ? "workspace-primary-button" : "workspace-secondary-button"} onClick={() => setFilter("unread")}>{sw ? "Hazijasomwa" : "Unread"}</button>
+            <button type="button" className={filter === "all" ? "rounded-lg bg-[#153b67] px-4 py-2 text-sm font-semibold text-white" : "rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold"} onClick={() => setFilter("all")}>{sw ? "Zote" : "All"}</button>
+            <button type="button" className={filter === "unread" ? "rounded-lg bg-[#153b67] px-4 py-2 text-sm font-semibold text-white" : "rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold"} onClick={() => setFilter("unread")}>{sw ? "Hazijasomwa" : "Unread"}</button>
           </div>
         </section>
 
@@ -122,7 +122,7 @@ export function NotificationsPage({ role, backHref, backLabel }: Props) {
                         <p className="mt-2 whitespace-pre-wrap text-sm">{item.message}</p>
                         <time className="workspace-muted mt-3 block text-xs" dateTime={item.created_at}>{new Date(item.created_at).toLocaleString(sw ? "sw-TZ" : "en-GB")}</time>
                       </div>
-                      {!isRead ? <button type="button" className="workspace-secondary-button shrink-0" disabled={busyId === item.id} onClick={() => void markAsRead(item)}>{busyId === item.id ? (sw ? "Inahifadhi…" : "Saving…") : (sw ? "Weka kuwa imesomwa" : "Mark as read")}</button> : <span className="workspace-muted shrink-0 text-xs">{sw ? "Imesomwa" : "Read"}</span>}
+                      {!isRead ? <button type="button" className="shrink-0 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold disabled:opacity-50" disabled={busyId === item.id} onClick={() => void markAsRead(item)}>{busyId === item.id ? (sw ? "Inahifadhi…" : "Saving…") : (sw ? "Weka kuwa imesomwa" : "Mark as read")}</button> : <span className="workspace-muted shrink-0 text-xs">{sw ? "Imesomwa" : "Read"}</span>}
                     </div>
                   </article>
                 );
