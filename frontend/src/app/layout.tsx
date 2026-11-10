@@ -3,6 +3,7 @@ import "./globals.css";
 import "./landing-reference.css";
 import "./workspace.css";
 import { DIVSPreferencesProvider } from "@/components/preferences/preferences-provider";
+import { DIVSFeedbackProvider } from "@/components/feedback/feedback-provider";
 
 export const metadata: Metadata = {
   title: {
@@ -26,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body><DIVSPreferencesProvider>{children}</DIVSPreferencesProvider></body>
+      <body><DIVSPreferencesProvider><DIVSFeedbackProvider>{children}</DIVSFeedbackProvider></DIVSPreferencesProvider></body>
     </html>
   );
 }
