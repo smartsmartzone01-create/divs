@@ -1,4 +1,4 @@
-from rest_framework import serializers
+from django.core.exceptions import ObjectDoesNotExist\nfrom rest_framework import serializers
 
 from apps.profiles.models import DriverProfile
 from apps.registrations.serializers import DriverRegistrationSerializer
@@ -41,5 +41,5 @@ class AdminDriverDirectorySerializer(serializers.ModelSerializer):
     def get_verification_status(self, profile):
         try:
             return profile.verification.status
-        except DriverProfile.verification.RelatedObjectDoesNotExist:
+        except ObjectDoesNotExist:
             return "not_started"
