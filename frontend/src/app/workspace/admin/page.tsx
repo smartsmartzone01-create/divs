@@ -35,7 +35,7 @@ export default function AdminWorkspacePage() {
         const [accountResult, accessResult, notificationResult] = await Promise.all([
           getJson<Account>("/api/auth/me/"),
           getJson<Access>("/api/backend/operations/me/"),
-          getJson<{ unread_count: number; results: Notification[] }>("/api/backend/notifications/operations/"),
+          getJson<{ unread_count: number; results: { read_at: string | null }[] }>("/api/backend/notifications/operations/"),
         ]);
         if (!active) return;
         setAccount(accountResult);
