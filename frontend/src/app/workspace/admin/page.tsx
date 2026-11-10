@@ -7,7 +7,7 @@ import { useDIVSPreferences } from "@/components/preferences/preferences-provide
 
 type Account = { id: string; email: string | null; phone_number: string | null };
 type Access = { role: "admin" | "operator"; capabilities: string[] };
-type Notification = { id: string; title: string; message: string; created_at: string; read_at: string | null };
+
 type Application = { id: string; full_name: string; email: string | null; phone_number: string | null; role_applied_for: string; submitted_at: string };
 
 async function getJson<T>(url: string): Promise<T> {
@@ -21,7 +21,7 @@ export default function AdminWorkspacePage() {
   const sw = language === "sw";
   const [account, setAccount] = useState<Account | null>(null);
   const [access, setAccess] = useState<Access | null>(null);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [applications, setApplications] = useState<Application[]>([]);
   const [canReviewApplications, setCanReviewApplications] = useState(false);
   const [verificationCount, setVerificationCount] = useState<number | null>(null);
@@ -40,7 +40,7 @@ export default function AdminWorkspacePage() {
         if (!active) return;
         setAccount(accountResult);
         setAccess(accessResult);
-        setNotifications(notificationResult.results ?? []);
+        setUnreadNotifications(notificationResult.unread_count ?? notificationResult.results?.filter((item) => !item.read_at).length ?? 0);
 
         if (accessResult.capabilities.includes("view_operations_workspace")) {
           try {
@@ -73,7 +73,7 @@ export default function AdminWorkspacePage() {
     return () => { active = false; };
   }, [sw]);
 
-  const unread = notifications.filter((item) => !item.read_at).length;
+  const unread = unreadNotifications;
   const isAdmin = access?.role === "admin";
   const roleLabel = isAdmin ? (sw ? "Msimamizi" : "Administrator") : (sw ? "Mwendeshaji" : "Operations operator");
   const accountLabel = account?.email || account?.phone_number || (sw ? "Akaunti ya DIVS" : "DIVS account");
@@ -109,11 +109,11 @@ export default function AdminWorkspacePage() {
         {error ? <p className="admin-error" role="alert">{error}</p> : null}
 
         <section className="admin-feature-grid">
-          <a href="#recent-activity" className="admin-feature-card">
+          <Link href="/workspace/admin/notifications" className="admin-feature-card">
             <span className="admin-feature-icon is-blue" aria-hidden="true">⌁</span>
             <span className="admin-feature-copy"><strong>{sw ? "Arifa za uendeshaji" : "Operations notifications"}</strong><span>{unread ? (sw ? `${unread} hazijasomwa` : `${unread} unread`) : (sw ? "Hakuna arifa mpya" : "No unread notifications")}</span></span>
             <span className="admin-feature-count">{unread}</span>
-          </a>
+          </Link>
           {canReviewApplications ? (
             <Link href="/workspace/admin/applications" className="admin-feature-card">
               <span className="admin-feature-icon is-amber" aria-hidden="true">✓</span>
@@ -131,40 +131,12 @@ export default function AdminWorkspacePage() {
         <section className="admin-link-section">
           <h2>{sw ? "Sehemu za kazi" : "Workspace sections"}</h2>
           <div className="admin-horizontal-links">
-            <a href="#recent-activity"><span aria-hidden="true">◉</span>{sw ? "Arifa" : "Notifications"}<small>{unread || ""}</small></a>
+            <Link href="/workspace/admin/notifications"><span aria-hidden="true">◉</span>{sw ? "Arifa" : "Notifications"}<small>{unread || ""}</small></Link>
             {canReviewApplications ? <Link href="/workspace/admin/applications"><span aria-hidden="true">✓</span>{sw ? "Maombi" : "Applications"}<small>{applications.length || ""}</small></Link> : null}
             <Link href="/workspace/admin/verification"><span aria-hidden="true">⌕</span>{sw ? "Uhakiki" : "Verification"}<small>{verificationCount ?? ""}</small></Link>
             <span className="is-coming"><span aria-hidden="true">▤</span>{sw ? "Madereva" : "Drivers"}</span>
             <span className="is-coming"><span aria-hidden="true">↗</span>{sw ? "Utendaji" : "Performance"}</span>
           </div>
-        </section>
-
-        <section id="recent-activity" className="admin-panel">
-          <div className="admin-section-heading">
-            <div><h2>{sw ? "Yanayohitaji uangalizi wako" : "Needs your attention"}</h2><p>{sw ? "Arifa na kazi zinazohitaji kufuatiliwa." : "Notifications and work that may need follow-up."}</p></div>
-            <strong className="admin-count">{unread}</strong>
-          </div>
-
-          {canReviewApplications && applications.length > 0 ? (
-            <Link href="/workspace/admin/applications" className="admin-attention-card">
-              <span className="admin-attention-icon" aria-hidden="true">!</span>
-              <span><strong>{sw ? "Maombi ya kujiunga na uendeshaji" : "Operations access applications"}</strong><small>{sw ? "Kagua waombaji wa nafasi za Msimamizi au Mwendeshaji." : "Review applicants requesting an Admin or Operator role."}</small></span>
-              <b>{applications.length}</b>
-            </Link>
-          ) : null}
-
-          {notifications.length ? (
-            <div className="admin-notice-list">
-              {notifications.slice(0, 5).map((item) => (
-                <article key={item.id} className={item.read_at ? "" : "is-unread"}>
-                  <span className="admin-notice-dot" />
-                  <div><strong>{item.title}</strong><p>{item.message}</p><small>{new Date(item.created_at).toLocaleString(sw ? "sw-TZ" : "en-US")}</small></div>
-                </article>
-              ))}
-            </div>
-          ) : applications.length === 0 ? (
-            <div className="admin-empty-state"><strong>{sw ? "Umemaliza kazi za sasa" : "You're all caught up"}</strong><p>{sw ? "Hakuna arifa mpya za uendeshaji." : "There are no new operations notifications."}</p></div>
-          ) : null}
         </section>
 
         <section className="admin-panel">
