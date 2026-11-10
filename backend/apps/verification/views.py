@@ -1,8 +1,9 @@
 import logging
 
-from django.http import StreamingHttpResponse
+from django.http import Http404, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import status as http_status
+from rest_framework.exceptions import APIException
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -33,6 +34,7 @@ from apps.verification.storage import (
     EvidenceStorageUnavailable,
     retrieve_verification_evidence,
     store_verification_evidence,
+    log_evidence_storage_configuration,
 )
 from apps.operations.permissions import HasOperationsCapability
 from common.permissions import HasRequiredProfile
@@ -283,45 +285,106 @@ class DriverVerificationEvidenceUploadView(RoleProtectedAPIView):
     throttle_scope = "verification_evidence_upload"
 
     def post(self, request, check_id):
-        check = get_object_or_404(
-            DriverVerificationCheck.objects.select_related("verification", "verification__profile"),
-            pk=check_id,
-            verification__profile__registration__account=request.user,
+        request_id = request.headers.get("CF-Ray") or request.headers.get("X-Request-ID") or "unavailable"
+        stage = "request_received"
+        logger.info(
+            "Driver evidence upload started (stage=%s, check_id=%s, request_id=%s, content_length=%s).",
+            stage,
+            check_id,
+            request_id,
+            request.META.get("CONTENT_LENGTH", "unknown"),
         )
-        serializer = VerificationEvidenceUploadSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        try:
-            evidence = store_verification_evidence(
-                check=check,
-                uploaded_file=serializer.validated_data["file"],
-                actor=request.user,
-                source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
-            )
-        except EvidenceStorageUnavailable:
-            return Response(
-                {
-                    "detail": (
-                        "We couldn't submit your document right now. "
-                        "Your file has not been confirmed as submitted. Please try again."
-                    )
-                },
-                status=http_status.SERVICE_UNAVAILABLE,
-            )
-        except EvidenceStorageError as exc:
-            return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
-        except Exception:
-            logger.exception("Unexpected driver evidence upload failure (check_id=%s).", check_id)
-            return Response(
-                {
-                    "detail": (
-                        "We couldn't submit your document right now. "
-                        "Your file has not been confirmed as submitted. Please try again."
-                    )
-                },
-                status=http_status.SERVICE_UNAVAILABLE,
-            )
-        return Response(DriverVerificationEvidenceSerializer(evidence).data, status=http_status.CREATED)
 
+        try:
+            stage = "load_verification_check"
+            logger.info(
+                "Driver evidence upload stage (stage=%s, check_id=%s, request_id=%s).",
+                stage, check_id, request_id,
+            )
+            check = get_object_or_404(
+                DriverVerificationCheck.objects.select_related("verification", "verification__profile"),
+                pk=check_id,
+                verification__profile__registration__account=request.user,
+            )
+
+            stage = "parse_multipart_request"
+            logger.info(
+                "Driver evidence upload stage (stage=%s, check_id=%s, request_id=%s).",
+                stage, check_id, request_id,
+            )
+            serializer = VerificationEvidenceUploadSerializer(data=request.data)
+
+            stage = "validate_uploaded_file"
+            logger.info(
+                "Driver evidence upload stage (stage=%s, check_id=%s, request_id=%s).",
+                stage, check_id, request_id,
+            )
+            serializer.is_valid(raise_exception=True)
+            uploaded_file = serializer.validated_data["file"]
+            logger.info(
+                "Driver evidence file validated (check_id=%s, request_id=%s, file_size=%s).",
+                check_id, request_id, uploaded_file.size,
+            )
+
+            stage = "check_r2_configuration"
+            log_evidence_storage_configuration()
+
+            stage = "store_evidence_in_r2_and_database"
+            logger.info(
+                "Driver evidence upload stage (stage=%s, check_id=%s, request_id=%s).",
+                stage, check_id, request_id,
+            )
+            try:
+                evidence = store_verification_evidence(
+                    check=check,
+                    uploaded_file=uploaded_file,
+                    actor=request.user,
+                    source=DriverVerificationEvidence.Source.DRIVER_UPLOAD,
+                )
+            except EvidenceStorageUnavailable:
+                logger.exception(
+                    "Driver evidence storage unavailable (check_id=%s, request_id=%s).",
+                    check_id, request_id,
+                )
+                return Response(
+                    {
+                        "detail": (
+                            "We couldn't submit your document right now. "
+                            "Your file has not been confirmed as submitted. Please try again."
+                        )
+                    },
+                    status=http_status.SERVICE_UNAVAILABLE,
+                )
+            except EvidenceStorageError as exc:
+                logger.warning(
+                    "Driver evidence rejected by storage validation (check_id=%s, request_id=%s, error_type=%s).",
+                    check_id, request_id, type(exc).__name__,
+                )
+                return Response({"detail": str(exc)}, status=http_status.BAD_REQUEST)
+
+            logger.info(
+                "Driver evidence upload completed (check_id=%s, evidence_id=%s, request_id=%s).",
+                check_id, evidence.id, request_id,
+            )
+            return Response(DriverVerificationEvidenceSerializer(evidence).data, status=http_status.CREATED)
+
+        except (Http404, APIException):
+            # Preserve normal DRF 4xx handling for missing records and invalid requests.
+            raise
+        except Exception:
+            logger.exception(
+                "Unexpected driver evidence upload failure (stage=%s, check_id=%s, request_id=%s).",
+                stage, check_id, request_id,
+            )
+            return Response(
+                {
+                    "detail": (
+                        "We couldn't submit your document right now. "
+                        "Your file has not been confirmed as submitted. Please try again."
+                    )
+                },
+                status=http_status.INTERNAL_SERVER_ERROR,
+            )
 
 class OperationsVerificationEvidenceUploadView(RoleProtectedAPIView):
     required_profile_type = "operations"
